@@ -4,7 +4,6 @@
 -- COMPATIBILIDAD: PostgreSQL 16+ / PostgreSQL 18
 -- ============================================================================
 
--- Limpieza preventiva de tablas previas en orden inverso de dependencias
 DROP TABLE IF EXISTS registro_detalle CASCADE;
 DROP TABLE IF EXISTS registro CASCADE;
 DROP TABLE IF EXISTS devolucion_detalle CASCADE;
@@ -24,9 +23,7 @@ DROP TABLE IF EXISTS administrador CASCADE;
 DROP TABLE IF EXISTS usuario CASCADE;
 DROP TABLE IF EXISTS auditoria_operacion CASCADE;
 
--- ----------------------------------------------------------------------------
--- 1. TABLA: USUARIO (Autenticacion unificada, roles y control de acceso)
--- ----------------------------------------------------------------------------
+-- 1. TABLA: USUARIO
 CREATE TABLE usuario (
     id_usuario BIGSERIAL PRIMARY KEY,
     dni VARCHAR(8) UNIQUE NOT NULL,
@@ -39,9 +36,7 @@ CREATE TABLE usuario (
     creado_en TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ----------------------------------------------------------------------------
--- 2. TABLAS DE ROLES ESPECIALIZADOS (Extension segun APF2)
--- ----------------------------------------------------------------------------
+-- 2. TABLAS DE ROLES ESPECIALIZADOS
 CREATE TABLE mecanico (
     dni_mecanico VARCHAR(8) PRIMARY KEY,
     nombre_mecanico VARCHAR(100) NOT NULL,
@@ -68,9 +63,7 @@ CREATE TABLE administrador (
         REFERENCES usuario(dni) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
--- 3. TABLA: REPUESTO (Catalogo maestro)
--- ----------------------------------------------------------------------------
+-- 3. TABLA: REPUESTO
 CREATE TABLE repuesto (
     cod_parte VARCHAR(30) PRIMARY KEY,
     nombre_repuesto VARCHAR(150) NOT NULL,
@@ -80,9 +73,7 @@ CREATE TABLE repuesto (
     activo BOOLEAN NOT NULL DEFAULT TRUE
 );
 
--- ----------------------------------------------------------------------------
--- 4. TABLA: MAQUINARIA (Flota pesada)
--- ----------------------------------------------------------------------------
+-- 4. TABLA: MAQUINARIA
 CREATE TABLE maquinaria (
     cod_maquinaria VARCHAR(20) PRIMARY KEY,
     modelo_maquinaria VARCHAR(100) NOT NULL,
@@ -90,16 +81,14 @@ CREATE TABLE maquinaria (
     estado_operativo VARCHAR(20) NOT NULL CHECK (estado_operativo IN ('OPERATIVA', 'EN_MANTENIMIENTO', 'INOPERATIVA', 'BAJA'))
 );
 
--- ----------------------------------------------------------------------------
--- 5. TABLA: SOLICITUD (Cabecera de requerimiento)
--- ----------------------------------------------------------------------------
+-- 5. TABLA: SOLICITUD
 CREATE TABLE solicitud (
     solicitud_num VARCHAR(20) PRIMARY KEY,
     fecha_emision DATE NOT NULL,
     hora_emision TIME WITHOUT TIME ZONE NOT NULL,
-    prioridad_solicitud VARCHAR(20) NOT NULL CHECK (prioridad_solicitud IN ('Baja', 'Media', 'Alta')),
+    prioridad_solicitud VARCHAR(20) NOT NULL CHECK (prioridad_solicitud IN ('BAJA', 'MEDIA', 'ALTA')),
     justificacion_tecnica TEXT NOT NULL,
-    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'Pendiente' CHECK (estado_solicitud IN ('Pendiente', 'Aprobada', 'Aprobada Parcial', 'Rechazada', 'Orden Contactada')),
+    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADA', 'APROBADA_PARCIAL', 'RECHAZADA', 'ORDEN_CONTACTADA')),
     dni_mecanico VARCHAR(8) NOT NULL,
     cod_maquina VARCHAR(20) NOT NULL,
     CONSTRAINT fk_solicitud_mecanico FOREIGN KEY (dni_mecanico) 
@@ -108,16 +97,13 @@ CREATE TABLE solicitud (
         REFERENCES maquinaria(cod_maquinaria) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
--- 6. TABLA: SOLICITUD_DETALLE (Lineas de repuestos solicitados)
--- Correccion de tipo: cantidad_repuesto a INT
--- ----------------------------------------------------------------------------
+-- 6. TABLA: SOLICITUD_DETALLE
 CREATE TABLE solicitud_detalle (
     solicitud_num VARCHAR(20) NOT NULL,
     item INT NOT NULL,
     cantidad_repuesto INT NOT NULL CHECK (cantidad_repuesto > 0),
     cod_parte VARCHAR(30) NOT NULL,
-    estado_item VARCHAR(20) NOT NULL DEFAULT 'Pendiente' CHECK (estado_item IN ('Pendiente', 'Aprobado', 'Rechazado')),
+    estado_item VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado_item IN ('PENDIENTE', 'APROBADO', 'RECHAZADO')),
     PRIMARY KEY (solicitud_num, item),
     CONSTRAINT fk_soldet_solicitud FOREIGN KEY (solicitud_num) 
         REFERENCES solicitud(solicitud_num) ON DELETE CASCADE,
@@ -125,9 +111,7 @@ CREATE TABLE solicitud_detalle (
         REFERENCES repuesto(cod_parte) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
--- 7. TABLAS: DICTAMEN_RECHAZO Y DETALLE_RECHAZO (Modulo administrativo)
--- ----------------------------------------------------------------------------
+-- 7. TABLAS: DICTAMEN_RECHAZO Y DETALLE_RECHAZO
 CREATE TABLE dictamen_rechazo (
     dictamen_num VARCHAR(20) PRIMARY KEY,
     ref_solicitud_num VARCHAR(20) NOT NULL,
@@ -153,9 +137,7 @@ CREATE TABLE detalle_rechazo (
         REFERENCES repuesto(cod_parte) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
--- 8. TABLA: HERRAMIENTA (Panol de taller)
--- ----------------------------------------------------------------------------
+-- 8. TABLA: HERRAMIENTA
 CREATE TABLE herramienta (
     cod_herramienta VARCHAR(30) PRIMARY KEY,
     nombre_herramienta VARCHAR(150) NOT NULL,
@@ -164,10 +146,7 @@ CREATE TABLE herramienta (
     estado_actual VARCHAR(30) NOT NULL CHECK (estado_actual IN ('Disponible', 'Prestada', 'En Mora', 'En Mantenimiento', 'Extraviada', 'Baja Tecnica'))
 );
 
--- ----------------------------------------------------------------------------
 -- 9. TABLAS: PRESTAMO Y PRESTAMO_DETALLE
--- Correccion de tipo: firma_mecanico a TEXT/VARCHAR (en vez de TIME)
--- ----------------------------------------------------------------------------
 CREATE TABLE prestamo (
     prestamo_num VARCHAR(20) PRIMARY KEY,
     fecha_prestamo DATE NOT NULL,
@@ -196,9 +175,7 @@ CREATE TABLE prestamo_detalle (
         REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
 -- 10. TABLAS: DEVOLUCION Y DEVOLUCION_DETALLE
--- ----------------------------------------------------------------------------
 CREATE TABLE devolucion (
     devolucion_num VARCHAR(20) PRIMARY KEY,
     fecha_devolucion DATE NOT NULL,
@@ -227,9 +204,7 @@ CREATE TABLE devolucion_detalle (
         REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
--- 11. TABLAS: REGISTRO Y REGISTRO_DETALLE (Altas de herramientas)
--- ----------------------------------------------------------------------------
+-- 11. TABLAS: REGISTRO Y REGISTRO_DETALLE
 CREATE TABLE registro (
     registro_num VARCHAR(20) PRIMARY KEY,
     fecha_ingreso DATE NOT NULL,
@@ -249,9 +224,7 @@ CREATE TABLE registro_detalle (
         REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- ----------------------------------------------------------------------------
--- 12. TABLA: AUDITORIA_OPERACION (Append-Only inalterable con Hash SHA-256)
--- ----------------------------------------------------------------------------
+-- 12. TABLA: AUDITORIA_OPERACION
 CREATE TABLE auditoria_operacion (
     id_auditoria BIGSERIAL PRIMARY KEY,
     id_operacion VARCHAR(50) NOT NULL,
@@ -262,9 +235,7 @@ CREATE TABLE auditoria_operacion (
     hash_sha256 VARCHAR(64) NOT NULL
 );
 
--- ----------------------------------------------------------------------------
--- INDICES B-TREE PARA OPTIMIZACION DE BUSQUEDA
--- ----------------------------------------------------------------------------
+-- INDICES B-TREE
 CREATE INDEX idx_solicitud_mecanico ON solicitud(dni_mecanico);
 CREATE INDEX idx_solicitud_estado ON solicitud(estado_solicitud);
 CREATE INDEX idx_prestamo_mecanico ON prestamo(dni_mecanico);
@@ -282,8 +253,8 @@ INSERT INTO usuario (dni, nombre, correo_corporativo, contrasena_hash, rol, esta
 ('45829104', 'Marcos Aurelio Ramos Quispe', 'marcos.ramos@masterdrilling.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'ALMACENISTA', 'ACTIVO'),
 ('10293847', 'Leao Chura', 'leao.chura@masterdrilling.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'ADMINISTRADOR', 'ACTIVO');
 
-INSERT INTO mecanico (dni_mecanico, nombre_mecanico, especialidad_mecanico, cargo_mecanico, telefono) VALUES
-('75859812', 'Carlos Mendoza', 'Hidraulica', 'Mecanico de Planta', '995348431');
+INSERT INTO mecanico (dni_mecanico, nombre_mecanico, especialidad_mecanico, cargo_mecanico) VALUES
+('75859812', 'Carlos Mendoza', 'Hidraulica', 'Mecanico de Planta');
 
 INSERT INTO almacenista (dni_almacenista, nombre_almacenista, sede_asignada) VALUES
 ('45829104', 'Marcos Aurelio Ramos Quispe', 'Taller Lurin');
