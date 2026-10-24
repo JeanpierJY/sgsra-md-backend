@@ -9,5 +9,5 @@ import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 public interface IPrestamoService {
     MensajeGenericoResponse registrarPrestamo(String correoAlmacenista, RegistrarPrestamoRequest request, String ipOrigen);
     MensajeGenericoResponse registrarDevolucion(String correoAlmacenista, DevolucionHerramientaRequest request, String ipOrigen);
-    MensajeGenericoResponse reportarHerramientaExtraviada(ReporteExtravioRequest request, String ipOrigen);
+    MensajeGenericoResponse reportarHerramientaExtraviada(String correoAlmacenista, ReporteExtravioRequest request, String ipOrigen);
 }

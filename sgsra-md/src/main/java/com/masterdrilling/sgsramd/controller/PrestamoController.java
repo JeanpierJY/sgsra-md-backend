@@ -41,9 +41,10 @@ public class PrestamoController {
 
     @PostMapping("/extravio")
     public ResponseEntity<MensajeGenericoResponse> reportarExtravio(
+            @RequestParam("correoAlmacenista") String correoAlmacenista,
             @Valid @RequestBody ReporteExtravioRequest request,
             HttpServletRequest httpRequest) {
         String ipOrigen = httpRequest.getRemoteAddr();
-        return ResponseEntity.ok(prestamoService.reportarHerramientaExtraviada(request, ipOrigen));
+        return ResponseEntity.ok(prestamoService.reportarHerramientaExtraviada(correoAlmacenista, request, ipOrigen));
     }
 }

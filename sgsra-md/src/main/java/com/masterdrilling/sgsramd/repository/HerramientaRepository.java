@@ -3,14 +3,12 @@ package com.masterdrilling.sgsramd.repository;
 import com.masterdrilling.sgsramd.model.entity.Herramienta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 // DAO para pañol, escaneo QR y dashboard de stock (RF33, RF34, RF35, RF45)
-@Repository
+
 public interface HerramientaRepository extends JpaRepository<Herramienta, String> {
 
     Optional<Herramienta> findByCodHerramienta(String codHerramienta);

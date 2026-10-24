@@ -121,9 +121,10 @@ class SolicitudControllerTest {
                 .dato("SOL-2026-0001")
                 .build();
 
-        when(solicitudService.aprobarSolicitudTotal(eq("SOL-2026-0001"), anyString())).thenReturn(response);
+        when(solicitudService.aprobarSolicitudTotal(eq("SOL-2026-0001"), eq("leao.chura@masterdrilling.com"), anyString())).thenReturn(response);
 
-        mockMvc.perform(put("/api/v1/solicitudes/SOL-2026-0001/aprobar"))
+        mockMvc.perform(put("/api/v1/solicitudes/SOL-2026-0001/aprobar")
+                        .param("correoAdmin", "leao.chura@masterdrilling.com"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exito").value(true))
                 .andExpect(jsonPath("$.mensaje").value("Solicitud aprobada integramente"));

@@ -6,12 +6,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+
 
 import java.time.LocalDateTime;
 
 // DAO inalterable append-only para auditoria y sellado SHA-256 (RF49)
-@Repository
+
 public interface AuditoriaOperacionRepository extends JpaRepository<AuditoriaOperacion, Long> {
 
     Page<AuditoriaOperacion> findAllByOrderByTimestampDesc(Pageable pageable);

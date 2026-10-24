@@ -59,9 +59,10 @@ public class SolicitudController {
     @PutMapping("/{solicitudNum}/aprobar")
     public ResponseEntity<MensajeGenericoResponse> aprobarTotal(
             @PathVariable("solicitudNum") String solicitudNum,
+            @RequestParam("correoAdmin") String correoAdmin,
             HttpServletRequest httpRequest) {
         String ipOrigen = httpRequest.getRemoteAddr();
-        return ResponseEntity.ok(solicitudService.aprobarSolicitudTotal(solicitudNum, ipOrigen));
+        return ResponseEntity.ok(solicitudService.aprobarSolicitudTotal(solicitudNum, correoAdmin, ipOrigen));
     }
 
     @PutMapping("/{solicitudNum}/rechazar")
@@ -87,9 +88,10 @@ public class SolicitudController {
     @PutMapping("/{solicitudNum}/contactar")
     public ResponseEntity<MensajeGenericoResponse> marcarContactada(
             @PathVariable("solicitudNum") String solicitudNum,
+            @RequestParam("correoAdmin") String correoAdmin,
             @Valid @RequestBody ContactarProveedorRequest request,
             HttpServletRequest httpRequest) {
         String ipOrigen = httpRequest.getRemoteAddr();
-        return ResponseEntity.ok(solicitudService.marcarOrdenContactada(solicitudNum, request, ipOrigen));
+        return ResponseEntity.ok(solicitudService.marcarOrdenContactada(solicitudNum, correoAdmin, request, ipOrigen));
     }
 }

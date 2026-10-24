@@ -5,13 +5,11 @@ import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 // DAO para custodia y trazabilidad de herramientas (RF36, RF42, RF43)
-@Repository
 public interface PrestamoRepository extends JpaRepository<Prestamo, String> {
 
     List<Prestamo> findByMecanicoDniMecanicoAndEstadoPrestamo(String dniMecanico, EstadoPrestamo estadoPrestamo);

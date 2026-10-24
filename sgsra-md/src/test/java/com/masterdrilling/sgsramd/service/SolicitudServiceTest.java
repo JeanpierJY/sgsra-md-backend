@@ -94,8 +94,10 @@ class SolicitudServiceTest {
     @DisplayName("Debe aprobar la solicitud cambiando el estado a APROBADA (RF23)")
     void testAprobarSolicitudTotal_Exito() {
         when(solicitudRepository.findById("SOL-2026-0001")).thenReturn(Optional.of(solicitud));
+        when(usuarioRepository.findByCorreoCorporativo("leao.chura@masterdrilling.com")).thenReturn(Optional.of(usuarioAdmin));
 
-        MensajeGenericoResponse response = solicitudService.aprobarSolicitudTotal("SOL-2026-0001", "127.0.0.1");
+        MensajeGenericoResponse response = solicitudService.aprobarSolicitudTotal(
+                "SOL-2026-0001", "leao.chura@masterdrilling.com", "127.0.0.1");
 
         assertNotNull(response);
         assertTrue(response.isExito());

@@ -174,7 +174,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
 
     @Override
     @Transactional
-    public MensajeGenericoResponse aprobarSolicitudTotal(String solicitudNum, String ipOrigen) {
+    public MensajeGenericoResponse aprobarSolicitudTotal(String solicitudNum, String correoAdmin, String ipOrigen) {
         Solicitud s = solicitudRepository.findById(solicitudNum)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Solicitud no encontrada"));
 
@@ -182,11 +182,14 @@ public class SolicitudServiceImpl implements ISolicitudService {
             throw new BadRequestException("La solicitud ya fue procesada anteriormente");
         }
 
+        Usuario adminUsuario = usuarioRepository.findByCorreoCorporativo(correoAdmin)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario evaluador no registrado"));
+
         s.setEstadoSolicitud(EstadoSolicitud.APROBADA);
         s.getDetalles().forEach(d -> d.setEstadoItem(EstadoItemSolicitud.APROBADO));
         solicitudRepository.save(s);
 
-        auditoriaService.registrarAsiento(s.getSolicitudNum(), 1L, "SOLICITUD_APROBADA_TOTAL", ipOrigen);
+        auditoriaService.registrarAsiento(s.getSolicitudNum(), adminUsuario.getIdUsuario(), "SOLICITUD_APROBADA_TOTAL", ipOrigen);
         notificacionService.enviarNotificacion(s.getMecanico().getDniMecanico(), "Solicitud Aprobada", "La orden " + s.getSolicitudNum() + " fue autorizada");
 
         return MensajeGenericoResponse.builder().exito(true).mensaje("Solicitud aprobada integramente").dato(s.getSolicitudNum()).build();
@@ -245,6 +248,9 @@ public class SolicitudServiceImpl implements ISolicitudService {
         Solicitud s = solicitudRepository.findById(solicitudNum)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Solicitud no encontrada"));
 
+        Usuario adminUsuario = usuarioRepository.findByCorreoCorporativo(correoAdmin)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario evaluador no registrado"));
+
         boolean existenAprobados = false;
         boolean existenRechazados = false;
 
@@ -275,7 +281,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
         }
 
         solicitudRepository.save(s);
-        auditoriaService.registrarAsiento(s.getSolicitudNum(), 1L, "SOLICITUD_APROBADA_PARCIAL", ipOrigen);
+        auditoriaService.registrarAsiento(s.getSolicitudNum(), adminUsuario.getIdUsuario(), "SOLICITUD_APROBADA_PARCIAL", ipOrigen);
         notificacionService.enviarNotificacion(s.getMecanico().getDniMecanico(), "Resolucion Mixta", "Orden " + s.getSolicitudNum() + " resuelta parcialmente");
 
         return MensajeGenericoResponse.builder().exito(true).mensaje("Dictamen parcial aplicado").dato(s.getSolicitudNum()).build();
@@ -283,7 +289,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
 
     @Override
     @Transactional
-    public MensajeGenericoResponse marcarOrdenContactada(String solicitudNum, ContactarProveedorRequest request, String ipOrigen) {
+    public MensajeGenericoResponse marcarOrdenContactada(String solicitudNum, String correoAdmin, ContactarProveedorRequest request, String ipOrigen) {
         Solicitud s = solicitudRepository.findById(solicitudNum)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Solicitud no encontrada"));
 
@@ -291,9 +297,12 @@ public class SolicitudServiceImpl implements ISolicitudService {
             throw new BadRequestException("Solo se pueden contactar ordenes aprobadas previamente");
         }
 
+        Usuario adminUsuario = usuarioRepository.findByCorreoCorporativo(correoAdmin)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no registrado"));
+
         s.setEstadoSolicitud(EstadoSolicitud.ORDEN_CONTACTADA);
         solicitudRepository.save(s);
-        auditoriaService.registrarAsiento(s.getSolicitudNum(), 1L, "ORDEN_CONTACTADA_PROVEEDOR", ipOrigen);
+        auditoriaService.registrarAsiento(s.getSolicitudNum(), adminUsuario.getIdUsuario(), "ORDEN_CONTACTADA_PROVEEDOR", ipOrigen);
 
         return MensajeGenericoResponse.builder().exito(true).mensaje("Orden marcada como contactada").dato(s.getSolicitudNum()).build();
     }

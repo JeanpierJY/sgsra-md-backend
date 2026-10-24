@@ -1,23 +1,36 @@
 package com.masterdrilling.sgsramd.service.impl;
 
 import com.masterdrilling.sgsramd.dto.request.ActualizarPerfilRequest;
+import com.masterdrilling.sgsramd.dto.request.CrearUsuarioRequest;
 import com.masterdrilling.sgsramd.dto.request.LoginRequest;
 import com.masterdrilling.sgsramd.dto.response.LoginResponse;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
+import com.masterdrilling.sgsramd.dto.response.UsuarioResumenResponse;
 import com.masterdrilling.sgsramd.exception.AccesoDenegadoException;
+import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.exception.CuentaBloqueadaException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
+import com.masterdrilling.sgsramd.model.entity.Administrador;
+import com.masterdrilling.sgsramd.model.entity.Almacenista;
+import com.masterdrilling.sgsramd.model.entity.Mecanico;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.EstadoCuenta;
+import com.masterdrilling.sgsramd.model.enums.RolUsuario;
+import com.masterdrilling.sgsramd.repository.AdministradorRepository;
+import com.masterdrilling.sgsramd.repository.AlmacenistaRepository;
 import com.masterdrilling.sgsramd.repository.MecanicoRepository;
 import com.masterdrilling.sgsramd.repository.UsuarioRepository;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
 import com.masterdrilling.sgsramd.service.IAutenticacionService;
 import com.masterdrilling.sgsramd.util.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +38,8 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
 
     private final UsuarioRepository usuarioRepository;
     private final MecanicoRepository mecanicoRepository;
+    private final AlmacenistaRepository almacenistaRepository;
+    private final AdministradorRepository administradorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
     private final IAuditoriaService auditoriaService;
@@ -107,6 +122,109 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
                 .exito(true)
                 .mensaje("Perfil de operario actualizado exitosamente")
                 .dato(null)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UsuarioResumenResponse> listarUsuarios(RolUsuario rol, Pageable pageable) {
+        Page<Usuario> pagina = (rol != null) 
+                ? usuarioRepository.findByRol(rol, pageable) 
+                : usuarioRepository.findAll(pageable);
+
+        return pagina.map(u -> UsuarioResumenResponse.builder()
+                .idUsuario(u.getIdUsuario())
+                .dni(u.getDni())
+                .nombre(u.getNombre())
+                .correoCorporativo(u.getCorreoCorporativo())
+                .rol(u.getRol())
+                .estadoCuenta(u.getEstadoCuenta())
+                .intentosFallidos(u.getIntentosFallidos())
+                .creadoEn(u.getCreadoEn())
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse registrarUsuario(CrearUsuarioRequest request, String ipOrigen) {
+        if (usuarioRepository.existsByDni(request.getDni().trim())) {
+            throw new BadRequestException("El DNI ingresado ya se encuentra registrado en el sistema");
+        }
+
+        if (usuarioRepository.existsByCorreoCorporativo(request.getCorreoCorporativo().trim().toLowerCase())) {
+            throw new BadRequestException("El correo corporativo ingresado ya esta en uso");
+        }
+
+        Usuario nuevoUsuario = Usuario.builder()
+                .dni(request.getDni().trim())
+                .nombre(request.getNombre().trim())
+                .correoCorporativo(request.getCorreoCorporativo().trim().toLowerCase())
+                .contrasenaHash(passwordEncoder.encode(request.getContrasena()))
+                .rol(request.getRol())
+                .estadoCuenta(EstadoCuenta.ACTIVO)
+                .intentosFallidos(0)
+                .creadoEn(LocalDateTime.now())
+                .build();
+
+        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+
+        // Registro subordinado en tabla hija segun rol
+        switch (request.getRol()) {
+            case MECANICO -> {
+                Mecanico mec = Mecanico.builder()
+                        .dniMecanico(usuarioGuardado.getDni())
+                        .nombreMecanico(usuarioGuardado.getNombre())
+                        .especialidadMecanico(request.getEspecialidad() != null ? request.getEspecialidad() : "Mecanica General")
+                        .cargoMecanico(request.getCargo() != null ? request.getCargo() : "Mecanico de Planta")
+                        .telefono(request.getTelefono())
+                        .build();
+                mecanicoRepository.save(mec);
+            }
+            case ALMACENISTA -> {
+                Almacenista alm = Almacenista.builder()
+                        .dniAlmacenista(usuarioGuardado.getDni())
+                        .nombreAlmacenista(usuarioGuardado.getNombre())
+                        .sedeAsignada(request.getSedeAsignada() != null ? request.getSedeAsignada() : "Sede Central")
+                        .build();
+                almacenistaRepository.save(alm);
+            }
+            case ADMINISTRADOR -> {
+                Administrador adm = Administrador.builder()
+                        .dniAdministrador(usuarioGuardado.getDni())
+                        .nombreAdministrador(usuarioGuardado.getNombre())
+                        .correoCorporativo(usuarioGuardado.getCorreoCorporativo())
+                        .build();
+                administradorRepository.save(adm);
+            }
+        }
+
+        auditoriaService.registrarAsiento("ALTA_USUARIO_" + usuarioGuardado.getDni(), usuarioGuardado.getIdUsuario(), "USUARIO_CREADO", ipOrigen);
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Usuario " + usuarioGuardado.getNombre() + " registrado con exito")
+                .dato(usuarioGuardado.getIdUsuario())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse cambiarEstadoCuenta(Long idUsuario, EstadoCuenta nuevoEstado, String ipOrigen) {
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con ID: " + idUsuario));
+
+        usuario.setEstadoCuenta(nuevoEstado);
+        if (nuevoEstado == EstadoCuenta.ACTIVO) {
+            usuario.setIntentosFallidos(0);
+        }
+        usuarioRepository.save(usuario);
+
+        auditoriaService.registrarAsiento("ESTADO_CUENTA_" + usuario.getDni(), usuario.getIdUsuario(), "CAMBIO_ESTADO_" + nuevoEstado.name(), ipOrigen);
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Estado de cuenta actualizado a: " + nuevoEstado.name())
+                .dato(usuario.getEstadoCuenta())
                 .build();
     }
 }

@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-// Registro administrativo de rechazo 
+// Registro administrativo de rechazo formal
 @Entity
 @Table(name = "dictamen_rechazo")
 @Getter
@@ -21,7 +21,7 @@ public class DictamenRechazo {
     private String dictamenNum;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ref_solicitud_num", nullable = false)
+    @JoinColumn(name = "ref_solicitud_num", referencedColumnName = "solicitud_num", nullable = false)
     private Solicitud solicitud;
 
     @Column(name = "fecha_evaluacion", nullable = false)

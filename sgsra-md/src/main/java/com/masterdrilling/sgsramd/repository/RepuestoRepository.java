@@ -6,13 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 // DAO para catalogo de repuestos y busqueda predictiva (RF09, RF10, RF32)
-@Repository
 public interface RepuestoRepository extends JpaRepository<Repuesto, String> {
 
     Optional<Repuesto> findByCodParteAndActivoTrue(String codParte);

@@ -158,7 +158,7 @@ public class PrestamoServiceImpl implements IPrestamoService {
 
     @Override
     @Transactional
-    public MensajeGenericoResponse reportarHerramientaExtraviada(ReporteExtravioRequest request, String ipOrigen) {
+    public MensajeGenericoResponse reportarHerramientaExtraviada(String correoAlmacenista, ReporteExtravioRequest request, String ipOrigen) {
         Herramienta herramienta = herramientaRepository.findByCodHerramienta(request.getCodHerramienta().trim())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Herramienta no registrada"));
 
@@ -166,13 +166,17 @@ public class PrestamoServiceImpl implements IPrestamoService {
             throw new BadRequestException("La herramienta figura disponible en estantes. Verifique fisicamente el panol antes de reportarla");
         }
 
+        Usuario usuarioAlmacen = usuarioRepository.findByCorreoCorporativo(correoAlmacenista)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Almacenista reportante no encontrado"));
+
         herramienta.setEstadoActual(EstadoHerramienta.EXTRAVIADA.getDescripcionSql());
         herramientaRepository.save(herramienta);
 
         String custodio = prestamoRepository.findUltimoMecanicoCustodio(herramienta.getCodHerramienta())
                 .orElse("SIN_CUSTODIO_PREVIO");
 
-        auditoriaService.registrarAsiento(herramienta.getCodHerramienta(), 1L, "EXTRAVIO_IMPUTADO_" + custodio, ipOrigen);
+        // Se usa el ID del usuario real autenticado que emite el reporte
+        auditoriaService.registrarAsiento(herramienta.getCodHerramienta(), usuarioAlmacen.getIdUsuario(), "EXTRAVIO_IMPUTADO_" + custodio, ipOrigen);
 
         return MensajeGenericoResponse.builder()
                 .exito(true)

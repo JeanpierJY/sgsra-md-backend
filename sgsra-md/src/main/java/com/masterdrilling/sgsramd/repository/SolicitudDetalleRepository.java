@@ -5,13 +5,11 @@ import com.masterdrilling.sgsramd.model.entity.SolicitudDetalleId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
 
 // DAO para lineas y estadisticas de repuestos (RF13, RF22, RF29)
-@Repository
 public interface SolicitudDetalleRepository extends JpaRepository<SolicitudDetalle, SolicitudDetalleId> {
 
     List<SolicitudDetalle> findByIdSolicitudNum(String solicitudNum);

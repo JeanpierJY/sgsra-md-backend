@@ -19,8 +19,8 @@ public interface ISolicitudService {
     Page<SolicitudResumenResponse> listarHistorialMecanico(String correoMecanico, Pageable pageable);
     List<SolicitudResumenResponse> listarBandejaAdministrador(EstadoSolicitud estado);
     DetalleSolicitudResponse obtenerDetalleSolicitud(String solicitudNum);
-    MensajeGenericoResponse aprobarSolicitudTotal(String solicitudNum, String ipOrigen);
+    MensajeGenericoResponse aprobarSolicitudTotal(String solicitudNum, String correoAdmin, String ipOrigen);
     MensajeGenericoResponse rechazarSolicitudTotal(String solicitudNum, String correoAdmin, DictamenRechazoRequest request, String ipOrigen);
     MensajeGenericoResponse aprobarSolicitudParcial(String solicitudNum, String correoAdmin, AprobacionParcialRequest request, String ipOrigen);
-    MensajeGenericoResponse marcarOrdenContactada(String solicitudNum, ContactarProveedorRequest request, String ipOrigen);
+    MensajeGenericoResponse marcarOrdenContactada(String solicitudNum, String correoAdmin, ContactarProveedorRequest request, String ipOrigen);
 }
