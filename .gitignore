@@ -22,3 +22,14 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+
+sgsra_mobile/.dart_tool/
+sgsra_mobile/.flutter-plugins
+sgsra_mobile/.flutter-plugins-dependencies
+sgsra_mobile/.packages
+sgsra_mobile/build/
+sgsra_mobile/android/.gradle/
+sgsra_mobile/android/local.properties
+sgsra_mobile/android/app/build/
+*.ephemeral/
