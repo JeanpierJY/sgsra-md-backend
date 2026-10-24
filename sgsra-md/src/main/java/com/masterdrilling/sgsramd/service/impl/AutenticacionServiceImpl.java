@@ -7,7 +7,6 @@ import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 import com.masterdrilling.sgsramd.exception.AccesoDenegadoException;
 import com.masterdrilling.sgsramd.exception.CuentaBloqueadaException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
-import com.masterdrilling.sgsramd.model.entity.Mecanico;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.EstadoCuenta;
 import com.masterdrilling.sgsramd.repository.MecanicoRepository;
@@ -60,7 +59,6 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
             throw new AccesoDenegadoException("Credenciales no validas. Intentos restantes: " + (UMBRAL_BLOQUEO_INTENTOS - usuario.getIntentosFallidos()));
         }
 
-        // Exito de autenticacion
         usuario.setIntentosFallidos(0);
         usuarioRepository.save(usuario);
 

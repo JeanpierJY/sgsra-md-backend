@@ -35,13 +35,11 @@ import java.util.List;
 public class SolicitudServiceImpl implements ISolicitudService {
 
     private final SolicitudRepository solicitudRepository;
-    private final SolicitudDetalleRepository detalleRepository;
     private final RepuestoRepository repuestoRepository;
     private final MaquinariaRepository maquinariaRepository;
     private final MecanicoRepository mecanicoRepository;
     private final AdministradorRepository administradorRepository;
     private final DictamenRechazoRepository dictamenRepository;
-    private final DetalleRechazoRepository detalleRechazoRepository;
     private final UsuarioRepository usuarioRepository;
     private final IAuditoriaService auditoriaService;
     private final INotificacionService notificacionService;
@@ -51,7 +49,6 @@ public class SolicitudServiceImpl implements ISolicitudService {
     @Override
     @Transactional
     public MensajeGenericoResponse registrarSolicitud(String correoMecanico, SolicitudRepuestoRequest request, String ipOrigen) {
-        // Validacion desacoplada de reglas OCP
         validadoresSolicitud.forEach(v -> v.validar(request));
 
         Usuario usuario = usuarioRepository.findByCorreoCorporativo(correoMecanico)
