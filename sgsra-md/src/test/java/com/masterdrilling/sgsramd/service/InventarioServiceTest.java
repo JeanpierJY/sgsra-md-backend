@@ -1,16 +1,19 @@
 ﻿package com.masterdrilling.sgsramd.service;
 
-import com.masterdrilling.sgsramd.dto.request.LoginRequest;
-import com.masterdrilling.sgsramd.dto.response.LoginResponse;
-import com.masterdrilling.sgsramd.exception.AccesoDenegadoException;
-import com.masterdrilling.sgsramd.exception.CuentaBloqueadaException;
+import com.masterdrilling.sgsramd.dto.request.RegistrarHerramientaRequest;
+import com.masterdrilling.sgsramd.dto.response.DashboardStockResponse;
+import com.masterdrilling.sgsramd.dto.response.FichaHerramientaResponse;
+import com.masterdrilling.sgsramd.exception.BadRequestException;
+import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
+import com.masterdrilling.sgsramd.model.entity.Almacenista;
+import com.masterdrilling.sgsramd.model.entity.Herramienta;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
-import com.masterdrilling.sgsramd.model.enums.EstadoCuenta;
-import com.masterdrilling.sgsramd.model.enums.RolUsuario;
-import com.masterdrilling.sgsramd.repository.MecanicoRepository;
+import com.masterdrilling.sgsramd.model.enums.CategoriaHerramienta;
+import com.masterdrilling.sgsramd.repository.AlmacenistaRepository;
+import com.masterdrilling.sgsramd.repository.HerramientaRepository;
+import com.masterdrilling.sgsramd.repository.RegistroRepository;
 import com.masterdrilling.sgsramd.repository.UsuarioRepository;
-import com.masterdrilling.sgsramd.service.impl.AutenticacionServiceImpl;
-import com.masterdrilling.sgsramd.util.JwtTokenUtil;
+import com.masterdrilling.sgsramd.service.impl.InventarioServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,99 +21,145 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-// Pruebas unitarias para logica de autenticacion y control de intentos fallidos (RF01, RF06)
+// Pruebas unitarias para logica de stock de panol y alta formal (RF33, RF35, RF44)
 @ExtendWith(MockitoExtension.class)
-class AutenticacionServiceTest {
+class InventarioServiceTest {
+
+    @Mock
+    private HerramientaRepository herramientaRepository;
+
+    @Mock
+    private AlmacenistaRepository almacenistaRepository;
 
     @Mock
     private UsuarioRepository usuarioRepository;
 
     @Mock
-    private MecanicoRepository mecanicoRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private JwtTokenUtil jwtTokenUtil;
-
-    @Mock
-    private IAuditoriaService auditoriaService;
+    private RegistroRepository registroRepository;
 
     @InjectMocks
-    private AutenticacionServiceImpl autenticacionService;
+    private InventarioServiceImpl inventarioService;
 
-    private Usuario usuarioPrueba;
-    private LoginRequest loginRequest;
+    private Herramienta herramienta;
+    private Usuario usuarioAlmacen;
+    private Almacenista almacenista;
 
     @BeforeEach
     void setUp() {
-        usuarioPrueba = Usuario.builder()
-                .idUsuario(1L)
-                .dni("75859812")
-                .nombre("Carlos Mendoza")
-                .correoCorporativo("carlos.mendoza@masterdrilling.com")
-                .contrasenaHash("$2a$10$hashedPassword")
-                .rol(RolUsuario.MECANICO)
-                .estadoCuenta(EstadoCuenta.ACTIVO)
-                .intentosFallidos(0)
+        herramienta = Herramienta.builder()
+                .codHerramienta("HER-TOR-004")
+                .nombreHerramienta("Torquimetro Industrial")
+                .marcaHerramienta("Proto")
+                .categoria("Manuales")
+                .estadoActual("Disponible")
                 .build();
 
-        loginRequest = LoginRequest.builder()
-                .correoCorporativo("carlos.mendoza@masterdrilling.com")
-                .contrasena("Mecanico123*")
+        usuarioAlmacen = Usuario.builder()
+                .idUsuario(2L)
+                .dni("45829104")
+                .correoCorporativo("marcos.ramos@masterdrilling.com")
+                .build();
+
+        almacenista = Almacenista.builder()
+                .dniAlmacenista("45829104")
+                .nombreAlmacenista("Marcos Aurelio Ramos")
+                .sedeAsignada("Taller Lurin")
                 .build();
     }
 
     @Test
-    @DisplayName("Debe autenticar exitosamente y retornar token cuando las credenciales son validas")
-    void testAutenticar_Exito() {
-        when(usuarioRepository.findByCorreoCorporativo(anyString())).thenReturn(Optional.of(usuarioPrueba));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
-        when(jwtTokenUtil.generarToken(anyString(), any(RolUsuario.class))).thenReturn("token.jwt.valido");
+    @DisplayName("Debe procesar la consulta agrupada y devolver las metricas exactas del dashboard (RF33)")
+    void testObtenerMetricasDashboard_Exito() {
+        List<Object[]> resultados = new ArrayList<>();
+        resultados.add(new Object[]{"Disponible", 142L});
+        resultados.add(new Object[]{"Prestada", 18L});
+        resultados.add(new Object[]{"En Mora", 3L});
+        resultados.add(new Object[]{"En Mantenimiento", 5L});
+        resultados.add(new Object[]{"Extraviada", 1L});
 
-        LoginResponse response = autenticacionService.autenticar(loginRequest, "127.0.0.1");
+        when(herramientaRepository.contarHerramientasPorEstado()).thenReturn(resultados);
 
-        assertNotNull(response);
-        assertEquals("token.jwt.valido", response.getTokenJwt());
-        assertEquals("75859812", response.getDni());
-        assertEquals(0, usuarioPrueba.getIntentosFallidos());
-        verify(usuarioRepository, times(1)).save(usuarioPrueba);
-        verify(auditoriaService, times(1)).registrarAsiento(eq("LOGIN_EXITOSO"), eq(1L), eq("SESION_INICIADA"), anyString());
+        DashboardStockResponse dashboard = inventarioService.obtenerMetricasDashboard();
+
+        assertNotNull(dashboard);
+        assertEquals(142, dashboard.getTotalDisponibles());
+        assertEquals(18, dashboard.getTotalPrestadas());
+        assertEquals(3, dashboard.getTotalEnMora());
+        assertEquals(5, dashboard.getTotalEnMantenimiento());
+        assertEquals(1, dashboard.getTotalExtraviadas());
     }
 
     @Test
-    @DisplayName("Debe incrementar intentos fallidos y lanzar excepcion cuando la clave no coincide")
-    void testAutenticar_ClaveIncorrecta() {
-        when(usuarioRepository.findByCorreoCorporativo(anyString())).thenReturn(Optional.of(usuarioPrueba));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
+    @DisplayName("Debe retornar la ficha de herramienta cuando el codigo existe (RF35)")
+    void testConsultarHerramientaPorCodigo_Exito() {
+        when(herramientaRepository.findByCodHerramienta("HER-TOR-004")).thenReturn(Optional.of(herramienta));
 
-        assertThrows(AccesoDenegadoException.class, () -> autenticacionService.autenticar(loginRequest, "127.0.0.1"));
+        FichaHerramientaResponse ficha = inventarioService.consultarHerramientaPorCodigo("HER-TOR-004");
 
-        assertEquals(1, usuarioPrueba.getIntentosFallidos());
-        verify(usuarioRepository, times(1)).save(usuarioPrueba);
+        assertNotNull(ficha);
+        assertEquals("HER-TOR-004", ficha.getCodHerramienta());
+        assertEquals("Proto", ficha.getMarcaHerramienta());
+        assertEquals("Disponible", ficha.getEstadoActual());
     }
 
     @Test
-    @DisplayName("Debe bloquear la cuenta al alcanzar 3 intentos fallidos consecutivos (RF06)")
-    void testAutenticar_BloqueoPorTresIntentos() {
-        usuarioPrueba.setIntentosFallidos(2);
-        when(usuarioRepository.findByCorreoCorporativo(anyString())).thenReturn(Optional.of(usuarioPrueba));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
+    @DisplayName("Debe lanzar RecursoNoEncontradoException si la herramienta no existe")
+    void testConsultarHerramientaPorCodigo_NoExiste() {
+        when(herramientaRepository.findByCodHerramienta("HER-INEXISTENTE")).thenReturn(Optional.empty());
 
-        assertThrows(CuentaBloqueadaException.class, () -> autenticacionService.autenticar(loginRequest, "127.0.0.1"));
+        assertThrows(RecursoNoEncontradoException.class, () ->
+                inventarioService.consultarHerramientaPorCodigo("HER-INEXISTENTE"));
+    }
 
-        assertEquals(3, usuarioPrueba.getIntentosFallidos());
-        assertEquals(EstadoCuenta.BLOQUEADO, usuarioPrueba.getEstadoCuenta());
-        verify(usuarioRepository, times(1)).save(usuarioPrueba);
-        verify(auditoriaService, times(1)).registrarAsiento(eq("BLOQUEO_CUENTA"), eq(1L), eq("BLOQUEO_POR_INTENTOS"), anyString());
+    @Test
+    @DisplayName("Debe registrar herramienta y crear ficha de registro de ingreso formal (RF44)")
+    void testRegistrarNuevaHerramienta_Exito() {
+        RegistrarHerramientaRequest request = RegistrarHerramientaRequest.builder()
+                .codHerramienta("HER-LLAV-099")
+                .nombreHerramienta("Juego de Llaves")
+                .marcaHerramienta("Stanley")
+                .categoria(CategoriaHerramienta.MANUALES)
+                .build();
+
+        when(herramientaRepository.existsById("HER-LLAV-099")).thenReturn(false);
+        when(usuarioRepository.findByCorreoCorporativo(anyString())).thenReturn(Optional.of(usuarioAlmacen));
+        when(almacenistaRepository.findByDniAlmacenista(anyString())).thenReturn(Optional.of(almacenista));
+        when(herramientaRepository.save(any(Herramienta.class))).thenAnswer(i -> i.getArgument(0));
+
+        FichaHerramientaResponse ficha = inventarioService.registrarNuevaHerramienta(request, "marcos.ramos@masterdrilling.com");
+
+        assertNotNull(ficha);
+        assertEquals("HER-LLAV-099", ficha.getCodHerramienta());
+        assertEquals("Disponible", ficha.getEstadoActual());
+        verify(registroRepository, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("Debe lanzar BadRequestException si el codigo de herramienta ya existe")
+    void testRegistrarNuevaHerramienta_Duplicada() {
+        RegistrarHerramientaRequest request = RegistrarHerramientaRequest.builder()
+                .codHerramienta("HER-TOR-004")
+                .nombreHerramienta("Torquimetro")
+                .marcaHerramienta("Proto")
+                .categoria(CategoriaHerramienta.MANUALES)
+                .build();
+
+        when(herramientaRepository.existsById("HER-TOR-004")).thenReturn(true);
+
+        assertThrows(BadRequestException.class, () ->
+                inventarioService.registrarNuevaHerramienta(request, "marcos.ramos@masterdrilling.com"));
+
+        verify(herramientaRepository, never()).save(any());
+        verify(registroRepository, never()).save(any());
     }
 }
