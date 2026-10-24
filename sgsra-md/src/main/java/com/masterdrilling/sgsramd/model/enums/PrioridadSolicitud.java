@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Nivel de urgencia asignado por el mecanico (RF14)
 public enum PrioridadSolicitud {

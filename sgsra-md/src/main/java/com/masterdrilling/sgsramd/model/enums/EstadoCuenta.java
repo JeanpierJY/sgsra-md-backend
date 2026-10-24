@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Define el estado operativo y de bloqueo de la cuenta de usuario (RF06)
 public enum EstadoCuenta {

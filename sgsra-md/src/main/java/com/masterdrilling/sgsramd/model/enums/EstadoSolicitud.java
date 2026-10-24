@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Ciclo de vida transaccional del requerimiento de repuestos (RF20, RF23, RF24, RF26, RF28)
 public enum EstadoSolicitud {

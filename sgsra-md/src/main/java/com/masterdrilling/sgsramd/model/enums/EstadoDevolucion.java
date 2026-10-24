@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Calificacion tecnica del retorno fisico de la herramienta (RF39, RF40)
 public enum EstadoDevolucion {

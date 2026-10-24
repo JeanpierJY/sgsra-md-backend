@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.util;
+package com.masterdrilling.sgsramd.util;
 
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
 import org.springframework.stereotype.Component;

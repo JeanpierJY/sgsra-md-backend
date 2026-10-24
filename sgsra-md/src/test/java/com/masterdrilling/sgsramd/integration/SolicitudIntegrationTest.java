@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.integration;
+package com.masterdrilling.sgsramd.integration;
 
 import com.masterdrilling.sgsramd.dto.request.SolicitudRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;

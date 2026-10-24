@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.entity;
+package com.masterdrilling.sgsramd.model.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.service.impl;
+package com.masterdrilling.sgsramd.service.impl;
 
 import com.masterdrilling.sgsramd.dto.response.AuditoriaResponse;
 import com.masterdrilling.sgsramd.model.entity.AuditoriaOperacion;

@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.util;
+package com.masterdrilling.sgsramd.util;
 
 import org.apache.commons.lang3.StringUtils;
 

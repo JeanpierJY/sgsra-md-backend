@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.entity;
+package com.masterdrilling.sgsramd.model.entity;
 
 import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
 import jakarta.persistence.*;

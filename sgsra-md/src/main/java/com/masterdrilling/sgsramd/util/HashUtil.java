@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.util;
+package com.masterdrilling.sgsramd.util;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

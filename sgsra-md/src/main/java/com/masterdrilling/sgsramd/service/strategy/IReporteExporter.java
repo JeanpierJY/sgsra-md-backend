@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.service.strategy;
+package com.masterdrilling.sgsramd.service.strategy;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;

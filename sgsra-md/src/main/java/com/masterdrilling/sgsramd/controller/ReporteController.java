@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.controller;
+package com.masterdrilling.sgsramd.controller;
 
 import com.masterdrilling.sgsramd.dto.response.EstadisticaDemandaResponse;
 import com.masterdrilling.sgsramd.service.IReporteService;

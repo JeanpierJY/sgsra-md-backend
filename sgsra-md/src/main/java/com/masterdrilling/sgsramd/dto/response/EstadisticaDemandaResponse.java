@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.dto.response;
+package com.masterdrilling.sgsramd.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

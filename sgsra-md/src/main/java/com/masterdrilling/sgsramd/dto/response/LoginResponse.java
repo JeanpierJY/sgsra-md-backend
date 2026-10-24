@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.dto.response;
+package com.masterdrilling.sgsramd.dto.response;
 
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.service.impl;
+package com.masterdrilling.sgsramd.service.impl;
 
 import com.masterdrilling.sgsramd.service.IExportacionDocumentoService;
 import com.masterdrilling.sgsramd.service.IReporteService;

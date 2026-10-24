@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.service;
+package com.masterdrilling.sgsramd.service;
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;

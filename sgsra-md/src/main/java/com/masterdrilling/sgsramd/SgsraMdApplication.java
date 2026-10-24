@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsra_md;
+package com.masterdrilling.sgsramd;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

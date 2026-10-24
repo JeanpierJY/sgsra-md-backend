@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.dto.request;
+package com.masterdrilling.sgsramd.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

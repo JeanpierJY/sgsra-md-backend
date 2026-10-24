@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Segmentacion tecnica en el inventario del panol (RF45)
 public enum CategoriaHerramienta {

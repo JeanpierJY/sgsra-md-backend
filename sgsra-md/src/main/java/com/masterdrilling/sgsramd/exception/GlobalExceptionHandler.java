@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.exception;
+package com.masterdrilling.sgsramd.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;

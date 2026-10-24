@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Condicion fisica y operativa de la flota pesada (RF15)
 public enum EstadoMaquinaria {

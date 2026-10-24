@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.exception;
+package com.masterdrilling.sgsramd.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

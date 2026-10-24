@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.repository;
 
 import com.masterdrilling.sgsramd.model.entity.RegistroDetalle;
 import com.masterdrilling.sgsramd.model.entity.RegistroDetalleId;

@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Situacion transaccional del prestamo de herramientas (RF36, RF40, RF43)
 public enum EstadoPrestamo {

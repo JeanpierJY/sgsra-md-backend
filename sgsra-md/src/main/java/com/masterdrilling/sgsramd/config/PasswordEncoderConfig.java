@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.config;
+package com.masterdrilling.sgsramd.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

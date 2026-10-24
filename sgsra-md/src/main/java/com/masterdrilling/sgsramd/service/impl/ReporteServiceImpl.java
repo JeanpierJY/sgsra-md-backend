@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.service.impl;
+package com.masterdrilling.sgsramd.service.impl;
 
 import com.masterdrilling.sgsramd.dto.response.EstadisticaDemandaResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;

@@ -1,4 +1,4 @@
-﻿package com.masterdrilling.sgsramd.model.enums;
+package com.masterdrilling.sgsramd.model.enums;
 
 // Estado operativo y de custodia del activo en panol (RF33, RF37, RF40, RF41, RF43)
 public enum EstadoHerramienta {
