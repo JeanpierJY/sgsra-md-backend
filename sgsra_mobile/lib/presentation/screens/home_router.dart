@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'catalogo_screen.dart';
+import 'almacen_scan_screen.dart'; 
+import 'admin_solicitudes_screen.dart';
 
 class HomeRouter extends StatelessWidget {
   final String role;
@@ -13,16 +15,14 @@ class HomeRouter extends StatelessWidget {
       case "MECANICO":
         return const CatalogoScreen();
       case "ADMINISTRADOR":
-        return const Scaffold(
-          body: Center(child: Text("Bandeja del Administrador\nEvaluación de solicitudes autorizada.", textAlign: TextAlign.center)),
-        );
+        return const AdminSolicitudesScreen(); 
       case "ALMACENISTA":
-        return const Scaffold(
-          body: Center(child: Text("Dashboard del Almacenista\nControl óptico por QR disponible.", textAlign: TextAlign.center)),
-        );
+        return const AlmacenScanScreen(); 
       default:
         return const Scaffold(
-          body: Center(child: Text("Error: Rol no parametrizado en soporte Técnico.")),
+          body: Center(
+            child: Text("Error: Rol no parametrizado en soporte Técnico.", textAlign: TextAlign.center),
+          ),
         );
     }
   }

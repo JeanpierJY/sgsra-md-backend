@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/catalogo_bloc.dart';
+import 'solicitud_form_screen.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
@@ -19,6 +20,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Catálogo Maestro de Repuestos")),
@@ -30,8 +37,8 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               controller: _searchController,
               onChanged: (text) => context.read<CatalogoBloc>().add(BuscarRepuestosRequested(text)),
               decoration: const InputDecoration(
-                labelText: "Buscar por nombre o código de parte...",
-                prefixIcon: Icon(Icons.search, color: Color(0xFFFFB300)),
+                labelText: "Buscar repuesto...", 
+                prefixIcon: Icon(Icons.search, color: Color(0xFFFFB300)), 
                 border: OutlineInputBorder(),
               ),
             ),
@@ -41,9 +48,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               builder: (context, state) {
                 if (state is CatalogoLoading) {
                   return const Center(child: CircularProgressIndicator(color: Color(0xFFFFB300)));
-                } else if (state is CatalogoLoaded) {
+                }
+                if (state is CatalogoLoaded) {
                   final lista = _searchController.text.isNotEmpty ? state.sugerencias : state.items;
-                  if (lista.isEmpty) return const Center(child: Text("No hay coincidencias."));
+                  if (lista.isEmpty) {
+                    return const Center(child: Text("No hay coincidencias."));
+                  }
                   
                   return ListView.builder(
                     itemCount: lista.length,
@@ -53,8 +63,15 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                         margin: const EdgeInsets.all(8),
                         child: ListTile(
                           title: Text(item.nombreRepuesto),
-                          subtitle: Text("Código Parte: ${item.codParte}", style: const TextStyle(color: Color(0xFF29B6F6))),
-                          trailing: Text("Stock: ${item.stockActual}"),
+                          subtitle: Text("Código: ${item.codParte}", style: const TextStyle(color: Color(0xFF29B6F6))),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SolicitudFormScreen(repuestoSeleccionado: item),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
