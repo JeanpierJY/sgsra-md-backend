@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'catalogo_screen.dart';
-import 'almacen_scan_screen.dart'; 
-import 'admin_solicitudes_screen.dart';
+import 'mecanico/catalogo_screen.dart';
+import 'administrador/gestion_usuarios_screen.dart';
+import 'almacenista/dashboard_pañol_screen.dart';
 
 class HomeRouter extends StatelessWidget {
   final String role;
@@ -10,20 +10,28 @@ class HomeRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // RF02, RF08: Intercepción de seguridad por roles para denegar accesos cruzados
-    switch (role) {
+    // RF02 y RF08: Intercepción de seguridad y carga de vistas según rol limpio
+    switch (role.toUpperCase()) {
       case "MECANICO":
         return const CatalogoScreen();
       case "ADMINISTRADOR":
-        return const AdminSolicitudesScreen(); 
+        return const GestionUsuariosScreen();
       case "ALMACENISTA":
-        return const AlmacenScanScreen(); 
+        return const DashboardPanolScreen();
       default:
         return const Scaffold(
           body: Center(
-            child: Text("Error: Rol no parametrizado en soporte Técnico.", textAlign: TextAlign.center),
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text(
+                "Error de Permisos:\nSu cuenta no registra vistas válidas en el catálogo maestro. Contacte a soporte técnico.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
           ),
         );
     }
   }
 }
+

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:local_auth/local_auth.dart';
-import '../bloc/auth_bloc.dart';
+import '../bloc/auth/auth_bloc.dart';
+import '../bloc/auth/auth_event.dart';
+import '../bloc/auth/auth_state.dart';
 import 'home_router.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,35 +13,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _correoController = TextEditingController();
   final _passwordController = TextEditingController();
-  final LocalAuthentication _localAuth = LocalAuthentication();
 
-  Future<void> _authenticateWithBiometrics() async {
-    try {
-      bool canCheckBiometrics = await _localAuth.canCheckBiometrics;
-      bool isDeviceSupported = await _localAuth.isDeviceSupported();
-
-      if (canCheckBiometrics && isDeviceSupported) {
-        bool authenticated = await _localAuth.authenticate(
-          localizedReason: 'SGSRA-MD: Escanee su huella digital para control de accesos',
-          options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
-        );
-        if (authenticated && mounted) {
-          context.read<AuthBloc>().add(LoginRequested("mecanico@masterdrilling.com", "bypass_biometric_login")); // RF05
-        }
-      } else {
-        _showSnackBar("El hardware biométrico no se encuentra disponible.");
-      }
-    } catch (e) {
-      _showSnackBar("Error al procesar la huella digital.");
-    }
-  }
-
-  void _showSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    }
+  @override
+  void dispose() {
+    _correoController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,50 +31,60 @@ class _LoginScreenState extends State<LoginScreen> {
         listener: (context, state) {
           if (state is Authenticated) {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeRouter(role: state.role)));
-          } else if (state is AuthError) {
-            _showSnackBar(state.message);
           } else if (state is AuthAccountLocked) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Cuenta bloqueada por seguridad tras 3 intentos fallidos (RF06)."),
-              backgroundColor: Colors.red,
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.msg), backgroundColor: Colors.red));
+          } else if (state is AuthFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error), backgroundColor: Colors.orange));
           }
         },
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text("SGSRA-MD", style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-              const SizedBox(height: 6),
-              const Text("Sistema de Gestión de Repuestos y Almacén", textAlign: TextAlign.center),
-              const SizedBox(height: 48),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Correo Corporativo", border: OutlineInputBorder()),
-                keyboardType: TextInputType.emailAddress,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.precision_manufacturing, size: 72, color: Color(0xFFFFB300)),
+                  const SizedBox(height: 16),
+                  Text("SGSRA-MD", style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  const Text("Plataforma Móvil Logística - Master Drilling", textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 48),
+                  TextFormField(
+                    controller: _correoController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(labelText: "Correo Corporativo (RF01)", border: OutlineInputBorder()),
+                    validator: (v) => (v == null || !v.contains('@masterdrilling.com')) ? 'Debe usar su correo institucional validado' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: "Contraseña", border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      if (state is AuthLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFFFFB300)));
+                      return ElevatedButton(
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            context.read<AuthBloc>().add(AuthenticationSubmitRequested(
+                              email: _correoController.text.trim(),
+                              password: _passwordController.text,
+                            ));
+                          }
+                        },
+                        child: const Text("INICIAR SESIÓN"),
+                      );
+                    },
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Contraseña", border: OutlineInputBorder()),
-                obscureText: true,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<AuthBloc>().add(LoginRequested(_emailController.text, _passwordController.text)); // RF01
-                },
-                child: const Text("INICIAR SESIÓN"),
-              ),
-              const SizedBox(height: 32),
-              IconButton(
-                iconSize: 56,
-                icon: const Icon(Icons.fingerprint, color: Color(0xFFFFB300)),
-                onPressed: _authenticateWithBiometrics,
-              )
-            ],
+            ),
           ),
         ),
       ),
