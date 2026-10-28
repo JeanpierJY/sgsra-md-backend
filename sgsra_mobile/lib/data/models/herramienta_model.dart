@@ -15,11 +15,11 @@ class HerramientaModel {
 
   factory HerramientaModel.fromJson(Map<String, dynamic> json) {
     return HerramientaModel(
-      codHerramienta: json['codHerramienta'] ?? '',
-      nombreHerramienta: json['nombreHerramienta'] ?? '',
-      marcaHerramienta: json['marcaHerramienta'] ?? '',
-      categoria: json['categoria'] ?? '',
-      estadoActual: json['estadoActual'] ?? '',
+      codHerramienta: json['codHerramienta'] as String? ?? '',
+      nombreHerramienta: json['nombreHerramienta'] as String? ?? '',
+      marcaHerramienta: json['marcaHerramienta'] as String? ?? '',
+      categoria: json['categoria'] as String? ?? 'Manuales',
+      estadoActual: json['estadoActual'] as String? ?? 'Disponible',
     );
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'mecanico/mecanico_router.dart';
-import 'administrador/gestion_usuarios_tab.dart'; 
-import 'almacenista/dashboard_panol_screen.dart'; 
+import 'administrador/admin_main_screen.dart';
+import 'mecanico/mecanico_main_screen.dart';
+import 'almacenista/almacenista_main_screen.dart';
 
 class HomeRouter extends StatelessWidget {
   final String role;
@@ -12,17 +12,19 @@ class HomeRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (role.toUpperCase()) {
       case "MECANICO":
-        return const MecanicoRouter();
-        
+        return const MecanicoMainScreen();
       case "ADMINISTRADOR":
-        return const GestionUsuariosTab(); 
-        
+        return const AdminMainScreen();
       case "ALMACENISTA":
-        return const DashboardPanolScreen(); 
-        
+        return const AlmacenistaMainScreen();
       default:
         return const Scaffold(
-          body: Center(child: Text("Error de Privilegios")),
+          body: Center(
+            child: Text(
+              "Rol desconocido. Contacte a soporte de sistemas.",
+              style: TextStyle(color: Colors.redAccent, fontSize: 16),
+            ),
+          ),
         );
     }
   }

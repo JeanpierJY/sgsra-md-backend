@@ -22,6 +22,26 @@ FROM usuario
 WHERE LOWER(correo_corporativo) = 'leao.chura@masterdrilling.com';
 
 
+-- Limpiar dependencias transaccionales
+DELETE FROM solicitud_detalle;
+DELETE FROM solicitud;
+DELETE FROM prestamo_detalle;
+DELETE FROM prestamo;
+DELETE FROM devolucion_detalle;
+DELETE FROM devolucion;
+DELETE FROM registro_detalle;
+DELETE FROM registro;
+DELETE FROM detalle_rechazo;
+DELETE FROM dictamen_rechazo;
+
+-- Limpiar tablas de roles
+DELETE FROM administrador;
+DELETE FROM mecanico;
+DELETE FROM almacenista;
+
+-- Limpiar usuarios
+DELETE FROM usuario;
+
 SELECT id_auditoria, id_operacion, accion, timestamp 
 FROM auditoria_operacion 
 ORDER BY id_auditoria DESC;

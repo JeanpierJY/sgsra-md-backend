@@ -1,57 +1,59 @@
-import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'dart:async';
 import 'package:path/path.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 class DatabaseHelper {
-  static final DatabaseHelper instance = DatabaseHelper._init();
-  static Database? _database;
+  static final DatabaseHelper _instance = DatabaseHelper._internal();
+  factory DatabaseHelper() => _instance;
+  DatabaseHelper._internal();
 
-  DatabaseHelper._init();
+  static Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('sgsra_md_secured_local.db');
+    _database = await _initDatabase();
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-    const String encryptionKey = "MasterDrillingSecuredKey2026_AES256_Prod";
+  Future<Database> _initDatabase() async {
+    final String databasesPath = await getDatabasesPath();
+    final String path = join(databasesPath, 'sgsra_offline.db');
 
     return await openDatabase(
       path,
       version: 1,
-      password: encryptionKey,
-      onCreate: _createDB,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE borrador_solicitud (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codMaquinaria TEXT NOT NULL,
+            prioridad TEXT NOT NULL,
+            justificacionTecnica TEXT NOT NULL,
+            payloadJson TEXT NOT NULL,
+            sincronizado INTEGER DEFAULT 0
+          )
+        ''');
+      },
     );
   }
 
-  Future _createDB(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE borradores_solicitudes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cod_maquinaria TEXT NOT NULL,
-        prioridad TEXT NOT NULL,
-        justificacion TEXT NOT NULL,
-        repuestos_json TEXT NOT NULL,
-        fecha_creacion TEXT NOT NULL
-      )
-    ''');
+  Future<int> guardarBorradorOffline(Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.insert('borrador_solicitud', data);
   }
 
-  Future<int> guardarBorradorOffline(Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.insert('borradores_solicitudes', row);
+  Future<List<Map<String, dynamic>>> obtenerBorradoresPendientes() async {
+    final db = await database;
+    return await db.query('borrador_solicitud', where: 'sincronizado = 0');
   }
 
-  Future<List<Map<String, dynamic>>> obtenerBorradoresOffline() async {
-    final db = await instance.database;
-    return await db.query('borradores_solicitudes', orderBy: 'fecha_creacion DESC');
-  }
-
-  Future<int> eliminarBorradorSincronizado(int id) async {
-    final db = await instance.database;
-    return await db.delete('borradores_solicitudes', where: 'id = ?', whereArgs: [id]);
+  Future<int> marcarComoSincronizado(int id) async {
+    final db = await database;
+    return await db.update(
+      'borrador_solicitud',
+      {'sincronizado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
-

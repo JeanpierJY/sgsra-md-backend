@@ -15,11 +15,11 @@ class DashboardMetricasModel {
 
   factory DashboardMetricasModel.fromJson(Map<String, dynamic> json) {
     return DashboardMetricasModel(
-      totalDisponibles: json['totalDisponibles'] ?? 0,
-      totalPrestadas: json['totalPrestadas'] ?? 0,
-      totalEnMora: json['totalEnMora'] ?? 0,
-      totalEnMantenimiento: json['totalEnMantenimiento'] ?? 0,
-      totalExtraviadas: json['totalExtraviadas'] ?? 0,
+      totalDisponibles: json['totalDisponibles'] as int? ?? 0,
+      totalPrestadas: json['totalPrestadas'] as int? ?? 0,
+      totalEnMora: json['totalEnMora'] as int? ?? 0,
+      totalEnMantenimiento: json['totalEnMantenimiento'] as int? ?? 0,
+      totalExtraviadas: json['totalExtraviadas'] as int? ?? 0,
     );
   }
 }

@@ -19,18 +19,19 @@ class UsuarioModel {
 
   factory UsuarioModel.fromJson(Map<String, dynamic> json) {
     return UsuarioModel(
-      idUsuario: json['idUsuario'],
-      dni: json['dni'] ?? '',
-      nombre: json['nombre'] ?? '',
-      correoCorporativo: json['correoCorporativo'] ?? '',
-      rol: json['rol'] ?? '',
-      estadoCuenta: json['estadoCuenta'] ?? 'ACTIVO',
-      intentosFallidos: json['intentosFallidos'] ?? 0,
+      idUsuario: json['idUsuario'] as int?,
+      dni: json['dni'] as String? ?? '',
+      nombre: json['nombre'] as String? ?? '',
+      correoCorporativo: json['correoCorporativo'] as String? ?? '',
+      rol: json['rol'] as String? ?? 'MECANICO',
+      estadoCuenta: json['estadoCuenta'] as String? ?? 'ACTIVO',
+      intentosFallidos: json['intentosFallidos'] as int? ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      if (idUsuario != null) 'idUsuario': idUsuario,
       'dni': dni,
       'nombre': nombre,
       'correoCorporativo': correoCorporativo,

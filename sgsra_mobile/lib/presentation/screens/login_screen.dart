@@ -13,80 +13,81 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _correoController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _correoController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  final _correoController = TextEditingController(text: "leao.chura@masterdrilling.com");
+  final _passwordController = TextEditingController(text: "Admin123*");
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocListener<AuthBloc, AuthState>(
+      body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is Authenticated) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeRouter(role: state.role)));
-          } else if (state is AuthAccountLocked) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.msg), backgroundColor: Colors.red));
+          if (state is AuthSuccess) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => HomeRouter(role: state.rol)),
+            );
           } else if (state is AuthFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error), backgroundColor: Colors.orange));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error), backgroundColor: Colors.red),
+            );
           }
         },
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.precision_manufacturing, size: 72, color: Color(0xFFFFB300)),
-                  const SizedBox(height: 16),
-                  Text("SGSRA-MD", style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                  const SizedBox(height: 8),
-                  const Text("Plataforma Móvil Logística - Master Drilling", textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 48),
-                  TextFormField(
-                    controller: _correoController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: "Correo Corporativo (RF01)", border: OutlineInputBorder()),
-                    validator: (v) => (v == null || !v.contains('@masterdrilling.com')) ? 'Debe usar su correo institucional validado' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: "Contraseña", border: OutlineInputBorder()),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      if (state is AuthLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFFFFB300)));
-                      return ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            context.read<AuthBloc>().add(AuthenticationSubmitRequested(
-                              email: _correoController.text.trim(),
-                              password: _passwordController.text,
-                            ));
-                          }
-                        },
-                        child: const Text("INICIAR SESIÓN"),
-                      );
-                    },
-                  ),
-                ],
+        builder: (context, state) {
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.precision_manufacturing, size: 70, color: Color(0xFFFFB300)),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "MASTER DRILLING",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    ),
+                    const Text(
+                      "SGSRA-MD Sistema Operativo",
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 32),
+                    TextField(
+                      controller: _correoController,
+                      decoration: const InputDecoration(labelText: "Correo Corporativo"),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: "Contraseña"),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: state is AuthLoading
+                          ? null
+                          : () {
+                              context.read<AuthBloc>().add(
+                                    LoginRequested(
+                                      _correoController.text.trim(),
+                                      _passwordController.text,
+                                    ),
+                                  );
+                            },
+                      child: state is AuthLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            )
+                          : const Text("INICIAR SESION"),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

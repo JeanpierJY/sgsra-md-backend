@@ -1,44 +1,45 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../data/services/api_service.dart';
 import '../../../data/models/usuario_model.dart';
+import '../../../data/services/api_service.dart';
 import 'usuarios_event.dart';
 import 'usuarios_state.dart';
 
 class UsuariosBloc extends Bloc<UsuariosEvent, UsuariosState> {
-  final ApiService apiService = ApiService();
+  final ApiService _apiService = ApiService();
 
   UsuariosBloc() : super(UsuariosInitial()) {
     on<FetchUsuariosRequested>((event, emit) async {
       emit(UsuariosLoading());
       try {
-        final response = await apiService.listarUsuariosBackend();
-        final List<dynamic> content = response.data['content'] ?? [];
-        final List<UsuarioModel> usuarios = content.map((json) => UsuarioModel.fromJson(json)).toList();
-        emit(UsuariosLoaded(usuarios));
+        final res = await _apiService.listarUsuariosBackend();
+        final rawList = res.data is List ? res.data as List : [];
+        final list = rawList.map((e) => UsuarioModel.fromJson(e as Map<String, dynamic>)).toList();
+        emit(UsuariosLoaded(list));
       } catch (e) {
-        emit(UsuariosFailure("Fallo al sincronizar nómina de trabajadores del backend."));
+        emit(UsuariosFailure("Error al recuperar lista de usuarios"));
       }
     });
 
     on<CreateUsuarioRequested>((event, emit) async {
       emit(UsuariosLoading());
       try {
-        await apiService.crearUsuarioBackend(event.usuario.toJson());
-        emit(UsuariosActionSuccess("Operario dado de alta formalmente en los servidores de Master Drilling."));
+        final Map<String, dynamic> payload = event.usuario.toJson();
+        payload['contrasena'] = 'Admin123*';
+        await _apiService.crearUsuarioBackend(payload);
+        emit(UsuariosActionSuccess("Usuario registrado exitosamente"));
         add(FetchUsuariosRequested());
       } catch (e) {
-        emit(UsuariosFailure("Error en los parámetros de validación del DNI o correo duplicado."));
+        emit(UsuariosFailure("Error: DNI o correo ya registrados"));
+        add(FetchUsuariosRequested());
       }
     });
 
     on<ToggleEstadoUsuarioRequested>((event, emit) async {
-      emit(UsuariosLoading());
       try {
-        await apiService.cambiarEstadoCuentaBackend(event.idUsuario, event.nuevoEstado);
-        emit(UsuariosActionSuccess("Estado de cuenta modificado de forma segura."));
+        await _apiService.cambiarEstadoCuentaBackend(event.idUsuario, event.nuevoEstado);
         add(FetchUsuariosRequested());
       } catch (e) {
-        emit(UsuariosFailure("No se pudo mutar el ciclo de vida de la cuenta."));
+        emit(UsuariosFailure("No se pudo cambiar el estado de la cuenta"));
       }
     });
   }

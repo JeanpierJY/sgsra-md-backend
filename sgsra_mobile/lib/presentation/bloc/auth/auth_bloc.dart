@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../data/services/api_service.dart';
@@ -6,32 +5,31 @@ import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final ApiService apiService = ApiService();
-  final _secureStorage = const FlutterSecureStorage();
+  final ApiService _apiService = ApiService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   AuthBloc() : super(AuthInitial()) {
-    on<AuthenticationSubmitRequested>((event, emit) async {
+    on<LoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        final response = await apiService.login(event.email, event.password);
-        final data = response.data;
-        
-        await _secureStorage.write(key: "token_jwt", value: data['tokenJwt']);
-        await _secureStorage.write(key: "correo_corporativo", value: data['correoCorporativo']);
-        await _secureStorage.write(key: "rol_usuario", value: data['rol']);
+        final res = await _apiService.login(event.correo, event.contrasena);
+        final data = res.data;
+        final token = data['tokenJwt'] as String? ?? '';
+        final rol = data['rol'] as String? ?? '';
+        final nombre = data['nombre'] as String? ?? '';
 
-        emit(Authenticated(role: data['role'] ?? data['rol'], email: data['correoCorporativo']));
+        await _storage.write(key: "token_jwt", value: token);
+        await _storage.write(key: "user_rol", value: rol);
+        await _storage.write(key: "user_nombre", value: nombre);
+
+        emit(AuthSuccess(token: token, rol: rol, nombre: nombre));
       } catch (e) {
-        if (e is DioException && e.response?.statusCode == 423) {
-          emit(AuthAccountLocked("Cuenta bloqueada temporalmente tras 3 intentos fallidos (RF06)."));
-        } else {
-          emit(AuthFailure("Credenciales corporativas invalidas o error de red."));
-        }
+        emit(AuthFailure("Credenciales invalidas o error de conexion"));
       }
     });
 
     on<LogoutRequested>((event, emit) async {
-      await _secureStorage.deleteAll();
+      await _storage.deleteAll();
       emit(AuthInitial());
     });
   }

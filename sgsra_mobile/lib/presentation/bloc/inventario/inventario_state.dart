@@ -1,22 +1,13 @@
+import '../../../data/models/dashboard_metricas_model.dart';
+
 abstract class InventarioState {}
 
 class InventarioInitial extends InventarioState {}
-
 class InventarioLoading extends InventarioState {}
 
 class DashboardLoaded extends InventarioState {
-  final Map<String, dynamic> metricas;
-  DashboardLoaded({required this.metricas});
-}
-
-class HerramientaEscaneadaSuccess extends InventarioState {
-  final Map<String, dynamic> herramienta;
-  HerramientaEscaneadaSuccess({required this.herramienta});
-}
-
-class PrestamoRegistradoSuccess extends InventarioState {
-  final String mensaje;
-  PrestamoRegistradoSuccess({required this.mensaje});
+  final DashboardMetricasModel metricas;
+  DashboardLoaded(this.metricas);
 }
 
 class InventarioFailure extends InventarioState {

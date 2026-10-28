@@ -17,12 +17,23 @@ class RepuestoModel {
 
   factory RepuestoModel.fromJson(Map<String, dynamic> json) {
     return RepuestoModel(
-      codParte: json['codParte'] ?? '',
-      nombreRepuesto: json['nombreRepuesto'] ?? '',
-      stockActual: json['stockActual'] ?? 0,
-      stockMinimo: json['stockMinimo'] ?? 0,
-      descripcion: json['descripcion'],
-      activo: json['activo'] ?? true,
+      codParte: json['codParte'] as String? ?? '',
+      nombreRepuesto: json['nombreRepuesto'] as String? ?? '',
+      stockActual: json['stockActual'] as int? ?? 0,
+      stockMinimo: json['stockMinimo'] as int? ?? 0,
+      descripcion: json['descripcion'] as String?,
+      activo: json['activo'] as bool? ?? true,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'codParte': codParte,
+      'nombreRepuesto': nombreRepuesto,
+      'stockActual': stockActual,
+      'stockMinimo': stockMinimo,
+      'descripcion': descripcion,
+      'activo': activo,
+    };
   }
 }

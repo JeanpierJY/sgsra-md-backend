@@ -1,60 +1,33 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../datasources/database_helper.dart';
 import 'api_service.dart';
 
 class SincronizacionService {
+  final Connectivity _connectivity = Connectivity();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   final ApiService _apiService = ApiService();
-  final _secureStorage = const FlutterSecureStorage();
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
-  bool _sincronizando = false;
 
   void inicializarEscuchaRed() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> resultados) {
-      if (resultados.contains(ConnectivityResult.wifi) || resultados.contains(ConnectivityResult.mobile)) {
-        _vaciarColaBorradores();
+    _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
+        sincronizarBorradoresPendientes();
       }
     });
   }
 
-  Future<void> _vaciarColaBorradores() async {
-    if (_sincronizando) return;
-    _sincronizando = true;
+  Future<void> sincronizarBorradoresPendientes() async {
+    final pendientes = await _dbHelper.obtenerBorradoresPendientes();
+    for (final row in pendientes) {
+      try {
+        final Map<String, dynamic> payload = jsonDecode(row['payloadJson'] as String);
+        final int id = row['id'] as int;
 
-    try {
-      final dbHelper = DatabaseHelper.instance;
-      final List<Map<String, dynamic>> borradores = await dbHelper.obtenerBorradoresOffline();
-      final correoMecanico = await _secureStorage.read(key: "correo_corporativo");
-
-      if (borradores.isEmpty || correoMecanico == null) {
-        _sincronizando = false;
-        return;
+        await _apiService.registrarSolicitud("carlos.mendoza@masterdrilling.com", payload);
+        await _dbHelper.marcarComoSincronizado(id);
+      } catch (_) {
+        break;
       }
-
-      for (var borrador in borradores) {
-        final int idLocal = borrador['id'];
-        final Map<String, dynamic> payload = {
-          'codMaquinaria': borrador['cod_maquinaria'],
-          'prioridad': borrador['prioridad'],
-          'justificacionTecnica': borrador['justificacion'],
-          'items': jsonDecode(borrador['repuestos_json']),
-        };
-
-        final response = await _apiService.registrarSolicitud(correoMecanico, payload);
-
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          await dbHelper.eliminarBorradorSincronizado(idLocal);
-        }
-      }
-    } catch (_) {
-    } finally {
-      _sincronizando = false;
     }
-  }
-
-  void cancelarMonitoreo() {
-    _connectivitySubscription?.cancel();
   }
 }
