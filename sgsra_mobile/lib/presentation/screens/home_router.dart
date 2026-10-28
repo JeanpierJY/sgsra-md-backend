@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'mecanico/catalogo_screen.dart';
 import 'administrador/gestion_usuarios_screen.dart';
-import 'almacenista/dashboard_pañol_screen.dart';
+import 'almacenista/dashboard_panol_screen.dart';
 
 class HomeRouter extends StatelessWidget {
   final String role;

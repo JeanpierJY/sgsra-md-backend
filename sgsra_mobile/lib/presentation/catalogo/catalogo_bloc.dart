@@ -1,44 +1,71 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/repuesto_model.dart';
-
-abstract class CatalogoEvent {}
-class CargarCatalogoRequested extends CatalogoEvent {}
-class BuscarRepuestosRequested extends CatalogoEvent { final String query; BuscarRepuestosRequested(this.query); }
-
-abstract class CatalogoState {}
-class CatalogoInitial extends CatalogoState {}
-class CatalogoLoading extends CatalogoState {}
-class CatalogoLoaded extends CatalogoState { 
-  final List<RepuestoModel> items; 
-  final List<RepuestoModel> sugerencias;
-  CatalogoLoaded(this.items, {this.sugerencias = const []}); 
-}
+import '../../../data/models/repuesto_model.dart';
+import '../../../data/services/api_service.dart';
+import 'catalogo_event.dart';
+import 'catalogo_state.dart';
 
 class CatalogoBloc extends Bloc<CatalogoEvent, CatalogoState> {
+  final ApiService apiService = ApiService();
+
   final List<RepuestoModel> _mockMasterList = [
-    RepuestoModel(codParte: "RB-001", nombreRepuesto: "Tricono de Perforación 12 1/4", stockActual: 15, stockMinimo: 2),
-    RepuestoModel(codParte: "RB-002", nombreRepuesto: "Barra de Perforación Estándar 10''", stockActual: 45, stockMinimo: 5),
-    RepuestoModel(codParte: "RB-003", nombreRepuesto: "Bomba Hidráulica Axial de Pistones", stockActual: 4, stockMinimo: 1),
+    RepuestoModel(
+      codParte: "P-REX-024",
+      nombreRepuesto: "Bomba de pistones axiales Rexroth A4VSO",
+      stockActual: 10,
+      stockMinimo: 2,
+      descripcion: "Bomba hidraulica para rotacion principal",
+      activo: true,
+    ),
+    RepuestoModel(
+      codParte: "H-ESP-118",
+      nombreRepuesto: "Manguera espiral 4SP 1 pulgada",
+      stockActual: 35,
+      stockMinimo: 5,
+      descripcion: "Manguera de alta presion 400 bar",
+      activo: true,
+    ),
+    RepuestoModel(
+      codParte: "F-HYD-882",
+      nombreRepuesto: "Filtro hidraulico 10 micras",
+      stockActual: 50,
+      stockMinimo: 10,
+      descripcion: "Filtro de retorno de aceite para tanque",
+      activo: true,
+    ),
   ];
 
   CatalogoBloc() : super(CatalogoInitial()) {
     on<CargarCatalogoRequested>((event, emit) async {
       emit(CatalogoLoading());
-      await Future.delayed(const Duration(milliseconds: 400));
-      emit(CatalogoLoaded(_mockMasterList));
+      try {
+        final response = await apiService.obtenerCatalogo();
+        if (response.statusCode == 200 && response.data['content'] != null) {
+          final List dynamicList = response.data['content'];
+          final lista = dynamicList.map((e) => RepuestoModel.fromJson(e)).toList();
+          emit(CatalogoLoaded(repuestos: lista));
+        } else {
+          emit(CatalogoLoaded(repuestos: _mockMasterList));
+        }
+      } catch (e) {
+        emit(CatalogoLoaded(repuestos: _mockMasterList));
+      }
     });
 
-    on<BuscarRepuestosRequested>((event, emit) {
-      if (state is CatalogoLoaded) {
-        final q = event.query.toLowerCase().trim();
-        if (q.isEmpty) {
-          emit(CatalogoLoaded(_mockMasterList, sugerencias: const []));
-          return;
-        }
-        final filtrados = _mockMasterList.where((item) {
-          return item.nombreRepuesto.toLowerCase().contains(q) || item.codParte.toLowerCase().contains(q);
-        }).toList();
-        emit(CatalogoLoaded(_mockMasterList, sugerencias: filtrados));
+    on<BuscarRepuestoPredictivoRequested>((event, emit) async {
+      if (event.termino.trim().length < 3) {
+        emit(CatalogoLoaded(repuestos: _mockMasterList));
+        return;
+      }
+      try {
+        final response = await apiService.buscarRepuestosPredictivo(event.termino);
+        final List dynamicList = response.data;
+        final lista = dynamicList.map((e) => RepuestoModel.fromJson(e)).toList();
+        emit(CatalogoLoaded(repuestos: lista));
+      } catch (e) {
+        final filtrados = _mockMasterList.where((r) =>
+            r.nombreRepuesto.toLowerCase().contains(event.termino.toLowerCase()) ||
+            r.codParte.toLowerCase().contains(event.termino.toLowerCase())).toList();
+        emit(CatalogoLoaded(repuestos: filtrados));
       }
     });
   }

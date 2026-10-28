@@ -25,6 +25,8 @@ dependencies:
   # Control de Sensores Nativos (Cámara para códigos de barra, QR y Conectividad Híbrida)
   mobile_scanner: ^5.1.1
   connectivity_plus: ^6.0.3
+  
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:

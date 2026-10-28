@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../data/services/api_service.dart';
@@ -24,7 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (e is DioException && e.response?.statusCode == 423) {
           emit(AuthAccountLocked("Cuenta bloqueada temporalmente tras 3 intentos fallidos (RF06)."));
         } else {
-          emit(AuthFailure("Credenciales corporativas inválidas o error de red."));
+          emit(AuthFailure("Credenciales corporativas invalidas o error de red."));
         }
       }
     });
@@ -35,4 +36,3 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
 }
-

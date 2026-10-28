@@ -1,8 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../data/services/api_service.dart';
-import '../../../data/models/dashboard_metricas_model.dart';
-import '../../../data/models/herramienta_model.dart';
 import 'inventario_event.dart';
 import 'inventario_state.dart';
 
@@ -11,39 +9,44 @@ class InventarioBloc extends Bloc<InventarioEvent, InventarioState> {
   final _secureStorage = const FlutterSecureStorage();
 
   InventarioBloc() : super(InventarioInitial()) {
-    on<FetchMetricasDashboardRequested>((event, emit) async {
+    on<CargarDashboardRequested>((event, emit) async {
       emit(InventarioLoading());
       try {
-        final res = await apiService.obtenerMetricasDashboard();
-        emit(DashboardMetricasLoaded(DashboardMetricasModel.fromJson(res.data)));
+        final response = await apiService.obtenerMetricasDashboard();
+        emit(DashboardLoaded(metricas: response.data));
       } catch (e) {
-        emit(InventarioFailure("Fallo al sincronizar stock actual del pañol."));
+        emit(InventarioFailure("Error al cargar metricas de panol"));
       }
     });
-
+    
     on<EscanearCodigoQRRequested>((event, emit) async {
       emit(InventarioLoading());
       try {
-        final res = await apiService.consultarHerramientaPorCodigo(event.codigo);
-        emit(HerramientaEscaneadaLoaded(HerramientaModel.fromJson(res.data)));
+        final response = await apiService.consultarHerramientaPorCodigo(event.codigo);
+        emit(HerramientaEscaneadaSuccess(herramienta: response.data));
       } catch (e) {
-        emit(InventarioFailure("El código QR/Barras no pertenece al inventario maestro de Master Drilling."));
+        emit(InventarioFailure("Herramienta no registrada en panol: ${event.codigo}"));
       }
     });
 
-    on<ConfirmarPrestamoRequested>((event, emit) async {
+    on<RegistrarPrestamoRequested>((event, emit) async {
       emit(InventarioLoading());
       try {
-        final correoAlmacenista = await _secureStorage.read(key: "correo_corporativo");
+        final correoAlmacenista = await _secureStorage.read(key: "correo_corporativo") ?? "marcos.ramos@masterdrilling.com";
         final payload = {
           'dniMecanico': event.dniMecanico,
-          'codigosHerramienta': event.codigosHerramientas,
-          'firmaMecanico': event.firmaBase64
+          'codigosHerramienta': event.codigosHerramienta,
+          'firmaMecanico': event.firmaMecanico,
         };
-        await apiService.registrarPrestamo(correoAlmacenista!, payload);
-        emit(TransaccionSuccess("Préstamo registrado exitosamente bajo auditoría inalterable (RF36)."));
+
+        final response = await apiService.registrarPrestamo(correoAlmacenista, payload);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          emit(PrestamoRegistradoSuccess(mensaje: response.data['mensaje'] ?? "Prestamo exitoso"));
+        } else {
+          emit(InventarioFailure("Error al procesar el despacho"));
+        }
       } catch (e) {
-        emit(InventarioFailure("Bloqueo: Operario en mora o cupo máximo de custodia excedido."));
+        emit(InventarioFailure("Fallo al registrar prestamo: cupo excedido o herramientas no disponibles"));
       }
     });
   }

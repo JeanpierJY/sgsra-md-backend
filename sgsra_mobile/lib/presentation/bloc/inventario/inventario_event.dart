@@ -1,9 +1,20 @@
 abstract class InventarioEvent {}
-class FetchMetricasDashboardRequested extends InventarioEvent {}
-class EscanearCodigoQRRequested extends InventarioEvent { final String codigo; InventarioEvent(this.codigo); }
-class ConfirmarPrestamoRequested extends InventarioEvent {
+
+class CargarDashboardRequested extends InventarioEvent {}
+
+class EscanearCodigoQRRequested extends InventarioEvent {
+  final String codigo;
+  EscanearCodigoQRRequested(this.codigo);
+}
+
+class RegistrarPrestamoRequested extends InventarioEvent {
   final String dniMecanico;
-  final List<String> codigosHerramientas;
-  final String firmaBase64;
-  ConfirmarPrestamoRequested({required this.dniMecanico, required this.codigosHerramientas, required this.firmaBase64});
+  final List<String> codigosHerramienta;
+  final String firmaMecanico;
+
+  RegistrarPrestamoRequested({
+    required this.dniMecanico,
+    required this.codigosHerramienta,
+    required this.firmaMecanico,
+  });
 }

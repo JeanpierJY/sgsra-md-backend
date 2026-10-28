@@ -13,7 +13,7 @@ class SincronizacionService {
 
   void inicializarEscuchaRed() {
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> resultados) {
-      if (results.contains(ConnectivityResult.wifi) || results.contains(ConnectivityResult.mobile)) {
+      if (resultados.contains(ConnectivityResult.wifi) || resultados.contains(ConnectivityResult.mobile)) {
         _vaciarColaBorradores();
       }
     });
@@ -48,10 +48,9 @@ class SincronizacionService {
           await dbHelper.eliminarBorradorSincronizado(idLocal);
         }
       }
-    } catch (e) {
-      // Si la transacción atómica falla, la cola se retiene con cifrado AES-256 en la base local
+    } catch (_) {
     } finally {
-      _isSyncing = false;
+      _sincronizando = false;
     }
   }
 

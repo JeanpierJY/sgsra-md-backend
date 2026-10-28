@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import '../../../data/models/repuesto_model.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/services/api_service.dart';
 
 class SolicitudFormScreen extends StatefulWidget {
-  final RepuestoModel repuesto;
-  const SolicitudFormScreen({super.key, required this.repuesto});
+  final RepuestoModel? repuestoInicial;
+  const SolicitudFormScreen({super.key, this.repuestoInicial});
 
   @override
   State<SolicitudFormScreen> createState() => _SolicitudFormScreenState();
@@ -14,102 +12,118 @@ class SolicitudFormScreen extends StatefulWidget {
 
 class _SolicitudFormScreenState extends State<SolicitudFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _maquinaController = TextEditingController();
   final _justificacionController = TextEditingController();
-  String _prioridad = 'MEDIA';
-  int _cantidad = 1;
+  final _cantidadController = TextEditingController(text: "1");
+  String _maquinariaSeleccionada = "MD-RB-01";
+  String _prioridadSeleccionada = "ALTA";
   final ApiService _apiService = ApiService();
-
-  Future<void> _enviarRequerimiento() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final List<Map<String, dynamic>> itemsJson = [
-      {'codParte': widget.repuesto.codParte, 'cantidad': _cantidad}
-    ];
-
-    final payload = {
-      'codMaquinaria': _maquinaController.text.trim().toUpperCase(),
-      'prioridad': _prioridad,
-      'justificacionTecnica': _justificacionController.text.trim(),
-      'items': itemsJson
-    };
-
-    try {
-      // Intenta enviar directamente vía API REST (RF17)
-      await _apiService.registrarSolicitud("carlos.mendoza@masterdrilling.com", payload);
-      _mostrarSnack("✓ Solicitud enviada formalmente en tiempo real a la central.", Colors.green);
-      Navigator.pop(context);
-    } catch (e) {
-      // Fallback automático hacia la base local cifrada ante pérdidas de red en mina (RF18)
-      await DatabaseHelper.instance.guardarBorradorOffline({
-        'cod_maquinaria': _maquinaController.text.trim().toUpperCase(),
-        'prioridad': _prioridad,
-        'justificacion': _justificacionController.text.trim(),
-        'repuestos_json': jsonEncode(itemsJson),
-        'fecha_creacion': DateTime.now().toIso8601String()
-      });
-      _mostrarSnack("📡 Socavón sin red. Requerimiento guardado de forma segura en la cola local.", Colors.amber);
-      Navigator.pop(context);
-    }
-  }
-
-  void _mostrarSnack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
-  }
+  bool _enviando = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Registrar Solicitud (RF13-RF17)")),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text("Solicitud de Repuesto")),
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
-              Text("Componente: ${widget.repuesto.nombreRepuesto}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              Text("Código Parte: ${widget.repuesto.codParte}", style: const TextStyle(color: Color(0xFF29B6F6))),
+              Text(
+                "Repuesto: ${widget.repuestoInicial?.nombreRepuesto ?? 'Componente de Perforadora'}",
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _maquinariaSeleccionada,
+                decoration: const InputDecoration(labelText: "Maquinaria Destino"),
+                items: const [
+                  DropdownMenuItem(value: "MD-RB-01", child: Text("Raise Borer Rhino 1008")),
+                  DropdownMenuItem(value: "MD-RB-02", child: Text("Componentes RD IV")),
+                  DropdownMenuItem(value: "MD-RB-03", child: Text("Perforadora Rhino 2002")),
+                ],
+                onChanged: (val) => setState(() => _maquinariaSeleccionada = val!),
+              ),
               const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.between,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Cantidad Requerida (RF14):", style: TextStyle(fontSize: 16)),
-                  Row(
-                    children: [
-                      IconButton(icon: const Icon(Icons.remove_circle), onPressed: () => setState(() { if(_cantidad > 1) _cantidad--; })),
-                      Text("$_cantidad", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      IconButton(icon: const Icon(Icons.add_circle), onPressed: () => setState(() => _cantidad++)),
+                  const Text("Nivel de Prioridad:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  DropdownButton<String>(
+                    value: _prioridadSeleccionada,
+                    items: const [
+                      DropdownMenuItem(value: "BAJA", child: Text("Baja")),
+                      DropdownMenuItem(value: "MEDIA", child: Text("Media")),
+                      DropdownMenuItem(value: "ALTA", child: Text("Alta")),
                     ],
-                  )
+                    onChanged: (val) => setState(() => _prioridadSeleccionada = val!),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _maquinaController,
-                decoration: const InputDecoration(labelText: "Código de Perforadora Afectada (RF15)"),
-                validator: (v) => (v == null || v.isEmpty) ? 'La vinculación de flota es obligatoria' : null,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _prioridad,
-                decoration: const InputDecoration(labelText: "Urgencia del Pedido"),
-                items: ['BAJA', 'MEDIA', 'ALTA'].map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                onChanged: (v) => setState(() => _prioridad = v!),
+                controller: _cantidadController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Cantidad Solicitada"),
+                validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null || int.parse(val) <= 0)
+                    ? "Ingrese una cantidad valida"
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _justificacionController,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: "Explicación Técnica de la Avería (RF16)"),
-                validator: (v) => (v == null || v.trim().length < 10) ? 'Debe ingresar al menos 10 caracteres explícitos' : null,
+                decoration: const InputDecoration(labelText: "Justificacion Tecnica (Minimo 10 caracteres)"),
+                validator: (val) => (val == null || val.trim().length < 10)
+                    ? "La justificacion debe tener al menos 10 caracteres"
+                    : null,
               ),
               const SizedBox(height: 24),
-              ElevatedButton(onPressed: _enviarRequerimiento, child: const Text("TRANSMITIR ORDEN")),
+              ElevatedButton(
+                onPressed: _enviando ? null : _enviarSolicitud,
+                child: _enviando
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : const Text("Enviar Solicitud"),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _enviarSolicitud() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _enviando = true);
+
+    final payload = {
+      'codMaquinaria': _maquinariaSeleccionada,
+      'prioridad': _prioridadSeleccionada,
+      'justificacionTecnica': _justificacionController.text.trim(),
+      'items': [
+        {
+          'codParte': widget.repuestoInicial?.codParte ?? "P-REX-024",
+          'cantidad': int.parse(_cantidadController.text),
+        }
+      ]
+    };
+
+    try {
+      final res = await _apiService.registrarSolicitud("carlos.mendoza@masterdrilling.com", payload);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Solicitud enviada con exito: ${res.data['dato']}")),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error al conectar con servidor")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
   }
 }

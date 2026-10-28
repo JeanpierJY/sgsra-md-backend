@@ -59,7 +59,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _rolSeleccionado,
+                    initialValue: _rolSeleccionado,
                     decoration: const InputDecoration(labelText: "Rol Funcional"),
                     items: ['MECANICO', 'ALMACENISTA', 'ADMINISTRADOR'].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                     onChanged: (v) => setState(() => _rolSeleccionado = v!),
@@ -127,7 +127,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     subtitle: Text("Rol: ${user.rol} | DNI: ${user.dni}\n${user.correoCorporativo}"),
                     trailing: Switch(
                       value: esActivo,
-                      activeColor: const Color(0xFFFFB300),
+                      activeThumbColor: const Color(0xFFFFB300),
                       onChanged: (value) {
                         if (user.idUsuario != null) {
                           context.read<UsuariosBloc>().add(ToggleEstadoUsuarioRequested(

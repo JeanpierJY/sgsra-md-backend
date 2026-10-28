@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/catalogo_bloc.dart';
-import 'solicitud_form_screen.dart';
+import 'package:sgsra_mobile/presentation/catalogo/catalogo_bloc.dart';
+import 'package:sgsra_mobile/presentation/catalogo/catalogo_event.dart';
+import 'package:sgsra_mobile/presentation/catalogo/catalogo_state.dart';
+import 'package:sgsra_mobile/presentation/screens/mecanico/solicitud_form_screen.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
@@ -11,8 +13,6 @@ class CatalogoScreen extends StatefulWidget {
 }
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
-  final _searchController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -20,55 +20,43 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Catálogo Maestro de Repuestos")),
+      appBar: AppBar(title: const Text("Catalogo de Repuestos")),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(12.0),
             child: TextField(
-              controller: _searchController,
-              onChanged: (text) => context.read<CatalogoBloc>().add(BuscarRepuestosRequested(text)),
               decoration: const InputDecoration(
-                labelText: "Buscar repuesto...", 
-                prefixIcon: Icon(Icons.search, color: Color(0xFFFFB300)), 
-                border: OutlineInputBorder(),
+                hintText: "Buscar por nombre o codigo de parte...",
+                prefixIcon: Icon(Icons.search),
               ),
+              onChanged: (termino) {
+                context.read<CatalogoBloc>().add(BuscarRepuestoPredictivoRequested(termino));
+              },
             ),
           ),
           Expanded(
             child: BlocBuilder<CatalogoBloc, CatalogoState>(
               builder: (context, state) {
                 if (state is CatalogoLoading) {
-                  return const Center(child: CircularProgressIndicator(color: Color(0xFFFFB300)));
-                }
-                if (state is CatalogoLoaded) {
-                  final lista = _searchController.text.isNotEmpty ? state.sugerencias : state.items;
-                  if (lista.isEmpty) {
-                    return const Center(child: Text("No hay coincidencias."));
-                  }
-                  
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is CatalogoLoaded) {
                   return ListView.builder(
-                    itemCount: lista.length,
+                    itemCount: state.repuestos.length,
                     itemBuilder: (context, index) {
-                      final item = lista[index];
-                      return Card(
-                        margin: const EdgeInsets.all(8),
-                        child: ListTile(
-                          title: Text(item.nombreRepuesto),
-                          subtitle: Text("Código: ${item.codParte}", style: const TextStyle(color: Color(0xFF29B6F6))),
-                          onTap: () {
+                      final item = state.repuestos[index];
+                      return ListTile(
+                        title: Text(item.nombreRepuesto, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("Codigo: ${item.codParte} | Stock: ${item.stockActual}"),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.add_shopping_cart, color: Color(0xFFFFB300)),
+                          onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => SolicitudFormScreen(repuestoSeleccionado: item),
+                                builder: (_) => SolicitudFormScreen(repuestoInicial: item),
                               ),
                             );
                           },
@@ -77,7 +65,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                     },
                   );
                 }
-                return const SizedBox();
+                return const Center(child: Text("No se encontraron repuestos"));
               },
             ),
           ),
