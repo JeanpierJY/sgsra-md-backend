@@ -1,5 +1,6 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
 import com.masterdrilling.sgsramd.dto.request.ReporteExtravioRequest;
@@ -10,7 +11,6 @@ import com.masterdrilling.sgsramd.model.entity.*;
 import com.masterdrilling.sgsramd.model.enums.EstadoDevolucion;
 import com.masterdrilling.sgsramd.model.enums.EstadoHerramienta;
 import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
-import com.masterdrilling.sgsramd.repository.*;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
 import com.masterdrilling.sgsramd.service.IPrestamoService;
 import com.masterdrilling.sgsramd.service.validator.CupoPrestamoValidator;
@@ -26,12 +26,12 @@ import java.util.ArrayList;
 @RequiredArgsConstructor
 public class PrestamoServiceImpl implements IPrestamoService {
 
-    private final PrestamoRepository prestamoRepository;
-    private final HerramientaRepository herramientaRepository;
-    private final MecanicoRepository mecanicoRepository;
-    private final AlmacenistaRepository almacenistaRepository;
-    private final DevolucionRepository devolucionRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final Prestamo_DAO prestamoRepository;
+    private final Herramienta_DAO herramientaRepository;
+    private final Mecanico_DAO mecanicoRepository;
+    private final Almacenista_DAO almacenistaRepository;
+    private final Devolucion_DAO devolucionRepository;
+    private final Usuario_DAO usuarioRepository;
     private final IAuditoriaService auditoriaService;
     private final CupoPrestamoValidator cupoValidator;
 

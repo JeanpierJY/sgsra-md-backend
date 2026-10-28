@@ -1,5 +1,9 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.Administrador_DAO;
+import com.masterdrilling.sgsramd.DAO.Almacenista_DAO;
+import com.masterdrilling.sgsramd.DAO.Mecanico_DAO;
+import com.masterdrilling.sgsramd.DAO.Usuario_DAO;
 import com.masterdrilling.sgsramd.dto.request.ActualizarPerfilRequest;
 import com.masterdrilling.sgsramd.dto.request.CrearUsuarioRequest;
 import com.masterdrilling.sgsramd.dto.request.LoginRequest;
@@ -16,10 +20,6 @@ import com.masterdrilling.sgsramd.model.entity.Mecanico;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.EstadoCuenta;
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
-import com.masterdrilling.sgsramd.repository.AdministradorRepository;
-import com.masterdrilling.sgsramd.repository.AlmacenistaRepository;
-import com.masterdrilling.sgsramd.repository.MecanicoRepository;
-import com.masterdrilling.sgsramd.repository.UsuarioRepository;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
 import com.masterdrilling.sgsramd.service.IAutenticacionService;
 import com.masterdrilling.sgsramd.util.JwtTokenUtil;
@@ -36,10 +36,10 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AutenticacionServiceImpl implements IAutenticacionService {
 
-    private final UsuarioRepository usuarioRepository;
-    private final MecanicoRepository mecanicoRepository;
-    private final AlmacenistaRepository almacenistaRepository;
-    private final AdministradorRepository administradorRepository;
+    private final Usuario_DAO usuarioRepository;
+    private final Mecanico_DAO mecanicoRepository;
+    private final Almacenista_DAO almacenistaRepository;
+    private final Administrador_DAO administradorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
     private final IAuditoriaService auditoriaService;

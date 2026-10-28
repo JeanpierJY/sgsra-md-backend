@@ -1,5 +1,7 @@
 package com.masterdrilling.sgsramd.integration;
 
+import com.masterdrilling.sgsramd.DAO.Herramienta_DAO;
+import com.masterdrilling.sgsramd.DAO.Prestamo_DAO;
 import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
@@ -8,8 +10,6 @@ import com.masterdrilling.sgsramd.model.entity.Prestamo;
 import com.masterdrilling.sgsramd.model.enums.EstadoDevolucion;
 import com.masterdrilling.sgsramd.model.enums.EstadoHerramienta;
 import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
-import com.masterdrilling.sgsramd.repository.HerramientaRepository;
-import com.masterdrilling.sgsramd.repository.PrestamoRepository;
 import com.masterdrilling.sgsramd.service.IPrestamoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,10 +30,10 @@ class PrestamoIntegrationTest {
     private IPrestamoService prestamoService;
 
     @Autowired
-    private PrestamoRepository prestamoRepository;
+    private Prestamo_DAO prestamoRepository;
 
     @Autowired
-    private HerramientaRepository herramientaRepository;
+    private Herramienta_DAO herramientaRepository;
 
     @Test
     @DisplayName("Debe despachar prestamo, mutar herramienta a Prestada y luego devolverla actualizando a Disponible")

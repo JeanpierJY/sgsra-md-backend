@@ -1,8 +1,8 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.AuditoriaOperacion_DAO;
 import com.masterdrilling.sgsramd.dto.response.AuditoriaResponse;
 import com.masterdrilling.sgsramd.model.entity.AuditoriaOperacion;
-import com.masterdrilling.sgsramd.repository.AuditoriaOperacionRepository;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
 import com.masterdrilling.sgsramd.util.HashUtil;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AuditoriaServiceImpl implements IAuditoriaService {
 
-    private final AuditoriaOperacionRepository auditoriaRepository;
+    private final AuditoriaOperacion_DAO auditoriaRepository;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)

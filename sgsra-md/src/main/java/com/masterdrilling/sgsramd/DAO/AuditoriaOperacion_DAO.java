@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.AuditoriaOperacion;
 import org.springframework.data.domain.Page;
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 // DAO inalterable append-only para auditoria y sellado SHA-256 (RF49)
 
-public interface AuditoriaOperacionRepository extends JpaRepository<AuditoriaOperacion, Long> {
+public interface AuditoriaOperacion_DAO extends JpaRepository<AuditoriaOperacion, Long> {
 
     Page<AuditoriaOperacion> findAllByOrderByTimestampDesc(Pageable pageable);
 

@@ -1,5 +1,6 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.AprobacionParcialRequest;
 import com.masterdrilling.sgsramd.dto.request.ContactarProveedorRequest;
 import com.masterdrilling.sgsramd.dto.request.DictamenRechazoRequest;
@@ -12,7 +13,6 @@ import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
 import com.masterdrilling.sgsramd.model.entity.*;
 import com.masterdrilling.sgsramd.model.enums.EstadoItemSolicitud;
 import com.masterdrilling.sgsramd.model.enums.EstadoSolicitud;
-import com.masterdrilling.sgsramd.repository.*;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
 import com.masterdrilling.sgsramd.service.INotificacionService;
 import com.masterdrilling.sgsramd.service.ISolicitudService;
@@ -34,13 +34,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SolicitudServiceImpl implements ISolicitudService {
 
-    private final SolicitudRepository solicitudRepository;
-    private final RepuestoRepository repuestoRepository;
-    private final MaquinariaRepository maquinariaRepository;
-    private final MecanicoRepository mecanicoRepository;
-    private final AdministradorRepository administradorRepository;
-    private final DictamenRechazoRepository dictamenRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final Solicitud_DAO solicitudRepository;
+    private final Repuesto_DAO repuestoRepository;
+    private final Maquinaria_DAO maquinariaRepository;
+    private final Mecanico_DAO mecanicoRepository;
+    private final Administrador_DAO administradorRepository;
+    private final DictamenRechazo_DAO dictamenRepository;
+    private final Usuario_DAO usuarioRepository;
     private final IAuditoriaService auditoriaService;
     private final INotificacionService notificacionService;
     private final List<ValidadorSolicitud> validadoresSolicitud;

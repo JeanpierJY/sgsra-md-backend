@@ -1,5 +1,7 @@
 package com.masterdrilling.sgsramd.service;
 
+import com.masterdrilling.sgsramd.DAO.Mecanico_DAO;
+import com.masterdrilling.sgsramd.DAO.Usuario_DAO;
 import com.masterdrilling.sgsramd.dto.request.LoginRequest;
 import com.masterdrilling.sgsramd.dto.response.LoginResponse;
 import com.masterdrilling.sgsramd.exception.AccesoDenegadoException;
@@ -7,8 +9,6 @@ import com.masterdrilling.sgsramd.exception.CuentaBloqueadaException;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.EstadoCuenta;
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
-import com.masterdrilling.sgsramd.repository.MecanicoRepository;
-import com.masterdrilling.sgsramd.repository.UsuarioRepository;
 import com.masterdrilling.sgsramd.service.impl.AutenticacionServiceImpl;
 import com.masterdrilling.sgsramd.util.JwtTokenUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,10 +31,10 @@ import static org.mockito.Mockito.*;
 class AutenticacionServiceTest {
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private Usuario_DAO usuarioRepository;
 
     @Mock
-    private MecanicoRepository mecanicoRepository;
+    private Mecanico_DAO mecanicoRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;

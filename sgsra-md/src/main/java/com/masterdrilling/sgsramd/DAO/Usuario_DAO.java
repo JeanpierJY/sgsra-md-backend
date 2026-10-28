@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 // DAO para gestion de autenticacion y perfiles corporativos (RF01, RF04, RF06)
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+public interface Usuario_DAO extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByCorreoCorporativo(String correoCorporativo);
 

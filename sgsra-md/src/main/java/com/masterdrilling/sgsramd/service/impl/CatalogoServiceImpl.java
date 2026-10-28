@@ -1,11 +1,11 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.Repuesto_DAO;
 import com.masterdrilling.sgsramd.dto.request.CrearRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.response.RepuestoResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
 import com.masterdrilling.sgsramd.model.entity.Repuesto;
-import com.masterdrilling.sgsramd.repository.RepuestoRepository;
 import com.masterdrilling.sgsramd.service.ICatalogoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CatalogoServiceImpl implements ICatalogoService {
 
-    private final RepuestoRepository repuestoRepository;
+    private final Repuesto_DAO repuestoRepository;
 
     @Override
     @Transactional(readOnly = true)

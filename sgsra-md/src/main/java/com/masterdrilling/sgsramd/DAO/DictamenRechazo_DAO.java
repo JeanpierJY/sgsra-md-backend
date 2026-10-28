@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.DictamenRechazo;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,7 +7,7 @@ import java.util.Optional;
 
 // DAO para resoluciones administrativas de rechazo (RF24, RF25)
 
-public interface DictamenRechazoRepository extends JpaRepository<DictamenRechazo, String> {
+public interface DictamenRechazo_DAO extends JpaRepository<DictamenRechazo, String> {
 
     Optional<DictamenRechazo> findBySolicitudSolicitudNum(String solicitudNum);
 }

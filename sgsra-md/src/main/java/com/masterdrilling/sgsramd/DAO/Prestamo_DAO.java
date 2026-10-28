@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.Prestamo;
 import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 // DAO para custodia y trazabilidad de herramientas (RF36, RF42, RF43)
-public interface PrestamoRepository extends JpaRepository<Prestamo, String> {
+public interface Prestamo_DAO extends JpaRepository<Prestamo, String> {
 
     List<Prestamo> findByMecanicoDniMecanicoAndEstadoPrestamo(String dniMecanico, EstadoPrestamo estadoPrestamo);
 

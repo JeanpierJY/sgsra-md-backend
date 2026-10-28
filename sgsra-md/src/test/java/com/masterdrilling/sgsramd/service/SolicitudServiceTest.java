@@ -1,12 +1,12 @@
 package com.masterdrilling.sgsramd.service;
 
+import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.DictamenRechazoRequest;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.model.entity.*;
 import com.masterdrilling.sgsramd.model.enums.EstadoSolicitud;
 import com.masterdrilling.sgsramd.model.enums.PrioridadSolicitud;
-import com.masterdrilling.sgsramd.repository.*;
 import com.masterdrilling.sgsramd.service.impl.SolicitudServiceImpl;
 import com.masterdrilling.sgsramd.service.validator.JustificacionRechazoValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,16 +32,16 @@ import static org.mockito.Mockito.*;
 class SolicitudServiceTest {
 
     @Mock
-    private SolicitudRepository solicitudRepository;
+    private Solicitud_DAO solicitudRepository;
 
     @Mock
-    private AdministradorRepository administradorRepository;
+    private Administrador_DAO administradorRepository;
 
     @Mock
-    private DictamenRechazoRepository dictamenRepository;
+    private DictamenRechazo_DAO dictamenRepository;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private Usuario_DAO usuarioRepository;
 
     @Mock
     private IAuditoriaService auditoriaService;

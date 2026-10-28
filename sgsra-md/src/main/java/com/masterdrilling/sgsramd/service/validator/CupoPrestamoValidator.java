@@ -1,7 +1,8 @@
 package com.masterdrilling.sgsramd.service.validator;
 
+import com.masterdrilling.sgsramd.DAO.Prestamo_DAO;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
-import com.masterdrilling.sgsramd.repository.PrestamoRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CupoPrestamoValidator {
 
-    private final PrestamoRepository prestamoRepository;
+    private final Prestamo_DAO prestamoRepository;
     private static final int LIMITE_MAXIMO_HERRAMIENTAS = 5;
 
     public void validarCupoDisponible(String dniMecanico, int cantidadNuevasHerramientas) {

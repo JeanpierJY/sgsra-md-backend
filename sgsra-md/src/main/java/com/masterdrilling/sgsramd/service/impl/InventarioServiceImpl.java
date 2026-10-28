@@ -1,5 +1,6 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.RegistrarHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.response.DashboardStockResponse;
 import com.masterdrilling.sgsramd.dto.response.FichaHerramientaResponse;
@@ -8,7 +9,6 @@ import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
 import com.masterdrilling.sgsramd.model.entity.*;
 import com.masterdrilling.sgsramd.model.enums.CategoriaHerramienta;
 import com.masterdrilling.sgsramd.model.enums.EstadoHerramienta;
-import com.masterdrilling.sgsramd.repository.*;
 import com.masterdrilling.sgsramd.service.IInventarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,10 +22,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InventarioServiceImpl implements IInventarioService {
 
-    private final HerramientaRepository herramientaRepository;
-    private final AlmacenistaRepository almacenistaRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final RegistroRepository registroRepository;
+    private final Herramienta_DAO herramientaRepository;
+    private final Almacenista_DAO almacenistaRepository;
+    private final Usuario_DAO usuarioRepository;
+    private final Registro_DAO registroRepository;
 
     @Override
     @Transactional(readOnly = true)

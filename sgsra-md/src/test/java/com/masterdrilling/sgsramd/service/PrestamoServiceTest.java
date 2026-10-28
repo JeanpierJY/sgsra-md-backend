@@ -1,5 +1,6 @@
 package com.masterdrilling.sgsramd.service;
 
+import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
@@ -8,7 +9,6 @@ import com.masterdrilling.sgsramd.model.entity.Herramienta;
 import com.masterdrilling.sgsramd.model.entity.Mecanico;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
-import com.masterdrilling.sgsramd.repository.*;
 import com.masterdrilling.sgsramd.service.impl.PrestamoServiceImpl;
 import com.masterdrilling.sgsramd.service.validator.CupoPrestamoValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,19 +31,19 @@ import static org.mockito.Mockito.*;
 class PrestamoServiceTest {
 
     @Mock
-    private PrestamoRepository prestamoRepository;
+    private Prestamo_DAO prestamoRepository;
 
     @Mock
-    private HerramientaRepository herramientaRepository;
+    private Herramienta_DAO herramientaRepository;
 
     @Mock
-    private MecanicoRepository mecanicoRepository;
+    private Mecanico_DAO mecanicoRepository;
 
     @Mock
-    private AlmacenistaRepository almacenistaRepository;
+    private Almacenista_DAO almacenistaRepository;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private Usuario_DAO usuarioRepository;
 
     @Mock
     private IAuditoriaService auditoriaService;

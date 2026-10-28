@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.Repuesto;
 import org.springframework.data.domain.Page;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 // DAO para catalogo de repuestos y busqueda predictiva (RF09, RF10, RF32)
-public interface RepuestoRepository extends JpaRepository<Repuesto, String> {
+public interface Repuesto_DAO extends JpaRepository<Repuesto, String> {
 
     Optional<Repuesto> findByCodParteAndActivoTrue(String codParte);
 

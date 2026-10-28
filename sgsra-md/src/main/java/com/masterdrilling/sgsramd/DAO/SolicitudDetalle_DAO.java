@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.SolicitudDetalle;
 import com.masterdrilling.sgsramd.model.entity.SolicitudDetalleId;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 // DAO para lineas y estadisticas de repuestos (RF13, RF22, RF29)
-public interface SolicitudDetalleRepository extends JpaRepository<SolicitudDetalle, SolicitudDetalleId> {
+public interface SolicitudDetalle_DAO extends JpaRepository<SolicitudDetalle, SolicitudDetalleId> {
 
     List<SolicitudDetalle> findByIdSolicitudNum(String solicitudNum);
 

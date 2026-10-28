@@ -1,4 +1,4 @@
-package com.masterdrilling.sgsramd.repository;
+package com.masterdrilling.sgsramd.DAO;
 
 import com.masterdrilling.sgsramd.model.entity.Solicitud;
 import com.masterdrilling.sgsramd.model.enums.EstadoSolicitud;
@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 // DAO para cabecera de solicitudes de piezas (RF17, RF19, RF21, RF29, RF31)
-public interface SolicitudRepository extends JpaRepository<Solicitud, String> {
+public interface Solicitud_DAO extends JpaRepository<Solicitud, String> {
 
     Page<Solicitud> findByMecanicoDniMecanicoOrderByFechaEmisionDescHoraEmisionDesc(String dniMecanico, Pageable pageable);
 

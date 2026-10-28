@@ -1,5 +1,9 @@
 package com.masterdrilling.sgsramd.service;
 
+import com.masterdrilling.sgsramd.DAO.Almacenista_DAO;
+import com.masterdrilling.sgsramd.DAO.Herramienta_DAO;
+import com.masterdrilling.sgsramd.DAO.Registro_DAO;
+import com.masterdrilling.sgsramd.DAO.Usuario_DAO;
 import com.masterdrilling.sgsramd.dto.request.RegistrarHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.response.DashboardStockResponse;
 import com.masterdrilling.sgsramd.dto.response.FichaHerramientaResponse;
@@ -9,10 +13,6 @@ import com.masterdrilling.sgsramd.model.entity.Almacenista;
 import com.masterdrilling.sgsramd.model.entity.Herramienta;
 import com.masterdrilling.sgsramd.model.entity.Usuario;
 import com.masterdrilling.sgsramd.model.enums.CategoriaHerramienta;
-import com.masterdrilling.sgsramd.repository.AlmacenistaRepository;
-import com.masterdrilling.sgsramd.repository.HerramientaRepository;
-import com.masterdrilling.sgsramd.repository.RegistroRepository;
-import com.masterdrilling.sgsramd.repository.UsuarioRepository;
 import com.masterdrilling.sgsramd.service.impl.InventarioServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,16 +36,16 @@ import static org.mockito.Mockito.*;
 class InventarioServiceTest {
 
     @Mock
-    private HerramientaRepository herramientaRepository;
+    private Herramienta_DAO herramientaRepository;
 
     @Mock
-    private AlmacenistaRepository almacenistaRepository;
+    private Almacenista_DAO almacenistaRepository;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private Usuario_DAO usuarioRepository;
 
     @Mock
-    private RegistroRepository registroRepository;
+    private Registro_DAO registroRepository;
 
     @InjectMocks
     private InventarioServiceImpl inventarioService;

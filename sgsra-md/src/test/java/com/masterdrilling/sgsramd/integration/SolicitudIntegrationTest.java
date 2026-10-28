@@ -1,11 +1,11 @@
 package com.masterdrilling.sgsramd.integration;
 
+import com.masterdrilling.sgsramd.DAO.Solicitud_DAO;
 import com.masterdrilling.sgsramd.dto.request.SolicitudRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 import com.masterdrilling.sgsramd.model.entity.Solicitud;
 import com.masterdrilling.sgsramd.model.enums.EstadoSolicitud;
 import com.masterdrilling.sgsramd.model.enums.PrioridadSolicitud;
-import com.masterdrilling.sgsramd.repository.SolicitudRepository;
 import com.masterdrilling.sgsramd.service.ISolicitudService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ class SolicitudIntegrationTest {
     private ISolicitudService solicitudService;
 
     @Autowired
-    private SolicitudRepository solicitudRepository;
+    private Solicitud_DAO solicitudRepository;
 
     @Test
     @DisplayName("Debe persistir la solicitud con sus lineas de detalle de repuesto en cascada")

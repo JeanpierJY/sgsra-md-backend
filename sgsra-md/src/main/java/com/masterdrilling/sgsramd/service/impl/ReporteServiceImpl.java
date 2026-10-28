@@ -1,10 +1,10 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.DAO.SolicitudDetalle_DAO;
+import com.masterdrilling.sgsramd.DAO.Solicitud_DAO;
 import com.masterdrilling.sgsramd.dto.response.EstadisticaDemandaResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.model.entity.Solicitud;
-import com.masterdrilling.sgsramd.repository.SolicitudDetalleRepository;
-import com.masterdrilling.sgsramd.repository.SolicitudRepository;
 import com.masterdrilling.sgsramd.service.IReporteService;
 import com.masterdrilling.sgsramd.service.strategy.IReporteExporter;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +20,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReporteServiceImpl implements IReporteService {
 
-    private final SolicitudDetalleRepository detalleRepository;
-    private final SolicitudRepository solicitudRepository;
+    private final SolicitudDetalle_DAO detalleRepository;
+    private final Solicitud_DAO solicitudRepository;
     private final List<IReporteExporter> exportadores;
 
     @Override
