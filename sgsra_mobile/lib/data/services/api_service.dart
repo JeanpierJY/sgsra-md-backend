@@ -34,6 +34,19 @@ class ApiService {
     });
   }
 
+  // Gestión de Usuarios / Personal (RF07)
+  Future<Response> listarUsuariosBackend() async {
+    return await _dio.get('/auth/usuarios');
+  }
+
+  Future<Response> crearUsuarioBackend(Map<String, dynamic> usuarioJson) async {
+    return await _dio.post('/auth/usuarios', data: usuarioJson);
+  }
+
+  Future<Response> cambiarEstadoCuentaBackend(int idUsuario, String nuevoEstado) async {
+    return await _dio.put('/auth/usuarios/$idUsuario/estado', queryParameters: {'nuevoEstado': nuevoEstado});
+  }
+
   // Catálogo (RF09, RF10, RF32)
   Future<Response> obtenerCatalogo() async {
     return await _dio.get('/catalogo');
@@ -43,7 +56,7 @@ class ApiService {
     return await _dio.get('/catalogo/buscar', queryParameters: {'termino': termino});
   }
 
-  // Solicitudes (RF17, RF19, RF21, RF23, RF24, RF28)
+  // Solicitudes (RF17, RF19, RF21, RF22, RF23, RF24, RF26, RF28)
   Future<Response> registrarSolicitud(String correoMecanico, Map<String, dynamic> payload) async {
     return await _dio.post('/solicitudes', data: payload, queryParameters: {'correoMecanico': correoMecanico});
   }
@@ -56,14 +69,35 @@ class ApiService {
     return await _dio.get('/solicitudes/mecanico', queryParameters: {'correoMecanico': correoMecanico});
   }
 
+  Future<Response> obtenerDetalleSolicitud(String solicitudNum) async {
+    return await _dio.get('/solicitudes/$solicitudNum');
+  }
+
   Future<Response> aprobarSolicitudTotal(String solicitudNum, String correoAdmin) async {
     return await _dio.put('/solicitudes/$solicitudNum/aprobar', queryParameters: {'correoAdmin': correoAdmin});
   }
 
   Future<Response> rechazarSolicitudTotal(String solicitudNum, String correoAdmin, String justificacion) async {
-    return await _dio.put('/solicitudes/$solicitudNum/rechazar',
-        queryParameters: {'correoAdmin': correoAdmin},
-        data: {'justificacionRechazo': justificacion});
+    return await _dio.put(
+      '/solicitudes/$solicitudNum/rechazar',
+      queryParameters: {'correoAdmin': correoAdmin},
+      data: {'justificacionRechazo': justificacion},
+    );
+  }
+
+  Future<Response> aprobarParcialSolicitud(String solicitudNum, String correoAdmin, Map<String, dynamic> payload) async {
+    return await _dio.put(
+      '/solicitudes/$solicitudNum/aprobar-parcial',
+      queryParameters: {'correoAdmin': correoAdmin},
+      data: payload,
+    );
+  }
+
+  Future<Response> marcarOrdenContactada(String solicitudNum, String correoAdmin, String cotizacion) async {
+    return await _dio.put(
+      '/solicitudes/$solicitudNum/contactar',
+      queryParameters: {'correoAdmin': correoAdmin, 'codigoCotizacion': cotizacion},
+    );
   }
 
   // Inventario y Pañol (RF33, RF35, RF36, RF38)
@@ -83,16 +117,8 @@ class ApiService {
     return await _dio.post('/prestamos/devolucion', data: payload, queryParameters: {'correoAlmacenista': correoAlmacenista});
   }
 
-  // Gestión de Usuarios (RF07)
-  Future<Response> listarUsuariosBackend() async {
-    return await _dio.get('/auth/usuarios');
-  }
-
-  Future<Response> crearUsuarioBackend(Map<String, dynamic> usuarioJson) async {
-    return await _dio.post('/auth/usuarios', data: usuarioJson);
-  }
-
-  Future<Response> cambiarEstadoCuentaBackend(int idUsuario, String nuevoEstado) async {
-    return await _dio.put('/auth/usuarios/$idUsuario/estado', queryParameters: {'nuevoEstado': nuevoEstado});
+  // Auditoría (RF49)
+  Future<Response> obtenerAuditoria() async {
+    return await _dio.get('/auditoria');
   }
 }

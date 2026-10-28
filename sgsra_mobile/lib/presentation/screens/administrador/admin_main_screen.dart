@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'bandeja_solicitudes_tab.dart';
-import 'gestion_usuarios_screen.dart';
+import 'metricas_admin_tab.dart';
+import 'auditoria_admin_tab.dart';
+import '../mecanico/catalogo_screen.dart';
 import 'perfil_admin_tab.dart';
 
 class AdminMainScreen extends StatefulWidget {
@@ -15,7 +17,9 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   final List<Widget> _tabs = [
     const BandejaSolicitudesTab(),
-    const GestionUsuariosContent(),
+    const MetricasAdminTab(),
+    const AuditoriaAdminTab(),
+    const CatalogoScreen(),
     const PerfilAdminTab(),
   ];
 
@@ -28,14 +32,19 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF1E1E1E),
-        selectedItemColor: const Color(0xFFFFB300),
-        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF0D47A1),
+        unselectedItemColor: Colors.grey.shade600,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: "Bandeja"),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Personal"),
-          BottomNavigationBarItem(icon: Icon(Icons.account_circle), label: "Perfil"),
+          BottomNavigationBarItem(icon: Icon(Icons.all_inbox), label: "Bandeja"),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: "Métricas"),
+          BottomNavigationBarItem(icon: Icon(Icons.history_edu), label: "Auditoría"),
+          BottomNavigationBarItem(icon: Icon(Icons.view_in_ar), label: "Catálogo"),
+          BottomNavigationBarItem(icon: Icon(Icons.account_circle), label: "Mi Perfil"),
         ],
       ),
     );
