@@ -4,47 +4,32 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      primaryColor: const Color(0xFFFFB300),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFFFFB300),
-        secondary: Color(0xFFFF8F00),
-        surface: Color(0xFF1E1E1E),
-        error: Color(0xFFCF6679),
+      brightness: Brightness.light, 
+      primaryColor: const Color(0xFF0D47A1), 
+      scaffoldBackgroundColor: const Color(0xFFF4F6F9), 
+      colorScheme: const ColorScheme.light(
+        primary: Color(0xFF0D47A1),
+        secondary: Color(0xFF29B6F6),
+        surface: Colors.white,
+        error: Color(0xFFEF5350),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1E1E1E),
+      cardTheme: const CardThemeData(
         elevation: 0,
-        centerTitle: true,
+        margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF2C2C2C),
+        fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: Colors.white24),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: const BorderSide(color: Color(0xFFFFB300), width: 2),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFB300),
-          foregroundColor: Colors.black,
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
       ),
     );
   }
 }
+

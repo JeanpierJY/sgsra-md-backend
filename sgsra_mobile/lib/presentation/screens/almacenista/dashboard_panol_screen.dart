@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../bloc/inventario/inventario_bloc.dart';
-import '../../bloc/inventario/inventario_event.dart';
-import '../../bloc/inventario/inventario_state.dart';
-import 'escaner_qr_screen.dart';
+import 'inventario_tab.dart';
+import 'prestamos_tab.dart';
+import 'bitacora_tab.dart';
+import 'perfil_tab.dart';
 
 class DashboardPanolScreen extends StatefulWidget {
   const DashboardPanolScreen({super.key});
@@ -13,69 +12,127 @@ class DashboardPanolScreen extends StatefulWidget {
 }
 
 class _DashboardPanolScreenState extends State<DashboardPanolScreen> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<InventarioBloc>().add(CargarDashboardRequested());
+  int _currentIndex = 0;
+
+  final List<Widget> _tabs = [
+    const InventarioTab(),
+    const PrestamosTab(),
+    const SizedBox(), 
+    const BitacoraTab(),
+    const PerfilTab(),
+  ];
+
+  void _mostrarModalEscaneo(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: const BoxDecoration(
+            color: Color(0xFF111622),
+            borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.qr_code_scanner, color: Colors.amber, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "Escáner Óptico de Código QR / Barras\n(RF34)",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    style: IconButton.styleFrom(backgroundColor: Colors.white10),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                ],
+              ),
+              const Spacer(),
+              Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFFFFB300), width: 3),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Stack(
+                  children: [
+                    const Center(child: Icon(Icons.camera_alt_outlined, color: Color(0xFFFFB300), size: 40)),
+                    Center(child: Container(width: double.infinity, height: 2, color: Colors.red)),
+                    const Positioned(
+                      bottom: 20, left: 0, right: 0,
+                      child: Text("APUNTE AL RÓTULO QR", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                    )
+                  ],
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Control de Pañol - Herramientas")),
-      body: BlocBuilder<InventarioBloc, InventarioState>(
-        builder: (context, state) {
-          if (state is InventarioLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is DashboardLoaded) {
-            final metricas = state.metricas;
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<InventarioBloc>().add(CargarDashboardRequested());
-              },
-              child: ListView(
-                padding: const EdgeInsets.all(16.0),
-                children: [
-                  _tarjetaMetrica("Disponibles", metricas['totalDisponibles']?.toString() ?? "0", Colors.green),
-                  _tarjetaMetrica("Prestadas", metricas['totalPrestadas']?.toString() ?? "0", Colors.orange),
-                  _tarjetaMetrica("En Mora", metricas['totalEnMora']?.toString() ?? "0", Colors.red),
-                  _tarjetaMetrica("En Mantenimiento", metricas['totalEnMantenimiento']?.toString() ?? "0", Colors.blueGrey),
-                  _tarjetaMetrica("Extraviadas", metricas['totalExtraviadas']?.toString() ?? "0", Colors.purple),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text("Escanear Código QR"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const EscanerQRScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-          return Center(
-            child: ElevatedButton(
-              onPressed: () => context.read<InventarioBloc>().add(CargarDashboardRequested()),
-              child: const Text("Reintentar Carga"),
-            ),
-          );
-        },
+      appBar: AppBar(
+        leading: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: CircleAvatar(backgroundColor: Color(0xFF0D47A1), child: Text("MD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+        ),
+        title: const Text("SGSRA-MD", style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-    );
-  }
-
-  Widget _tarjetaMetrica(String titulo, String valor, Color color) {
-    return Card(
-      color: const Color(0xFF1E1E1E),
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: ListTile(
-        leading: CircleAvatar(backgroundColor: color, radius: 10),
-        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
-        trailing: Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+      body: _tabs[_currentIndex],
+      bottomNavigationBar: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          BottomNavigationBar(
+            currentIndex: _currentIndex,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color(0xFF0D47A1),
+            unselectedItemColor: Colors.grey,
+            onTap: (index) {
+              if (index == 2) {
+                _mostrarModalEscaneo(context);
+              } else {
+                setState(() => _currentIndex = index);
+              }
+            },
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.build_outlined), label: "Inventario"),
+              BottomNavigationBarItem(icon: Icon(Icons.history_toggle_off), label: "Préstamos"),
+              BottomNavigationBarItem(icon: Icon(Icons.circle, color: Colors.transparent), label: "Escanear QR"),
+              BottomNavigationBarItem(icon: Icon(Icons.verified_user_outlined), label: "Bitácora"),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
+            ],
+          ),
+          Positioned(
+            top: -16,
+            child: GestureDetector(
+              onTap: () => _mostrarModalEscaneo(context),
+              child: const CircleAvatar(
+                radius: 28,
+                backgroundColor: Color(0xFF0D47A1),
+                child: Icon(Icons.qr_code_scanner, color: Colors.white, size: 28),
+              ),
+            ),
+          )
+        ],
       ),
     );
   }
 }
+
