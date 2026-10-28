@@ -3,6 +3,28 @@
 -- SCRIPT DDL: CREACION DE TABLAS, RESTRICCIONES, INDICES Y DATOS SEMILLA
 -- COMPATIBILIDAD: PostgreSQL 16+ / PostgreSQL 18
 -- ============================================================================
+sgsra_db
+
+SELECT * FROM administrador;
+
+-- Hash oficial generado por org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+-- para la contraseña exacta: Admin123*
+-- Hash BCrypt exacto para: admin123*
+UPDATE usuario 
+SET  estado_cuenta = 'ACTIVO',
+    intentos_fallidos = 0
+WHERE correo_corporativo IN ('carlos.baro@masterdrilling.com');
+
+
+-- Verificar estado actual
+SELECT id_usuario, correo_corporativo, rol, estado_cuenta, intentos_fallidos 
+FROM usuario 
+WHERE LOWER(correo_corporativo) = 'leao.chura@masterdrilling.com';
+
+
+SELECT id_auditoria, id_operacion, accion, timestamp 
+FROM auditoria_operacion 
+ORDER BY id_auditoria DESC;
 
 DROP TABLE IF EXISTS registro_detalle CASCADE;
 DROP TABLE IF EXISTS registro CASCADE;
