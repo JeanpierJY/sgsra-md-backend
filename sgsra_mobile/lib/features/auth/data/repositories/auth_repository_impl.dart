@@ -3,15 +3,11 @@ import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
 
-/// Implementación concreta del repositorio de autenticación
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
 
-  AuthRepositoryImpl({
-    required this.remoteDataSource,
-    required this.localDataSource,
-  });
+  AuthRepositoryImpl({required this.remoteDataSource, required this.localDataSource});
 
   @override
   Future<UserEntity> login(String correo, String password) async {
@@ -21,17 +17,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> recuperarClave(String correo) async {
-    await remoteDataSource.recuperarClave(correo);
-  }
+  Future<void> recuperarClave(String correo) => remoteDataSource.recuperarClave(correo);
 
   @override
-  Future<void> actualizarPerfil(String dni, String telefono) async {
-    await remoteDataSource.actualizarPerfil(dni, telefono);
-  }
+  Future<void> actualizarPerfil(String dni, String telefono) => remoteDataSource.actualizarPerfil(dni, telefono);
 
   @override
-  Future<void> cerrarSesion() async {
-    await localDataSource.eliminarSesion();
-  }
+  Future<void> cerrarSesion() => localDataSource.eliminarSesion();
 }

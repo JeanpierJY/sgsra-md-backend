@@ -19,6 +19,7 @@ dependencies:
 
   # Criptografía y Persistencia Segura (KeyStore / Android)
   flutter_secure_storage: ^9.2.2
+  sqflite: ^2.3.0
   sqflite_sqlcipher: ^3.2.0+1
   local_auth: ^2.1.8
 

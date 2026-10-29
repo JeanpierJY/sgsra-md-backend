@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/auth_usecases.dart';
 
-// Eventos
 abstract class AuthEvent {}
 class AuthLoginRequested extends AuthEvent {
   final String correo;
@@ -11,7 +10,6 @@ class AuthLoginRequested extends AuthEvent {
 }
 class AuthLogoutRequested extends AuthEvent {}
 
-// Estados
 abstract class AuthState {}
 class AuthInitial extends AuthState {}
 class AuthLoading extends AuthState {}

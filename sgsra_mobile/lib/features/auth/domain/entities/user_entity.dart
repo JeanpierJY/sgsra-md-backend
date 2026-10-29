@@ -1,4 +1,4 @@
-/// [RF01, RF02] Entidad de dominio que representa al usuario en el sistema
+/// [RF01, RF02] Entidad de dominio que representa al usuario autenticado en el sistema
 class UserEntity {
   final String id;
   final String correo;

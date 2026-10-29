@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
 import '../models/login_response_model.dart';
 
@@ -9,15 +8,11 @@ class AuthRemoteDataSource {
   AuthRemoteDataSource(this._dioClient);
 
   Future<LoginResponseModel> login(String correo, String password) async {
-    try {
-      final response = await _dioClient.dio.post('/auth/login', data: {
-        'correo': correo,
-        'password': password,
-      });
-      return LoginResponseModel.fromJson(response.data);
-    } catch (e) {
-      rethrow;
-    }
+    final response = await _dioClient.dio.post('/auth/login', data: {
+      'correo': correo,
+      'password': password,
+    });
+    return LoginResponseModel.fromJson(response.data);
   }
 
   Future<void> recuperarClave(String correo) async {
