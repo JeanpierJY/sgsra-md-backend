@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// Interceptor centralizado de excepciones (MVC / REST)
-@RestControllerAdvice
+// Se limita explicitamente al paquete de tus controladores para no bloquear /v3/api-docs
+@RestControllerAdvice(basePackages = "com.masterdrilling.sgsramd.controller")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(RecursoNoEncontradoException.class)

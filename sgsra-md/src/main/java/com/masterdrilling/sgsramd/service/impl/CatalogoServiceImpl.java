@@ -1,7 +1,9 @@
 package com.masterdrilling.sgsramd.service.impl;
 
 import com.masterdrilling.sgsramd.DAO.Repuesto_DAO;
+import com.masterdrilling.sgsramd.dto.request.ActualizarRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.request.CrearRepuestoRequest;
+import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 import com.masterdrilling.sgsramd.dto.response.RepuestoResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
@@ -75,6 +77,38 @@ public class CatalogoServiceImpl implements ICatalogoService {
                 .stockMinimo(r.getStockMinimo())
                 .descripcion(r.getDescripcion())
                 .activo(r.getActivo())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public RepuestoResponse actualizarRepuesto(String codParte, ActualizarRepuestoRequest request) {
+        Repuesto rep = repuestoRepository.findById(codParte.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Repuesto no encontrado: " + codParte));
+
+        rep.setNombreRepuesto(request.getNombreRepuesto().trim());
+        rep.setStockActual(request.getStockActual());
+        rep.setStockMinimo(request.getStockMinimo());
+        if (request.getDescripcion() != null) {
+            rep.setDescripcion(request.getDescripcion().trim());
+        }
+
+        return mapearAResponse(repuestoRepository.save(rep));
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse cambiarEstadoRepuesto(String codParte, boolean activo) {
+        Repuesto rep = repuestoRepository.findById(codParte.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Repuesto no encontrado: " + codParte));
+
+        rep.setActivo(activo);
+        repuestoRepository.save(rep);
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Estado de repuesto " + codParte + " actualizado a: " + (activo ? "HABILITADO" : "DESHABILITADO"))
+                .dato(rep.getActivo())
                 .build();
     }
 }

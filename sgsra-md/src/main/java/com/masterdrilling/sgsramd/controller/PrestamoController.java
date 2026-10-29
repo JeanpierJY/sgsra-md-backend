@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 // Endpoints para salidas, retornos con escaneo QR y extravios (RF34-RF42)
 @RestController
@@ -46,5 +47,16 @@ public class PrestamoController {
             HttpServletRequest httpRequest) {
         String ipOrigen = httpRequest.getRemoteAddr();
         return ResponseEntity.ok(prestamoService.reportarHerramientaExtraviada(correoAlmacenista, request, ipOrigen));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse>> listarTodosLosPrestamos() {
+        return ResponseEntity.ok(prestamoService.listarTodosLosPrestamos());
+    }
+
+    @GetMapping("/mecanico/{dniMecanico}")
+    public ResponseEntity<List<com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse>> listarPorMecanico(
+            @PathVariable("dniMecanico") String dniMecanico) {
+        return ResponseEntity.ok(prestamoService.listarPrestamosPorMecanico(dniMecanico));
     }
 }

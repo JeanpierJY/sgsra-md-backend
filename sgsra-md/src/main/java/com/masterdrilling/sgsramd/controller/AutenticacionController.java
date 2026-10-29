@@ -68,4 +68,19 @@ public class AutenticacionController {
         String ipOrigen = httpRequest.getRemoteAddr();
         return ResponseEntity.ok(autenticacionService.cambiarEstadoCuenta(idUsuario, nuevoEstado, ipOrigen));
     }
+
+    @PutMapping("/usuarios/dni/{dni}/estado")
+    public ResponseEntity<MensajeGenericoResponse> cambiarEstadoPorDni(
+            @PathVariable("dni") String dni,
+            @RequestParam("nuevoEstado") EstadoCuenta nuevoEstado,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(autenticacionService.cambiarEstadoCuentaPorDni(dni, nuevoEstado, httpRequest.getRemoteAddr()));
+    }
+
+    @PutMapping("/usuarios/dni/{dni}")
+    public ResponseEntity<MensajeGenericoResponse> actualizarUsuarioPorDni(
+            @PathVariable("dni") String dni,
+            @Valid @RequestBody ActualizarPerfilRequest request) {
+        return ResponseEntity.ok(autenticacionService.actualizarUsuarioPorDni(dni, request));
+    }
 }

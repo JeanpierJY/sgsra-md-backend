@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/api_service.dart';
-import 'detalle_solicitud_screen.dart';
 
 class BandejaSolicitudesTab extends StatefulWidget {
   const BandejaSolicitudesTab({super.key});
@@ -12,8 +11,9 @@ class BandejaSolicitudesTab extends StatefulWidget {
 class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
   final ApiService _apiService = ApiService();
   List<dynamic> _solicitudes = [];
+  List<dynamic> _solicitudesFiltradas = [];
   bool _cargando = true;
-  String _filtroActivo = 'Todas';
+  String _filtroEstado = "Todas";
 
   @override
   void initState() {
@@ -26,8 +26,15 @@ class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
     try {
       final res = await _apiService.listarBandejaAdministrador();
       if (mounted) {
+        List<dynamic> lista = [];
+        if (res.data is List) {
+          lista = res.data;
+        } else if (res.data is Map && res.data['content'] != null) {
+          lista = res.data['content'] as List;
+        }
         setState(() {
-          _solicitudes = res.data is List ? res.data : [];
+          _solicitudes = lista;
+          _filtrar(lista, _filtroEstado);
           _cargando = false;
         });
       }
@@ -36,19 +43,121 @@ class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
     }
   }
 
-  List<dynamic> get _solicitudesFiltradas {
-    if (_filtroActivo == 'Todas') return _solicitudes;
-    return _solicitudes.where((s) => (s['estado'] ?? '').toString().toUpperCase() == _filtroActivo.toUpperCase()).toList();
+  void _filtrar(List<dynamic> base, String estado) {
+    if (estado == "Todas") {
+      _solicitudesFiltradas = List.from(base);
+    } else {
+      _solicitudesFiltradas = base.where((s) => (s['estado'] ?? '').toString().toUpperCase() == estado.toUpperCase()).toList();
+    }
+  }
+
+  void _evaluarSolicitud(dynamic sol) {
+    final solNum = sol['solicitudNum'] ?? '';
+    final justifCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          top: 20,
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Evaluacion: $solNum", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Divider(),
+            Text("Equipo: ${sol['codMaquinaria'] ?? ''}"),
+            Text("Mecanico: ${sol['nombreMecanico'] ?? sol['dniMecanico'] ?? ''}"),
+            Text("Prioridad: ${sol['prioridad'] ?? ''}"),
+            const SizedBox(height: 8),
+            Text("Justificacion: ${sol['justificacionTecnica'] ?? ''}", style: const TextStyle(fontStyle: FontStyle.italic)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32)),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      setState(() => _cargando = true);
+                      await _apiService.aprobarSolicitudTotal(solNum, "leao.chura@masterdrilling.com");
+                      _cargarBandeja();
+                    },
+                    child: const Text("APROBAR TOTAL", style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC62828)),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _modalRechazo(solNum);
+                    },
+                    child: const Text("RECHAZAR", style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _modalRechazo(String solNum) {
+    final justifCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Rechazar Solicitud"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Ingrese la causa tecnica del rechazo (>15 caracteres):"),
+            const SizedBox(height: 10),
+            TextField(
+              controller: justifCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: "Motivo detallado..."),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              if (justifCtrl.text.trim().length < 15) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("El motivo debe tener al menos 15 caracteres")),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              setState(() => _cargando = true);
+              await _apiService.rechazarSolicitudTotal(solNum, "leao.chura@masterdrilling.com", justifCtrl.text.trim());
+              _cargarBandeja();
+            },
+            child: const Text("Confirmar Rechazo"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final int pendientes = _solicitudes.where((s) => s['estado'] == 'PENDIENTE').length;
-    final int aprobadas = _solicitudes.where((s) => s['estado'] == 'APROBADA').length;
-    final int rechazadas = _solicitudes.where((s) => s['estado'] == 'RECHAZADA').length;
+    final int pendientes = _solicitudes.where((s) => (s['estado'] ?? '') == 'PENDIENTE').length;
+    final int aprobadas = _solicitudes.where((s) => (s['estado'] ?? '') == 'APROBADA').length;
+    final int rechazadas = _solicitudes.where((s) => (s['estado'] ?? '') == 'RECHAZADA').length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text("Bandeja de Solicitudes"),
         actions: [
@@ -57,52 +166,38 @@ class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
       ),
       body: Column(
         children: [
-          // Banner Online Verde de Figma
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-            color: const Color(0xFFE8F5E9),
-            child: const Row(
-              children: [
-                Icon(Icons.wifi, color: Color(0xFF2E7D32), size: 16),
-                SizedBox(width: 8),
-                Text(
-                  "Modo Online Activado · Leao Chura (Jefe de Taller)",
-                  style: TextStyle(color: Color(0xFF2E7D32), fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-
-          // Tarjetas de Métricas de Inicio (Figma P14)
+          // Metricas superiores
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                _miniMetrica("Órdenes Pendientes", "$pendientes", Colors.orange),
+                _cardContador("Pendientes", "$pendientes", Colors.orange),
                 const SizedBox(width: 8),
-                _miniMetrica("Aprobadas", "$aprobadas", Colors.green),
+                _cardContador("Aprobadas", "$aprobadas", Colors.green),
                 const SizedBox(width: 8),
-                _miniMetrica("Rechazadas", "$rechazadas", Colors.red),
+                _cardContador("Rechazadas", "$rechazadas", Colors.red),
               ],
             ),
           ),
 
-          // Píldoras de Filtro (Figma P15)
+          // Selector de filtro
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
-              children: ['Todas', 'Pendiente', 'Aprobada', 'Rechazada'].map((f) {
-                final bool sel = _filtroActivo == f;
+              children: ["Todas", "PENDIENTE", "APROBADA", "RECHAZADA"].map((estado) {
+                final bool sel = _filtroEstado == estado;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
+                  padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: Text(f),
+                    label: Text(estado),
                     selected: sel,
-                    selectedColor: const Color(0xFF0D47A1),
-                    labelStyle: TextStyle(color: sel ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
-                    onSelected: (_) => setState(() => _filtroActivo = f),
+                    onSelected: (val) {
+                      setState(() {
+                        _filtroEstado = estado;
+                        _filtrar(_solicitudes, estado);
+                      });
+                    },
                   ),
                 );
               }).toList(),
@@ -110,10 +205,9 @@ class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
           ),
           const SizedBox(height: 8),
 
-          // Lista de Solicitudes
           Expanded(
             child: _cargando
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D47A1)))
+                ? const Center(child: CircularProgressIndicator())
                 : _solicitudesFiltradas.isEmpty
                     ? Center(
                         child: Column(
@@ -121,123 +215,30 @@ class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
                           children: [
                             const Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
                             const SizedBox(height: 12),
-                            const Text(
-                              "Bandeja al día",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "No hay solicitudes en estado $_filtroActivo",
-                              style: const TextStyle(color: Colors.grey),
-                            ),
+                            Text("No hay solicitudes en estado $_filtroEstado"),
                           ],
                         ),
                       )
-                    : RefreshIndicator(
-                        onRefresh: _cargarBandeja,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _solicitudesFiltradas.length,
-                          itemBuilder: (context, index) {
-                            final s = _solicitudesFiltradas[index];
-                            final estado = (s['estado'] ?? 'PENDIENTE').toString();
-                            final prioridad = (s['prioridad'] ?? 'MEDIA').toString();
-
-                            Color bgBadge = const Color(0xFFFFF9C4);
-                            Color textBadge = const Color(0xFFF57F17);
-                            if (estado == 'APROBADA') {
-                              bgBadge = const Color(0xFFE8F5E9);
-                              textBadge = const Color(0xFF2E7D32);
-                            } else if (estado == 'RECHAZADA') {
-                              bgBadge = const Color(0xFFFFEBEE);
-                              textBadge = const Color(0xFFC62828);
-                            }
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(14.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          s['solicitudNum'] ?? '',
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: bgBadge,
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: textBadge.withOpacity(0.4)),
-                                          ),
-                                          child: Text(
-                                            estado,
-                                            style: TextStyle(color: textBadge, fontSize: 12, fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "${s['codMaquinaria']} · ${s['modeloMaquinaria'] ?? 'Flota Principal'}",
-                                      style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: prioridad == 'ALTA' ? Colors.red.shade50 : Colors.blue.shade50,
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(color: prioridad == 'ALTA' ? Colors.red : Colors.blue),
-                                          ),
-                                          child: Text(
-                                            "Prioridad $prioridad",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: prioridad == 'ALTA' ? Colors.red.shade900 : Colors.blue.shade900,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          "${s['fechaEmision']} ${s['horaEmision'] ?? ''}",
-                                          style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(height: 20),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton.icon(
-                                        onPressed: () async {
-                                          await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => DetalleSolicitudScreen(solicitudNum: s['solicitudNum']),
-                                            ),
-                                          );
-                                          _cargarBandeja();
-                                        },
-                                        icon: const Icon(Icons.arrow_forward, size: 16),
-                                        label: Text(
-                                          estado == 'PENDIENTE' ? "Evaluar >" : "Ver Detalle >",
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _solicitudesFiltradas.length,
+                        itemBuilder: (ctx, i) {
+                          final s = _solicitudesFiltradas[i];
+                          final estado = (s['estado'] ?? 'PENDIENTE').toString();
+                          return Card(
+                            child: ListTile(
+                              title: Text("${s['solicitudNum']} · ${s['codMaquinaria']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text("Fecha: ${s['fechaEmision']} · Prioridad: ${s['prioridad']}"),
+                              trailing: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: estado == 'PENDIENTE' ? const Color(0xFF0D47A1) : Colors.grey,
                                 ),
+                                onPressed: () => _evaluarSolicitud(s),
+                                child: Text(estado == 'PENDIENTE' ? "Evaluar" : "Ver"),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
           ),
         ],
@@ -245,20 +246,19 @@ class _BandejaSolicitudesTabState extends State<BandejaSolicitudesTab> {
     );
   }
 
-  Widget _miniMetrica(String titulo, String valor, Color color) {
+  Widget _cardContador(String label, String valor, Color c) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: c.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
-            Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-            const SizedBox(height: 2),
-            Text(titulo, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center),
+            Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: c)),
+            Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
           ],
         ),
       ),

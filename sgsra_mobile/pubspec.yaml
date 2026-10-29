@@ -27,6 +27,7 @@ dependencies:
   connectivity_plus: ^6.0.3
   
   path: ^1.9.0
+  universal_html: ^2.3.0
 
 dev_dependencies:
   flutter_test:

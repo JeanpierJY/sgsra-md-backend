@@ -1,6 +1,8 @@
 package com.masterdrilling.sgsramd.service;
 
+import com.masterdrilling.sgsramd.dto.request.ActualizarRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.request.CrearRepuestoRequest;
+import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
 import com.masterdrilling.sgsramd.dto.response.RepuestoResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,4 +15,6 @@ public interface ICatalogoService {
     List<RepuestoResponse> buscarPredictivo(String termino);
     RepuestoResponse obtenerPorCodigo(String codParte);
     RepuestoResponse registrarRepuesto(CrearRepuestoRequest request);
+    RepuestoResponse actualizarRepuesto(String codParte, ActualizarRepuestoRequest request);
+    MensajeGenericoResponse cambiarEstadoRepuesto(String codParte, boolean activo);
 }

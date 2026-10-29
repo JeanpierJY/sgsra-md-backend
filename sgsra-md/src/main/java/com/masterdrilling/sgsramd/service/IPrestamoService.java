@@ -1,5 +1,6 @@
 package com.masterdrilling.sgsramd.service;
 
+import java.util.List;
 import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
 import com.masterdrilling.sgsramd.dto.request.ReporteExtravioRequest;
@@ -10,4 +11,6 @@ public interface IPrestamoService {
     MensajeGenericoResponse registrarPrestamo(String correoAlmacenista, RegistrarPrestamoRequest request, String ipOrigen);
     MensajeGenericoResponse registrarDevolucion(String correoAlmacenista, DevolucionHerramientaRequest request, String ipOrigen);
     MensajeGenericoResponse reportarHerramientaExtraviada(String correoAlmacenista, ReporteExtravioRequest request, String ipOrigen);
+    List<com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse> listarTodosLosPrestamos();
+    List<com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse> listarPrestamosPorMecanico(String dniMecanico);
 }

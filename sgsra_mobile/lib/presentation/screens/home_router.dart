@@ -16,7 +16,7 @@ class HomeRouter extends StatelessWidget {
       case "ADMINISTRADOR":
         return const AdminMainScreen();
       case "ALMACENISTA":
-        return const AlmacenistaMainScreen();
+        return const AlmacenMainScreen();
       default:
         return const Scaffold(
           body: Center(

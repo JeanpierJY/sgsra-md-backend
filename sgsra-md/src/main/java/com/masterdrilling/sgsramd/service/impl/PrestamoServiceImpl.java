@@ -5,6 +5,7 @@ import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
 import com.masterdrilling.sgsramd.dto.request.ReporteExtravioRequest;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
+import com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse;
 import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
 import com.masterdrilling.sgsramd.model.entity.*;
@@ -15,12 +16,15 @@ import com.masterdrilling.sgsramd.service.IAuditoriaService;
 import com.masterdrilling.sgsramd.service.IPrestamoService;
 import com.masterdrilling.sgsramd.service.validator.CupoPrestamoValidator;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -182,6 +186,56 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .exito(true)
                 .mensaje("Herramienta marcada como extraviada. Se asocio la responsabilidad a la bitacora de custodia")
                 .dato(custodio)
+                .build();
+    }
+
+    @Autowired
+    private PrestamoDetalle_DAO prestamoDetalleRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PrestamoResumenResponse> listarTodosLosPrestamos() {
+        return prestamoRepository.findAll().stream()
+                .map(this::mapearAPrestamoResumen)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PrestamoResumenResponse> listarPrestamosPorMecanico(String dniMecanico) {
+        return prestamoRepository.findAll().stream()
+                .filter(p -> p.getMecanico() != null && dniMecanico.trim().equals(p.getMecanico().getDniMecanico()))
+                .map(this::mapearAPrestamoResumen)
+                .toList();
+    }
+
+    private PrestamoResumenResponse mapearAPrestamoResumen(Prestamo p) {
+        String dniMec = (p.getMecanico() != null) ? p.getMecanico().getDniMecanico() : "";
+        String nombreMec = mecanicoRepository.findByDniMecanico(dniMec)
+                .map(Mecanico::getNombreMecanico)
+                .orElse("Mecanico no registrado");
+
+        List<PrestamoDetalle> detalles = prestamoDetalleRepository.findByIdPrestamoNum(p.getPrestamoNum());
+        List<PrestamoResumenResponse.ItemHerramientaPrestamo> items = detalles.stream().map(d -> {
+            String estadoFisico = herramientaRepository.findByCodHerramienta(d.getHerramienta().getCodHerramienta())
+                    .map(Herramienta::getEstadoActual)
+                    .orElse(d.getEstadoHerramienta());
+            return PrestamoResumenResponse.ItemHerramientaPrestamo.builder()
+                    .codHerramienta(d.getHerramienta().getCodHerramienta())
+                    .nombreHerramienta(d.getNombreHerramienta())
+                    .estadoHerramienta(d.getEstadoHerramienta())
+                    .estadoFisicoActual(estadoFisico)
+                    .build();
+        }).toList();
+
+        return PrestamoResumenResponse.builder()
+                .prestamoNum(p.getPrestamoNum())
+                .dniMecanico(dniMec)
+                .nombreMecanico(nombreMec)
+                .estadoPrestamo(p.getEstadoPrestamo())
+                .fechaPrestamo(p.getFechaPrestamo())
+                .horaSalida(p.getHoraSalida())
+                .herramientas(items)
                 .build();
     }
 }

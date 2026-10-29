@@ -40,4 +40,18 @@ public class CatalogoController {
     public ResponseEntity<RepuestoResponse> registrarRepuesto(@Valid @RequestBody CrearRepuestoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(catalogoService.registrarRepuesto(request));
     }
+    
+    @PutMapping("/{codParte}")
+    public ResponseEntity<RepuestoResponse> actualizarRepuesto(
+            @PathVariable("codParte") String codParte,
+            @Valid @RequestBody com.masterdrilling.sgsramd.dto.request.ActualizarRepuestoRequest request) {
+        return ResponseEntity.ok(catalogoService.actualizarRepuesto(codParte, request));
+    }
+
+    @PutMapping("/{codParte}/estado")
+    public ResponseEntity<com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse> cambiarEstadoRepuesto(
+            @PathVariable("codParte") String codParte,
+            @RequestParam("activo") boolean activo) {
+        return ResponseEntity.ok(catalogoService.cambiarEstadoRepuesto(codParte, activo));
+    }
 }

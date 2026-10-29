@@ -1,42 +1,43 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/session_timeout_wrapper.dart';
 import 'dashboard_panol_screen.dart';
-import 'registro_prestamo_tab.dart';
+import 'despacho_herramientas_screen.dart';
 import '../administrador/perfil_admin_tab.dart';
 
-class AlmacenistaMainScreen extends StatefulWidget {
-  const AlmacenistaMainScreen({super.key});
+class AlmacenMainScreen extends StatefulWidget {
+  const AlmacenMainScreen({super.key});
 
   @override
-  State<AlmacenistaMainScreen> createState() => _AlmacenistaMainScreenState();
+  State<AlmacenMainScreen> createState() => _AlmacenMainScreenState();
 }
 
-class _AlmacenistaMainScreenState extends State<AlmacenistaMainScreen> {
+class _AlmacenMainScreenState extends State<AlmacenMainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _tabs = [
     const DashboardPanolScreen(),
-    const RegistroPrestamoTab(),
+    const DespachoHerramientasScreen(),
     const PerfilAdminTab(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _tabs,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF1E1E1E),
-        selectedItemColor: const Color(0xFFFFB300),
-        unselectedItemColor: Colors.grey,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Pañol"),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory), label: "Préstamos"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
-        ],
+    return SessionTimeoutWrapper(
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _tabs,
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          selectedItemColor: const Color(0xFF0D47A1),
+          onTap: (idx) => setState(() => _currentIndex = idx),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Panol"),
+            BottomNavigationBarItem(icon: Icon(Icons.archive), label: "Prestamos"),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
+          ],
+        ),
       ),
     );
   }

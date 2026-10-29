@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/services/api_service.dart';
 import 'escaner_qr_screen.dart';
 
+
 class RegistroPrestamoTab extends StatefulWidget {
   const RegistroPrestamoTab({super.key});
 
@@ -18,7 +19,7 @@ class _RegistroPrestamoTabState extends State<RegistroPrestamoTab> {
   Future<void> _escanearQR() async {
     final codigo = await Navigator.push<String>(
       context,
-      MaterialPageRoute(builder: (_) => const EscanerQRScreen()),
+      MaterialPageRoute(builder: (_) => const EscanerQrScreen()),
     );
     if (codigo != null && codigo.isNotEmpty) {
       setState(() => _codigoHerramientaController.text = codigo);

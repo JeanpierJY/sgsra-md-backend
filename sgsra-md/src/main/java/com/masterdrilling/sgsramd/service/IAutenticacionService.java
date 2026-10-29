@@ -21,4 +21,6 @@ public interface IAutenticacionService {
     Page<UsuarioResumenResponse> listarUsuarios(RolUsuario rol, Pageable pageable);
     MensajeGenericoResponse registrarUsuario(CrearUsuarioRequest request, String ipOrigen);
     MensajeGenericoResponse cambiarEstadoCuenta(Long idUsuario, EstadoCuenta nuevoEstado, String ipOrigen);
+    MensajeGenericoResponse cambiarEstadoCuentaPorDni(String dni, EstadoCuenta nuevoEstado, String ipOrigen);
+    MensajeGenericoResponse actualizarUsuarioPorDni(String dni, ActualizarPerfilRequest request);
 }

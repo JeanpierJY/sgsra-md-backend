@@ -227,4 +227,20 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
                 .dato(usuario.getEstadoCuenta())
                 .build();
     }
+    
+    @Override
+    @Transactional
+    public MensajeGenericoResponse cambiarEstadoCuentaPorDni(String dni, EstadoCuenta nuevoEstado, String ipOrigen) {
+        Usuario usuario = usuarioRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con DNI: " + dni));
+        return cambiarEstadoCuenta(usuario.getIdUsuario(), nuevoEstado, ipOrigen);
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse actualizarUsuarioPorDni(String dni, ActualizarPerfilRequest request) {
+        Usuario usuario = usuarioRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con DNI: " + dni));
+        return actualizarPerfil(usuario.getCorreoCorporativo(), request);
+    }
 }

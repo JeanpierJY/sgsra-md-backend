@@ -21,7 +21,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// Prueba de integracion completa para ciclo de vida de prestamo y retorno fisico contra BD real
 @SpringBootTest
 @Transactional
 class PrestamoIntegrationTest {
@@ -38,32 +37,38 @@ class PrestamoIntegrationTest {
     @Test
     @DisplayName("Debe despachar prestamo, mutar herramienta a Prestada y luego devolverla actualizando a Disponible")
     void testCicloCompletoPrestamoYDevolucion() {
-        // 1. Registro de Prestamo
+        // Asegurar que la herramienta este en estado Disponible para iniciar el test
+        String codHerramienta = "HER-MAN-022";
+        Herramienta her = herramientaRepository.findByCodHerramienta(codHerramienta).orElse(null);
+        assertNotNull(her);
+        her.setEstadoActual(EstadoHerramienta.DISPONIBLE.getDescripcionSql());
+        herramientaRepository.save(her);
+
+        // 1. Registro de Prestamo con credenciales reales
         RegistrarPrestamoRequest prestamoReq = RegistrarPrestamoRequest.builder()
-                .dniMecanico("75859812")
-                .codigosHerramienta(List.of("HER-TOR-004"))
+                .dniMecanico("70000001")
+                .codigosHerramienta(List.of(codHerramienta))
                 .firmaMecanico("FIRMA_DIGITAL_INTEGRACION")
                 .build();
 
         MensajeGenericoResponse resPrestamo = prestamoService.registrarPrestamo(
-                "marcos.ramos@masterdrilling.com", prestamoReq, "127.0.0.1");
+                "marcos.baro@masterdrilling.com", prestamoReq, "127.0.0.1");
 
         assertNotNull(resPrestamo);
         assertTrue(resPrestamo.isExito());
         String prestamoNum = (String) resPrestamo.getDato();
 
-        // Validar persistencia de salida en base de datos
         Prestamo prestamoGuardado = prestamoRepository.findById(prestamoNum).orElse(null);
         assertNotNull(prestamoGuardado);
         assertEquals(EstadoPrestamo.ACTIVO, prestamoGuardado.getEstadoPrestamo());
 
-        Herramienta herramientaEnPrestamo = herramientaRepository.findByCodHerramienta("HER-TOR-004").orElse(null);
+        Herramienta herramientaEnPrestamo = herramientaRepository.findByCodHerramienta(codHerramienta).orElse(null);
         assertNotNull(herramientaEnPrestamo);
         assertEquals(EstadoHerramienta.PRESTADA.getDescripcionSql(), herramientaEnPrestamo.getEstadoActual());
 
         // 2. Registro de Devolucion Fisica
         DevolucionHerramientaRequest.ItemDevolucionRequest itemDev = DevolucionHerramientaRequest.ItemDevolucionRequest.builder()
-                .codHerramienta("HER-TOR-004")
+                .codHerramienta(codHerramienta)
                 .estadoFisico(EstadoDevolucion.BUEN_ESTADO)
                 .build();
 
@@ -74,17 +79,16 @@ class PrestamoIntegrationTest {
                 .build();
 
         MensajeGenericoResponse resDevolucion = prestamoService.registrarDevolucion(
-                "marcos.ramos@masterdrilling.com", devolucionReq, "127.0.0.1");
+                "marcos.baro@masterdrilling.com", devolucionReq, "127.0.0.1");
 
         assertNotNull(resDevolucion);
         assertTrue(resDevolucion.isExito());
 
-        // Validar liberacion de responsabilidad y retorno a estado Disponible
         Prestamo prestamoCerrado = prestamoRepository.findById(prestamoNum).orElse(null);
         assertNotNull(prestamoCerrado);
         assertEquals(EstadoPrestamo.CERRADO, prestamoCerrado.getEstadoPrestamo());
 
-        Herramienta herramientaRetornada = herramientaRepository.findByCodHerramienta("HER-TOR-004").orElse(null);
+        Herramienta herramientaRetornada = herramientaRepository.findByCodHerramienta(codHerramienta).orElse(null);
         assertNotNull(herramientaRetornada);
         assertEquals(EstadoHerramienta.DISPONIBLE.getDescripcionSql(), herramientaRetornada.getEstadoActual());
     }

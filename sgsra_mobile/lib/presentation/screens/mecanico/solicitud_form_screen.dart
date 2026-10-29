@@ -1,151 +1,225 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../../data/datasources/database_helper.dart';
-import '../../../data/models/repuesto_model.dart';
 import '../../../data/services/api_service.dart';
 
 class SolicitudFormScreen extends StatefulWidget {
-  final RepuestoModel repuestoInicial;
+  final Map<String, dynamic>? repuestoPreseleccionado;
 
-  const SolicitudFormScreen({super.key, required this.repuestoInicial});
+  const SolicitudFormScreen({super.key, this.repuestoPreseleccionado});
 
   @override
   State<SolicitudFormScreen> createState() => _SolicitudFormScreenState();
 }
 
 class _SolicitudFormScreenState extends State<SolicitudFormScreen> {
-  final _apiService = ApiService();
-  final _dbHelper = DatabaseHelper();
+  final ApiService _apiService = ApiService();
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _justificacionCtrl = TextEditingController();
+  final TextEditingController _cantidadCtrl = TextEditingController(text: "1");
 
-  String _codMaquinaria = "MD-RB-01";
+  String _maquinaSeleccionada = "MD-RB-01";
   String _prioridad = "ALTA";
-  int _cantidad = 1;
-  final _justificacionController = TextEditingController();
+  String? _repuestoSeleccionado;
   bool _enviando = false;
 
-  Future<void> _enviarRequerimiento() async {
-    if (_justificacionController.text.trim().length < 10) {
+  final List<Map<String, String>> _maquinarias = [
+    {"codigo": "MD-RB-01", "nombre": "Raise Borer Rhino 1008 (MD-RB-01)"},
+    {"codigo": "MD-RB-02", "nombre": "Jumbo Perforacion Frontal (MD-RB-02)"},
+  ];
+
+  final List<Map<String, String>> _repuestosDisponibles = [
+    {"codigo": "P-REX-024", "nombre": "Bomba de pistones axiales Rexroth A4VSO 125 DR"},
+    {"codigo": "H-ESP-118", "nombre": "Manguera espiral 4SP 1 pulgada"},
+    {"codigo": "F-HYD-882", "nombre": "Filtro hidraulico 10 micras"},
+    {"codigo": "K-SEL-340", "nombre": "Kit sellos Viton alta temperatura"},
+    {"codigo": "V-ALL-111", "nombre": "Valvula de control direccional proporcional"},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.repuestoPreseleccionado != null) {
+      _repuestoSeleccionado = widget.repuestoPreseleccionado!['codParte'];
+    } else {
+      _repuestoSeleccionado = _repuestosDisponibles.first["codigo"];
+    }
+  }
+
+  Future<void> _transmitirSolicitud() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_justificacionCtrl.text.trim().length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("La justificación técnica debe tener al menos 10 caracteres")),
+        const SnackBar(content: Text("La justificacion debe tener minimo 10 caracteres")),
       );
       return;
     }
 
     setState(() => _enviando = true);
+    final user = await _apiService.obtenerDatosUsuario();
+    final correoMecanico = user['email'] ?? 'carlos.mendoza@masterdrilling.com';
 
     final payload = {
-      'codMaquinaria': _codMaquinaria,
+      'codMaquinaria': _maquinaSeleccionada,
       'prioridad': _prioridad,
-      'justificacionTecnica': _justificacionController.text.trim(),
+      'justificacionTecnica': _justificacionCtrl.text.trim(),
       'items': [
-        {'codParte': widget.repuestoInicial.codParte, 'cantidad': _cantidad}
+        {
+          'codParte': _repuestoSeleccionado,
+          'cantidad': int.parse(_cantidadCtrl.text.trim()),
+        }
       ]
     };
 
     try {
-      final res = await _apiService.registrarSolicitud("carlos.mendoza@masterdrilling.com", payload);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res.data['mensaje'] ?? "Solicitud enviada"), backgroundColor: Colors.green),
-        );
-        Navigator.pop(context);
-      }
-    } catch (_) {
-      await _dbHelper.guardarBorradorOffline({
-        'codMaquinaria': _codMaquinaria,
-        'prioridad': _prioridad,
-        'justificacionTecnica': _justificacionController.text.trim(),
-        'payloadJson': jsonEncode(payload),
-        'sincronizado': 0,
-      });
+      await _apiService.registrarSolicitud(correoMecanico, payload);
+      if (!mounted) return;
+      setState(() => _enviando = false);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Sin conexión: Guardado en borrador local (se sincronizará automáticamente)"),
-            backgroundColor: Colors.orange,
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text("Solicitud Registrada"),
+            ],
           ),
-        );
-        Navigator.pop(context);
-      }
-    } finally {
-      if (mounted) setState(() => _enviando = false);
+          content: const Text(
+            "El requerimiento fue registrado en PostgreSQL con estado PENDIENTE.\n"
+            "El Administrador ya puede revisarlo en su bandeja de aprobaciones.",
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              child: const Text("Aceptar"),
+            )
+          ],
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _enviando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error al registrar solicitud en el servidor")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Emitir Solicitud")),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(title: const Text("Emitir Solicitud Formal")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _repuestoSeleccionado,
+                decoration: const InputDecoration(
+                  labelText: "Componente / Repuesto",
+                  prefixIcon: Icon(Icons.settings),
+                  border: OutlineInputBorder(),
+                ),
+                items: _repuestosDisponibles.map((r) {
+                  return DropdownMenuItem<String>(
+                    value: r["codigo"],
+                    child: Text("${r["codigo"]} · ${r["nombre"]}", overflow: TextOverflow.ellipsis),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _repuestoSeleccionado = v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _maquinaSeleccionada,
+                decoration: const InputDecoration(
+                  labelText: "Maquinaria Afectada",
+                  prefixIcon: Icon(Icons.precision_manufacturing),
+                  border: OutlineInputBorder(),
+                ),
+                items: _maquinarias.map((m) {
+                  return DropdownMenuItem<String>(
+                    value: m["codigo"],
+                    child: Text(m["nombre"]!),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _maquinaSeleccionada = v!),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Text(widget.repuestoInicial.nombreRepuesto, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text("Código: ${widget.repuestoInicial.codParte}", style: const TextStyle(color: Colors.grey)),
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _prioridad,
+                      decoration: const InputDecoration(
+                        labelText: "Prioridad",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: "ALTA", child: Text("ALTA")),
+                        DropdownMenuItem(value: "MEDIA", child: Text("MEDIA")),
+                        DropdownMenuItem(value: "BAJA", child: Text("BAJA")),
+                      ],
+                      onChanged: (v) => setState(() => _prioridad = v!),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _cantidadCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Cantidad",
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n <= 0) return "Minimo 1";
+                        return null;
+                      },
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _codMaquinaria,
-            decoration: const InputDecoration(labelText: "Maquinaria Afectada"),
-            items: const [
-              DropdownMenuItem(value: "MD-RB-01", child: Text("Raise Borer Rhino 1008 (MD-RB-01)")),
-              DropdownMenuItem(value: "MD-RB-02", child: Text("Master Drilling RD IV (MD-RB-02)")),
-              DropdownMenuItem(value: "MD-RB-03", child: Text("Perforadora Rhino 2002 (MD-RB-03)")),
-            ],
-            onChanged: (v) => setState(() => _codMaquinaria = v!),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _prioridad,
-                  decoration: const InputDecoration(labelText: "Prioridad"),
-                  items: const [
-                    DropdownMenuItem(value: "BAJA", child: Text("BAJA")),
-                    DropdownMenuItem(value: "MEDIA", child: Text("MEDIA")),
-                    DropdownMenuItem(value: "ALTA", child: Text("ALTA")),
-                  ],
-                  onChanged: (v) => setState(() => _prioridad = v!),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _justificacionCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: "Justificacion tecnica del cambio (minimo 10 caracteres)",
+                  border: OutlineInputBorder(),
                 ),
+                validator: (v) {
+                  if (v == null || v.trim().length < 10) {
+                    return "Escriba una justificacion de al menos 10 caracteres";
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  initialValue: "1",
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Cantidad"),
-                  onChanged: (v) => _cantidad = int.tryParse(v) ?? 1,
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D47A1),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
-              ),
+                onPressed: _enviando ? null : _transmitirSolicitud,
+                child: _enviando
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "ENVIAR SOLICITUD FORMAL",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+              )
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _justificacionController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: "Justificación técnica del cambio (mínimo 10 caracteres)",
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _enviando ? null : _enviarRequerimiento,
-            child: _enviando
-                ? const CircularProgressIndicator(color: Colors.black)
-                : const Text("ENVIAR SOLICITUD FORMAL"),
-          ),
-        ],
+        ),
       ),
     );
   }

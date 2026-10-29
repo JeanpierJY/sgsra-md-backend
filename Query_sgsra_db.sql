@@ -13,7 +13,7 @@ SELECT * FROM administrador;
 UPDATE usuario 
 SET  estado_cuenta = 'ACTIVO',
     intentos_fallidos = 0
-WHERE correo_corporativo IN ('carlos.baro@masterdrilling.com');
+WHERE correo_corporativo IN ('leao.chura@masterdrilling.com');
 
 
 -- Verificar estado actual
