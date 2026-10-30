@@ -23,13 +23,13 @@ class LoginResponseModel extends UserEntity {
 
   factory LoginResponseModel.fromJson(Map<String, dynamic> json) {
     return LoginResponseModel(
-      id: json['id']?.toString() ?? '',
-      correo: json['correo'] ?? '',
+      id: json['idUsuario']?.toString() ?? '',
+      correo: json['correoCorporativo'] ?? '',
       nombre: json['nombre'] ?? '',
       rol: json['rol'] ?? 'MECANICO',
       dni: json['dni'] ?? '',
       telefono: json['telefono'] ?? '',
-      token: json['token'] ?? '',
+      token: json['tokenJwt'] ?? '', // Lee exactamente 'tokenJwt' devuelto por Spring Boot
     );
   }
 }
