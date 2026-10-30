@@ -53,7 +53,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
       if (kIsWeb) {
         final blob = html.Blob([res.data]);
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
+        html.AnchorElement(href: url)
           ..setAttribute('download', nombreArchivo)
           ..click();
         html.Url.revokeObjectUrl(url);

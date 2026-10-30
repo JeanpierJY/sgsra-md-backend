@@ -1,4 +1,3 @@
-/// [RF09, RF12] Entidad de dominio para repuestos del catálogo
 class RepuestoEntity {
   final String codParte;
   final String nombre;
@@ -6,6 +5,7 @@ class RepuestoEntity {
   final String familiaMaquinaria;
   final String marca;
   final int stockDisponible;
+  final int stockMinimo;
   final String? urlFoto;
 
   const RepuestoEntity({
@@ -15,6 +15,7 @@ class RepuestoEntity {
     required this.familiaMaquinaria,
     required this.marca,
     required this.stockDisponible,
+    this.stockMinimo = 0,
     this.urlFoto,
   });
 }

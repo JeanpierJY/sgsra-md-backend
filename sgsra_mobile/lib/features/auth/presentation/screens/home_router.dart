@@ -6,6 +6,7 @@ import 'package:sgsra_mobile/features/administrador/data/datasources/admin_remot
 import 'package:sgsra_mobile/features/administrador/data/repositories/admin_repository_impl.dart';
 import 'package:sgsra_mobile/features/administrador/domain/usecases/admin_usecases.dart';
 import 'package:sgsra_mobile/features/administrador/presentation/screens/admin_main_screen.dart';
+import 'package:sgsra_mobile/features/mecanico/presentation/screens/mecanico_main_screen.dart';
 import '../../../administrador/presentation/bloc/admin_bloc.dart' show LoadBandejaEvent, AdminBloc;
 import '../../../../core/constants/app_colors.dart';
 
@@ -31,7 +32,7 @@ class HomeRouter extends StatelessWidget {
     } else if (rolClean.contains('ALMACENISTA')) {
       return const PlaceholderAlmacenScreen(); // Reemplazarás con tu vista Almacén
     } else {
-      return const PlaceholderMecanicoScreen(); // Reemplazarás con tu vista Mecánico
+      return const MecanicoMainScreen();
     }
   }
 }
