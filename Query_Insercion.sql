@@ -1,0 +1,72 @@
+-- B. FLOTA EXTENDIDA DE MAQUINARIA PESADA (Perforadoras Raise Borer y Jumbos)
+INSERT INTO maquinaria (cod_maquinaria, modelo_maquinaria, serie_fabricante, estado_operativo) VALUES
+('MD-RB-01', 'Raise Borer Rhino 1008 DC', 'SER-EPI-9901', 'OPERATIVA'),
+('MD-RB-02', 'Raise Borer Rhino 2002 Standard', 'SER-MD-4402', 'OPERATIVA'),
+('MD-RB-03', 'Perforadora Subterranea Rhino 1500', 'SER-EPI-2002', 'EN_MANTENIMIENTO'),
+('MD-RB-04', 'Raise Borer Rhino 2008 Blindhole', 'SER-MD-8812', 'OPERATIVA'),
+('MD-RB-05', 'Raise Borer Rhino 400 Boxhole', 'SER-MD-3319', 'OPERATIVA'),
+('MD-JM-01', 'Jumbo Electrohidraulico Sandvik DD421', 'SER-SDK-5510', 'OPERATIVA'),
+('MD-JM-02', 'Jumbo Frontal Epiroc Boomer 282', 'SER-EPI-6621', 'EN_MANTENIMIENTO'),
+('MD-SC-01', 'Scooptram Epiroc ST14 14 Toneladas', 'SER-EPI-7714', 'OPERATIVA'),
+('MD-SC-02', 'Cargador de Bajo Perfil Cat R1700K', 'SER-CAT-1702', 'OPERATIVA'),
+('MD-DP-01', 'Dumper Subterraneo Epiroc MT42', 'SER-EPI-4201', 'INOPERATIVA'),
+('MD-BL-01', 'Compresor de Aire Portatil Atlas Copco XATS 400', 'SER-AC-4001', 'OPERATIVA'),
+('MD-GEN-01', 'Grupo Electrogeno Cummins QSK23 900 kVA', 'SER-CUM-9002', 'OPERATIVA');
+
+
+-- C. CATALOGO MAESTRO EXTENDIDO DE REPUESTOS (25 Componentes Críticos)
+INSERT INTO repuesto (cod_parte, nombre_repuesto, stock_actual, stock_minimo, descripcion, activo) VALUES
+('P-REX-024', 'Bomba de pistones axiales Rexroth A4VSO 125 DR', 10, 2, 'Bomba hidraulica principal de circuito cerrado para rotacion de cabeza', TRUE),
+('H-ESP-118', 'Manguera espiral 4SP 1 pulgada x 3000 PSI', 35, 5, 'Manguera de alta presion 400 bar para transmision hidraulica', TRUE),
+('F-HYD-882', 'Filtro hidraulico de retorno 10 micras Hydac', 50, 10, 'Filtro de retorno de aceite para tanque principal con indicador de colmatacion', TRUE),
+('K-SEL-340', 'Kit de sellos Viton de alta temperatura para cilindro', 25, 4, 'Sellos para cilindro elevador principal y estabilizadores hidraulicos', TRUE),
+('V-ALL-111', 'Valvula de control direccional proporcional Rexroth', 12, 3, 'Modulo de mando electrohidraulico pilotado de 4 vias / 3 posiciones', TRUE),
+('B-CIL-501', 'Cilindro hidraulico de empuje y traccion Rhino 2002', 4, 1, 'Cilindro de carrera larga de avance de perforacion', TRUE),
+('E-ENG-902', 'Bomba de lubricacion de engranajes Lincoln Quicklub', 8, 2, 'Unidad de engrase automatico centralizado multipunto', TRUE),
+('R-ROD-065', 'Barra de perforacion 10 pulgadas x 5 pies MD Heavy', 40, 8, 'Barra de perforacion con rosca estandar DI-22 para raiseboring', TRUE),
+('C-CUT-128', 'Cortador de carburo de tungsteno TCI 12-1/4 pulgada', 18, 4, 'Cortador montado en cabeza escariadora (Reamer head)', TRUE),
+('M-MOT-440', 'Motor electrico trifasico ABB 250 kW 460V / 60Hz', 3, 1, 'Motor de accionamiento principal de rotacion con proteccion IP66', TRUE),
+('F-AIR-102', 'Filtro separador aire-aceite Donaldson', 30, 6, 'Elemento separador para sistema neumatico del compresor auxiliar', TRUE),
+('S-SEN-088', 'Sensor de presion inductivo 0-600 bar Danfoss', 15, 3, 'Transmisor de presion con salida analogica 4-20mA', TRUE),
+('S-TEM-045', 'Sensor de temperatura PT100 con vaina de acero inox', 20, 5, 'Sensor de monitoreo termico para cojinetes de caja reductora', TRUE),
+('G-RED-701', 'Pinon planetario etapa secundaria para caja reductora', 6, 2, 'Engranaje tratado termicamente para multiplicador de torque', TRUE),
+('A-ROD-305', 'Rodamiento de rodillos conicos Timken para spindle', 8, 2, 'Rodamiento de carga radial/axial combinada para eje principal', TRUE),
+('J-RET-211', 'Reten laberinto de aceite para cabezal de perforacion', 45, 10, 'Sello mecanico de estanqueidad para evitar ingreso de detritos (cuttings)', TRUE),
+('E-VAR-550', 'Variador de frecuencia Siemens Sinamics G120 200kW', 2, 1, 'Modulo inversor de potencia para control de RPM en cabeza', TRUE),
+('C-CAB-004', 'Cable minero extra flexible 4x70 mm2 vulcanizado 1kV', 120, 25, 'Cable de alimentacion principal con blindaje antidesgarro', TRUE),
+('V-SEC-015', 'Valvula de seguridad y alivio de presion 350 bar Sun', 14, 3, 'Valvula cartucho con rosca UNF para proteccion de sobrecarga', TRUE),
+('N-BOQ-090', 'Boquilla aspersora de refrigeracion de cabeza 3/8 NPT', 60, 15, 'Boquilla de lavado a presion para enfriamiento de cortadores', TRUE),
+('F-COM-012', 'Filtro coalescente de combustible Racor 1000FH', 40, 8, 'Separador de agua y particulas para motor diesel auxiliar', TRUE),
+('K-FRE-104', 'Kit de pastillas de freno para malacate de servicio', 16, 4, 'Material de friccion de alta resistencia para winche de apoyo', TRUE),
+('P-ACC-300', 'Acumulador de presion de nitrogeno 10L 330 bar Olaer', 5, 2, 'Vejiga de amortiguacion para pulsaciones del sistema hidraulico', TRUE),
+('T-TRA-055', 'Transductor de torque digital para columna de varillaje', 4, 1, 'Medidor dinamico de torsion en linea durante escariado', TRUE),
+('B-GRA-200', 'Grasa sintetica para rodamientos pesados Mobilith SHC (Balde 18kg)', 28, 5, 'Grasa grado NLGI 2 con aditivos EP para alta vibracion', TRUE);
+
+
+-- D. INVENTARIO EXTENDIDO DE HERRAMIENTAS EN PANOL (25 Herramientas Especializadas)
+INSERT INTO herramienta (cod_herramienta, nombre_herramienta, marca_herramienta, categoria, estado_actual) VALUES
+('HER-TOR-004', 'Torquimetro Industrial 3/4 pulgada 100-600 Nm', 'Proto', 'Manuales', 'Disponible'),
+('HER-TOR-005', 'Torquimetro de Zafe 1 pulgada 300-1500 Nm', 'Norbar', 'Manuales', 'Disponible'),
+('HER-PIST-003', 'Pistola de impacto neumatica 1 pulgada Heavy Duty', 'Chicago Pneumatic', 'Neumaticas', 'Disponible'),
+('HER-PIST-004', 'Pistola de impacto neumatica 3/4 pulgada', 'Ingersoll Rand', 'Neumaticas', 'Disponible'),
+('HER-BOM-008', 'Bomba hidraulica manual de 2 etapas 700 bar', 'Enerpac', 'Hidraulicas', 'Disponible'),
+('HER-BOM-009', 'Bomba hidraulica electrohidraulica portatil 700 bar', 'Enerpac', 'Hidraulicas', 'Disponible'),
+('HER-MAN-022', 'Manometro digital de presion diferencial 0-700 bar', 'Wika', 'Manuales', 'Disponible'),
+('HER-LLAV-015', 'Juego de llaves combinadas milimetricas 6-32mm (26 pzas)', 'Stanley FatMax', 'Manuales', 'Disponible'),
+('HER-LLAV-016', 'Juego de llaves de golpe acodadas 36-65mm (10 pzas)', 'Williams', 'Manuales', 'Disponible'),
+('HER-CIL-010', 'Cilindro hidraulico plano (Pancake) de 50 Toneladas', 'Enerpac', 'Hidraulicas', 'Disponible'),
+('HER-EXT-002', 'Extractor mecanico e hidraulico de engranajes y poleas 20T', 'Posi Lock', 'Manuales', 'Disponible'),
+('HER-MUL-001', 'Multimetro digital para mineria True RMS CAT IV 600V', 'Fluke 28-II', 'Electricas', 'Disponible'),
+('HER-PIN-007', 'Pinza amperimetrica AC/DC 1000A con registro', 'Fluke 376 FC', 'Electricas', 'Disponible'),
+('HER-MEG-003', 'Megohmetro digital de aislamiento hasta 5000V', 'Megger MIT515', 'Electricas', 'Disponible'),
+('HER-AMI-005', 'Amoladora angular de 7 pulgadas 2400W Industrial', 'DeWalt', 'Electricas', 'Disponible'),
+('HER-TAL-012', 'Rotomartillo electro-neumatico SDS-Max 1500W', 'Bosch Professional', 'Electricas', 'Disponible'),
+('HER-ENG-001', 'Engrasadora neumatica para tambor de grasa 20kg', 'Graco', 'Neumaticas', 'Disponible'),
+('HER-LAN-003', 'Lanza termica cortadora de pernos y pines atascados', 'Arcair', 'Neumaticas', 'Disponible'),
+('HER-TIR-002', 'Tirfor / Cabrestante manual de cable 3.2 Toneladas', 'Tractel', 'Manuales', 'Disponible'),
+('HER-TEC-008', 'Tecle de cadena de palanca 6 Toneladas x 3 metros', 'Elephant', 'Manuales', 'Disponible'),
+('HER-PRE-004', 'Prensa hidraulica de taller portatil 30 Toneladas', 'BVA Hydraulics', 'Hidraulicas', 'Disponible'),
+('HER-ALI-002', 'Alineador laser de poleas y acoplamientos de motor', 'SKF TKBA 40', 'Electricas', 'Disponible'),
+('HER-CAL-006', 'Calibrador vernier digital con resolucion 0.01mm x 300mm', 'Mitutoyo', 'Manuales', 'Disponible'),
+('HER-TERM-01', 'Camara termografica infrarroja para diagnostico de cojinetes', 'FLIR E8-XT', 'Electricas', 'Disponible'),
+('HER-LIN-014', 'Linterna antideflagrante intrinsecamente segura para tunel', 'Pelican 3715', 'Electricas', 'Disponible');

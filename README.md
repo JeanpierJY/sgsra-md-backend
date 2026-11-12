@@ -13,6 +13,7 @@ flutter run -d chrome
 =============================================
 Si falla la compilacion frontend usar:
 Stop-Process -Name "dart", "chrome" -Force -ErrorAction SilentlyContinue
+
 Repetir proceso
 
 =============================================

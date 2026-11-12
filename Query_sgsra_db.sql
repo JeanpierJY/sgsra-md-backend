@@ -1,51 +1,15 @@
 -- ============================================================================
 -- PROYECTO: SGSRA-MD (Master Drilling)
--- SCRIPT DDL: CREACION DE TABLAS, RESTRICCIONES, INDICES Y DATOS SEMILLA
+-- SCRIPT DDL: CREACION DE TABLAS, RESTRICCIONES, INDICES Y USUARIOS SEMILLA
 -- COMPATIBILIDAD: PostgreSQL 16+ / PostgreSQL 18
+-- Base de datos: sgsra_db
 -- ============================================================================
-sgsra_db
 
-SELECT * FROM administrador;
-
--- Hash oficial generado por org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
--- para la contraseña exacta: Admin123*
--- Hash BCrypt exacto para: admin123*
-UPDATE usuario 
-SET  estado_cuenta = 'ACTIVO',
-    intentos_fallidos = 0
-WHERE correo_corporativo IN ('leao.chura@masterdrilling.com');
-
-
--- Verificar estado actual
-SELECT id_usuario, correo_corporativo, rol, estado_cuenta, intentos_fallidos 
-FROM usuario 
-WHERE LOWER(correo_corporativo) = 'leao.chura@masterdrilling.com';
-
-
--- Limpiar dependencias transaccionales
-DELETE FROM solicitud_detalle;
-DELETE FROM solicitud;
-DELETE FROM prestamo_detalle;
-DELETE FROM prestamo;
-DELETE FROM devolucion_detalle;
-DELETE FROM devolucion;
-DELETE FROM registro_detalle;
-DELETE FROM registro;
-DELETE FROM detalle_rechazo;
-DELETE FROM dictamen_rechazo;
-
--- Limpiar tablas de roles
-DELETE FROM administrador;
-DELETE FROM mecanico;
-DELETE FROM almacenista;
-
--- Limpiar usuarios
-DELETE FROM usuario;
-
-SELECT id_auditoria, id_operacion, accion, timestamp 
-FROM auditoria_operacion 
-ORDER BY id_auditoria DESC;
-
+-- ----------------------------------------------------------------------------
+-- 0. LIMPIEZA TOTAL EN ORDEN DE DEPENDENCIAS (DROP TABLES)
+-- ----------------------------------------------------------------------------
+DROP TABLE IF EXISTS notificacion CASCADE;
+DROP TABLE IF EXISTS auditoria_operacion CASCADE;
 DROP TABLE IF EXISTS registro_detalle CASCADE;
 DROP TABLE IF EXISTS registro CASCADE;
 DROP TABLE IF EXISTS devolucion_detalle CASCADE;
@@ -63,9 +27,10 @@ DROP TABLE IF EXISTS mecanico CASCADE;
 DROP TABLE IF EXISTS almacenista CASCADE;
 DROP TABLE IF EXISTS administrador CASCADE;
 DROP TABLE IF EXISTS usuario CASCADE;
-DROP TABLE IF EXISTS auditoria_operacion CASCADE;
 
--- 1. TABLA: USUARIO
+-- ----------------------------------------------------------------------------
+-- 1. TABLA: USUARIO (Autenticacion y Control de Acceso)
+-- ----------------------------------------------------------------------------
 CREATE TABLE usuario (
     id_usuario BIGSERIAL PRIMARY KEY,
     dni VARCHAR(8) UNIQUE NOT NULL,
@@ -78,7 +43,9 @@ CREATE TABLE usuario (
     creado_en TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ----------------------------------------------------------------------------
 -- 2. TABLAS DE ROLES ESPECIALIZADOS
+-- ----------------------------------------------------------------------------
 CREATE TABLE mecanico (
     dni_mecanico VARCHAR(8) PRIMARY KEY,
     nombre_mecanico VARCHAR(100) NOT NULL,
@@ -105,17 +72,22 @@ CREATE TABLE administrador (
         REFERENCES usuario(dni) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 3. TABLA: REPUESTO
+-- ----------------------------------------------------------------------------
+-- 3. TABLA: REPUESTO (Catalogo Maestro con Soporte de Imagen y Stock)
+-- ----------------------------------------------------------------------------
 CREATE TABLE repuesto (
     cod_parte VARCHAR(30) PRIMARY KEY,
     nombre_repuesto VARCHAR(150) NOT NULL,
     stock_actual INT NOT NULL CHECK (stock_actual >= 0),
     stock_minimo INT NOT NULL CHECK (stock_minimo >= 0),
     descripcion TEXT,
-    activo BOOLEAN NOT NULL DEFAULT TRUE
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    imagen_url VARCHAR(255)
 );
 
--- 4. TABLA: MAQUINARIA
+-- ----------------------------------------------------------------------------
+-- 4. TABLA: MAQUINARIA (Flota de Perforacion y Equipos Pesados)
+-- ----------------------------------------------------------------------------
 CREATE TABLE maquinaria (
     cod_maquinaria VARCHAR(20) PRIMARY KEY,
     modelo_maquinaria VARCHAR(100) NOT NULL,
@@ -123,14 +95,16 @@ CREATE TABLE maquinaria (
     estado_operativo VARCHAR(20) NOT NULL CHECK (estado_operativo IN ('OPERATIVA', 'EN_MANTENIMIENTO', 'INOPERATIVA', 'BAJA'))
 );
 
--- 5. TABLA: SOLICITUD
+-- ----------------------------------------------------------------------------
+-- 5. TABLA: SOLICITUD (Pedidos de Repuestos)
+-- ----------------------------------------------------------------------------
 CREATE TABLE solicitud (
     solicitud_num VARCHAR(20) PRIMARY KEY,
     fecha_emision DATE NOT NULL,
     hora_emision TIME WITHOUT TIME ZONE NOT NULL,
     prioridad_solicitud VARCHAR(20) NOT NULL CHECK (prioridad_solicitud IN ('BAJA', 'MEDIA', 'ALTA')),
     justificacion_tecnica TEXT NOT NULL,
-    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADA', 'APROBADA_PARCIAL', 'RECHAZADA', 'ORDEN_CONTACTADA')),
+    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADA', 'APROBADA_PARCIAL', 'RECHAZADA', 'ORDEN_CONTACTADA', 'ENTREGADA')),
     dni_mecanico VARCHAR(8) NOT NULL,
     cod_maquina VARCHAR(20) NOT NULL,
     CONSTRAINT fk_solicitud_mecanico FOREIGN KEY (dni_mecanico) 
@@ -139,7 +113,9 @@ CREATE TABLE solicitud (
         REFERENCES maquinaria(cod_maquinaria) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 6. TABLA: SOLICITUD_DETALLE
+-- ----------------------------------------------------------------------------
+-- 6. TABLA: SOLICITUD_DETALLE (Items y Evaluacion por Repuesto)
+-- ----------------------------------------------------------------------------
 CREATE TABLE solicitud_detalle (
     solicitud_num VARCHAR(20) NOT NULL,
     item INT NOT NULL,
@@ -153,7 +129,9 @@ CREATE TABLE solicitud_detalle (
         REFERENCES repuesto(cod_parte) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 7. TABLAS: DICTAMEN_RECHAZO Y DETALLE_RECHAZO
+-- ----------------------------------------------------------------------------
+-- 7. TABLAS: DICTAMEN_RECHAZO Y DETALLE_RECHAZO (Sustento de Denegacion)
+-- ----------------------------------------------------------------------------
 CREATE TABLE dictamen_rechazo (
     dictamen_num VARCHAR(20) PRIMARY KEY,
     ref_solicitud_num VARCHAR(20) NOT NULL,
@@ -179,16 +157,21 @@ CREATE TABLE detalle_rechazo (
         REFERENCES repuesto(cod_parte) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 8. TABLA: HERRAMIENTA
+-- ----------------------------------------------------------------------------
+-- 8. TABLA: HERRAMIENTA (Panol, Estados y Soporte de Fotografia)
+-- ----------------------------------------------------------------------------
 CREATE TABLE herramienta (
     cod_herramienta VARCHAR(30) PRIMARY KEY,
     nombre_herramienta VARCHAR(150) NOT NULL,
     marca_herramienta VARCHAR(50) NOT NULL,
     categoria VARCHAR(30) NOT NULL CHECK (categoria IN ('Electricas', 'Hidraulicas', 'Neumaticas', 'Manuales')),
-    estado_actual VARCHAR(30) NOT NULL CHECK (estado_actual IN ('Disponible', 'Prestada', 'En Mora', 'En Mantenimiento', 'Extraviada', 'Baja Tecnica'))
+    estado_actual VARCHAR(30) NOT NULL CHECK (estado_actual IN ('Disponible', 'Prestada', 'En Mora', 'En Mantenimiento', 'Extraviada', 'Baja Tecnica')),
+    imagen_url VARCHAR(255)
 );
 
--- 9. TABLAS: PRESTAMO Y PRESTAMO_DETALLE
+-- ----------------------------------------------------------------------------
+-- 9. TABLAS: PRESTAMO Y PRESTAMO_DETALLE (Custodia en Campo)
+-- ----------------------------------------------------------------------------
 CREATE TABLE prestamo (
     prestamo_num VARCHAR(20) PRIMARY KEY,
     fecha_prestamo DATE NOT NULL,
@@ -217,7 +200,9 @@ CREATE TABLE prestamo_detalle (
         REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 10. TABLAS: DEVOLUCION Y DEVOLUCION_DETALLE
+-- ----------------------------------------------------------------------------
+-- 10. TABLAS: DEVOLUCION Y DEVOLUCION_DETALLE (Retorno e Inspeccion)
+-- ----------------------------------------------------------------------------
 CREATE TABLE devolucion (
     devolucion_num VARCHAR(20) PRIMARY KEY,
     fecha_devolucion DATE NOT NULL,
@@ -234,6 +219,9 @@ CREATE TABLE devolucion (
         REFERENCES mecanico(dni_mecanico) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
+-- ----------------------------------------------------------------------------
+-- 11. TABLA: DEVOLUCION_DETALLE
+-- ----------------------------------------------------------------------------
 CREATE TABLE devolucion_detalle (
     devolucion_num VARCHAR(20) NOT NULL,
     item INT NOT NULL,
@@ -246,7 +234,9 @@ CREATE TABLE devolucion_detalle (
         REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 11. TABLAS: REGISTRO Y REGISTRO_DETALLE
+-- ----------------------------------------------------------------------------
+-- 12. TABLAS: REGISTRO Y REGISTRO_DETALLE (Alta de Lote de Herramientas)
+-- ----------------------------------------------------------------------------
 CREATE TABLE registro (
     registro_num VARCHAR(20) PRIMARY KEY,
     fecha_ingreso DATE NOT NULL,
@@ -266,7 +256,9 @@ CREATE TABLE registro_detalle (
         REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- 12. TABLA: AUDITORIA_OPERACION
+-- ----------------------------------------------------------------------------
+-- 13. TABLA: AUDITORIA_OPERACION (Trazabilidad y No Repudio)
+-- ----------------------------------------------------------------------------
 CREATE TABLE auditoria_operacion (
     id_auditoria BIGSERIAL PRIMARY KEY,
     id_operacion VARCHAR(50) NOT NULL,
@@ -277,51 +269,63 @@ CREATE TABLE auditoria_operacion (
     hash_sha256 VARCHAR(64) NOT NULL
 );
 
--- INDICES B-TREE
+-- ----------------------------------------------------------------------------
+-- 14. TABLA: NOTIFICACION (Alertas Reactivas del Sistema - RF46 a RF50)
+-- ----------------------------------------------------------------------------
+CREATE TABLE notificacion (
+    id_notificacion BIGSERIAL PRIMARY KEY,
+    dni_destinatario VARCHAR(8),
+    rol_destinatario VARCHAR(20) CHECK (rol_destinatario IN ('MECANICO', 'ALMACENISTA', 'ADMINISTRADOR', 'TODOS')),
+    titulo VARCHAR(150) NOT NULL,
+    mensaje TEXT NOT NULL,
+    tipo_alerta VARCHAR(30) NOT NULL DEFAULT 'INFO' CHECK (tipo_alerta IN ('INFO', 'SOLICITUD', 'APROBACION', 'RECHAZO', 'MORA', 'EXTRAVIO', 'STOCK_MINIMO')),
+    leida BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_creacion TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 15. INDICES B-TREE (Optimizacion de Consultas Frecuentes)
+-- ----------------------------------------------------------------------------
 CREATE INDEX idx_solicitud_mecanico ON solicitud(dni_mecanico);
 CREATE INDEX idx_solicitud_estado ON solicitud(estado_solicitud);
 CREATE INDEX idx_prestamo_mecanico ON prestamo(dni_mecanico);
 CREATE INDEX idx_prestamo_estado ON prestamo(estado_prestamo);
 CREATE INDEX idx_herramienta_categoria ON herramienta(categoria);
+CREATE INDEX idx_herramienta_estado ON herramienta(estado_actual);
 CREATE INDEX idx_repuesto_activo ON repuesto(activo);
+CREATE INDEX idx_auditoria_timestamp ON auditoria_operacion(timestamp);
+CREATE INDEX idx_notificacion_destinatario ON notificacion(dni_destinatario, leida);
+CREATE INDEX idx_notificacion_rol ON notificacion(rol_destinatario, leida);
 
 -- ============================================================================
--- DATOS SEMILLA (SEEDS) INICIALES PARA PRUEBAS
+-- 16. USUARIOS SEMILLA (Contraseñas oficiales BCrypt: admin, meca, alma)
 -- ============================================================================
+-- Admin:       leao.chura@masterdrilling.com    / pass: admin
+-- Mecanico:    carlos.baro@masterdrilling.com   / pass: meca
+-- Almacenista: marcos.baro@masterdrilling.com   / pass: alma
 
--- Usuarios base (Clave inicial generada: Admin123*, Mecanico123*, Almacen123*)
 INSERT INTO usuario (dni, nombre, correo_corporativo, contrasena_hash, rol, estado_cuenta) VALUES
-('75859812', 'Carlos Mendoza', 'carlos.mendoza@masterdrilling.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'MECANICO', 'ACTIVO'),
-('45829104', 'Marcos Aurelio Ramos Quispe', 'marcos.ramos@masterdrilling.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'ALMACENISTA', 'ACTIVO'),
-('10293847', 'Leao Chura', 'leao.chura@masterdrilling.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'ADMINISTRADOR', 'ACTIVO');
-
-INSERT INTO mecanico (dni_mecanico, nombre_mecanico, especialidad_mecanico, cargo_mecanico) VALUES
-('75859812', 'Carlos Mendoza', 'Hidraulica', 'Mecanico de Planta');
-
-INSERT INTO almacenista (dni_almacenista, nombre_almacenista, sede_asignada) VALUES
-('45829104', 'Marcos Aurelio Ramos Quispe', 'Taller Lurin');
+('10293847', 'Leao Chura', 'leao.chura@masterdrilling.com', '$2a$10$SETRphAwaMIowSMY05fzae15b4lzZEG9kSOOnAoinuxztQIl.4e3i', 'ADMINISTRADOR', 'ACTIVO'),
+('70000001', 'Carlos Mendoza Baro', 'carlos.baro@masterdrilling.com', '$2a$10$iD7BzGlbX42.b2eXAm2Jj.yF28BJ5sxd2V2VZkqei8kRLiMo9gGpC', 'MECANICO', 'ACTIVO'),
+('70000002', 'Marcos Ramos Baro', 'marcos.baro@masterdrilling.com', '$2a$10$Mhsh51WoSbSQ0Qm6f.o38.0qH3NZZZTksyMEGZCVdr3okakrwU292', 'ALMACENISTA', 'ACTIVO'),
+('75859812', 'Carlos Mendoza', 'carlos.mendoza@masterdrilling.com', '$2a$10$iD7BzGlbX42.b2eXAm2Jj.yF28BJ5sxd2V2VZkqei8kRLiMo9gGpC', 'MECANICO', 'ACTIVO'),
+('45829104', 'Marcos Aurelio Ramos Quispe', 'marcos.ramos@masterdrilling.com', '$2a$10$Mhsh51WoSbSQ0Qm6f.o38.0qH3NZZZTksyMEGZCVdr3okakrwU292', 'ALMACENISTA', 'ACTIVO');
 
 INSERT INTO administrador (dni_administrador, nombre_administrador, correo_corporativo) VALUES
 ('10293847', 'Leao Chura', 'leao.chura@masterdrilling.com');
 
--- Maquinaria pesada
-INSERT INTO maquinaria (cod_maquinaria, modelo_maquinaria, serie_fabricante, estado_operativo) VALUES
-('MD-RB-01', 'Raise Borer Rhino 1008', 'SER-EPI-9901', 'OPERATIVA'),
-('MD-RB-02', 'Master Drilling Componentes RD IV', 'SER-MD-4402', 'OPERATIVA'),
-('MD-RB-03', 'Perforadora Subterranea Rhino 2002', 'SER-EPI-2002', 'EN_MANTENIMIENTO');
+INSERT INTO mecanico (dni_mecanico, nombre_mecanico, especialidad_mecanico, cargo_mecanico, telefono) VALUES
+('70000001', 'Carlos Mendoza Baro', 'Hidraulica', 'Mecanico de Planta', '987654321'),
+('75859812', 'Carlos Mendoza', 'Electrohidraulica', 'Mecanico de Campo', '995348431');
 
--- Catalogo maestro de repuestos
-INSERT INTO repuesto (cod_parte, nombre_repuesto, stock_actual, stock_minimo, descripcion, activo) VALUES
-('P-REX-024', 'Bomba de pistones axiales Rexroth A4VSO 125 DR', 10, 2, 'Bomba hidraulica para rotacion principal', TRUE),
-('H-ESP-118', 'Manguera espiral 4SP 1 pulgada', 35, 5, 'Manguera de alta presion 400 bar', TRUE),
-('F-HYD-882', 'Filtro hidraulico 10 micras', 50, 10, 'Filtro de retorno de aceite para tanque', TRUE),
-('K-SEL-340', 'Kit sellos Viton alta temperatura', 25, 4, 'Sellos para cilindro elevador', TRUE),
-('V-ALL-111', 'Valvula de control direccional proporcional', 12, 3, 'Modulo de mando electrohidraulico', TRUE);
+INSERT INTO almacenista (dni_almacenista, nombre_almacenista, sede_asignada) VALUES
+('70000002', 'Marcos Ramos Baro', 'Taller Lurin'),
+('45829104', 'Marcos Aurelio Ramos Quispe', 'Mina Cerro Lindo');
 
--- Inventario de herramientas en panol
-INSERT INTO herramienta (cod_herramienta, nombre_herramienta, marca_herramienta, categoria, estado_actual) VALUES
-('HER-TOR-004', 'Torquimetro Industrial 3/4 pulgada 100-600 Nm', 'Proto', 'Manuales', 'Disponible'),
-('HER-PIST-003', 'Pistola de impacto neumatica 1 pulgada', 'Chicago Pneumatic', 'Neumaticas', 'Disponible'),
-('HER-BOM-008', 'Bomba hidraulica manual 700 bar', 'Enerpac', 'Hidraulicas', 'Disponible'),
-('HER-MAN-022', 'Manometro digital de presion diferencial', 'Wika', 'Manuales', 'Disponible'),
-('HER-LLAV-015', 'Juego de llaves combinadas milimetricas 6-32mm', 'Stanley FatMax', 'Manuales', 'Disponible');
+-- ===================================================================================
+-- Limpieza de las tablas usuario y roles en caso de errores sin eliminar las tablas
+-- ===================================================================================
+TRUNCATE TABLE usuario CASCADE;
+TRUNCATE TABLE administrador CASCADE;
+TRUNCATE TABLE mecanico CASCADE;
+TRUNCATE TABLE almacenista CASCADE;
