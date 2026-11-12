@@ -17,9 +17,9 @@ public interface AuditoriaOperacion_DAO extends JpaRepository<AuditoriaOperacion
     Page<AuditoriaOperacion> findAllByOrderByTimestampDesc(Pageable pageable);
 
     @Query("SELECT a FROM AuditoriaOperacion a WHERE " +
-           "(:idOperacion IS NULL OR a.idOperacion = :idOperacion) AND " +
-           "(:fechaInicio IS NULL OR a.timestamp >= :fechaInicio) AND " +
-           "(:fechaFin IS NULL OR a.timestamp <= :fechaFin) " +
+           "(CAST(:idOperacion AS string) IS NULL OR a.idOperacion = :idOperacion) AND " +
+           "(CAST(:fechaInicio AS java.time.LocalDateTime) IS NULL OR a.timestamp >= :fechaInicio) AND " +
+           "(CAST(:fechaFin AS java.time.LocalDateTime) IS NULL OR a.timestamp <= :fechaFin) " +
            "ORDER BY a.timestamp DESC")
     Page<AuditoriaOperacion> filtrarAuditoria(
             @Param("idOperacion") String idOperacion,

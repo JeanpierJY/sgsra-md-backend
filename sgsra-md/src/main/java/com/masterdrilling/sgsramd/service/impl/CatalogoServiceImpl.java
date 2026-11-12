@@ -9,11 +9,13 @@ import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
 import com.masterdrilling.sgsramd.model.entity.Repuesto;
 import com.masterdrilling.sgsramd.service.ICatalogoService;
+import com.masterdrilling.sgsramd.service.IStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,6 +24,7 @@ import java.util.List;
 public class CatalogoServiceImpl implements ICatalogoService {
 
     private final Repuesto_DAO repuestoRepository;
+    private final IStorageService storageService;
 
     @Override
     @Transactional(readOnly = true)
@@ -77,6 +80,7 @@ public class CatalogoServiceImpl implements ICatalogoService {
                 .stockMinimo(r.getStockMinimo())
                 .descripcion(r.getDescripcion())
                 .activo(r.getActivo())
+                .imagenUrl(r.getImagenUrl())
                 .build();
     }
 
@@ -110,5 +114,20 @@ public class CatalogoServiceImpl implements ICatalogoService {
                 .mensaje("Estado de repuesto " + codParte + " actualizado a: " + (activo ? "HABILITADO" : "DESHABILITADO"))
                 .dato(rep.getActivo())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public RepuestoResponse subirImagenRepuesto(String codParte, MultipartFile archivo) {
+        Repuesto rep = repuestoRepository.findById(codParte.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Repuesto no encontrado con codigo: " + codParte));
+
+        if (rep.getImagenUrl() != null) {
+            storageService.eliminarArchivo(rep.getImagenUrl());
+        }
+
+        String nuevaUrl = storageService.guardarArchivo(archivo, "repuestos");
+        rep.setImagenUrl(nuevaUrl);
+        return mapearAResponse(repuestoRepository.save(rep));
     }
 }

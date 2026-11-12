@@ -18,4 +18,5 @@ public class RepuestoResponse {
     private Integer stockMinimo;
     private String descripcion;
     private Boolean activo;
+    private String imagenUrl;
 }

@@ -307,6 +307,52 @@ public class SolicitudServiceImpl implements ISolicitudService {
         return MensajeGenericoResponse.builder().exito(true).mensaje("Orden marcada como contactada").dato(s.getSolicitudNum()).build();
     }
 
+    @Override
+    @Transactional
+    public MensajeGenericoResponse despacharEntregaRepuestos(String solicitudNum, String correoAlmacenista, String ipOrigen) {
+        Solicitud s = solicitudRepository.findById(solicitudNum)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Solicitud no encontrada"));
+
+        if (s.getEstadoSolicitud() != EstadoSolicitud.APROBADA && s.getEstadoSolicitud() != EstadoSolicitud.APROBADA_PARCIAL) {
+            throw new BadRequestException("Solo se pueden despachar solicitudes en estado APROBADA o APROBADA_PARCIAL");
+        }
+
+        Usuario almacUsuario = usuarioRepository.findByCorreoCorporativo(correoAlmacenista)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Almacenista no registrado"));
+
+        // Descontar inventario fisico para cada repuesto aprobado
+        for (SolicitudDetalle det : s.getDetalles()) {
+            if (det.getEstadoItem() == EstadoItemSolicitud.APROBADO) {
+                Repuesto rep = det.getRepuesto();
+                if (rep.getStockActual() < det.getCantidadRepuesto()) {
+                    throw new BadRequestException("Stock insuficiente para el repuesto: " + rep.getCodParte() + 
+                            ". Disponible: " + rep.getStockActual() + ", Solicitado: " + det.getCantidadRepuesto());
+                }
+                rep.setStockActual(rep.getStockActual() - det.getCantidadRepuesto());
+                repuestoRepository.save(rep);
+
+                // Alerta si cae bajo stock minimo
+                if (rep.getStockActual() <= rep.getStockMinimo()) {
+                    notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Stock Critico",
+                            "El repuesto " + rep.getNombreRepuesto() + " (" + rep.getCodParte() + ") ha alcanzado nivel critico: " + rep.getStockActual() + " unidades", "STOCK_MINIMO");
+                }
+            }
+        }
+
+        s.setEstadoSolicitud(EstadoSolicitud.ENTREGADA);
+        solicitudRepository.save(s);
+
+        auditoriaService.registrarAsiento(s.getSolicitudNum(), almacUsuario.getIdUsuario(), "ENTREGA_DESPACHO_REPUESTOS", ipOrigen);
+        notificacionService.enviarNotificacionConTipo(s.getMecanico().getDniMecanico(), "MECANICO", "Repuestos Entregados",
+                "Los repuestos de la solicitud " + s.getSolicitudNum() + " han sido entregados en almacen.", "INFO");
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Repuestos despachados y stock actualizado exitosamente")
+                .dato(s.getSolicitudNum())
+                .build();
+    }
+
     private SolicitudResumenResponse mapearAResumen(Solicitud s) {
         return SolicitudResumenResponse.builder()
                 .solicitudNum(s.getSolicitudNum())

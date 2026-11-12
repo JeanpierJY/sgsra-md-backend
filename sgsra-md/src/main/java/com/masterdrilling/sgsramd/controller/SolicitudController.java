@@ -94,4 +94,13 @@ public class SolicitudController {
         String ipOrigen = httpRequest.getRemoteAddr();
         return ResponseEntity.ok(solicitudService.marcarOrdenContactada(solicitudNum, correoAdmin, request, ipOrigen));
     }
+
+    @PutMapping("/{solicitudNum}/entregar")
+    public ResponseEntity<MensajeGenericoResponse> despacharEntrega(
+            @PathVariable("solicitudNum") String solicitudNum,
+            @RequestParam("correoAlmacenista") String correoAlmacenista,
+            HttpServletRequest httpRequest) {
+        String ipOrigen = httpRequest.getRemoteAddr();
+        return ResponseEntity.ok(solicitudService.despacharEntregaRepuestos(solicitudNum, correoAlmacenista, ipOrigen));
+    }
 }

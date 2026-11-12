@@ -13,4 +13,5 @@ public interface IInventarioService {
     FichaHerramientaResponse consultarHerramientaPorCodigo(String codHerramienta);
     List<FichaHerramientaResponse> listarHerramientasPorCategoria(CategoriaHerramienta categoria);
     FichaHerramientaResponse registrarNuevaHerramienta(RegistrarHerramientaRequest request, String correoAlmacenista);
+    FichaHerramientaResponse subirImagenHerramienta(String codHerramienta, org.springframework.web.multipart.MultipartFile archivo);
 }

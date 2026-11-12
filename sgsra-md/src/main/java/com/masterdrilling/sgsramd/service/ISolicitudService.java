@@ -23,4 +23,5 @@ public interface ISolicitudService {
     MensajeGenericoResponse rechazarSolicitudTotal(String solicitudNum, String correoAdmin, DictamenRechazoRequest request, String ipOrigen);
     MensajeGenericoResponse aprobarSolicitudParcial(String solicitudNum, String correoAdmin, AprobacionParcialRequest request, String ipOrigen);
     MensajeGenericoResponse marcarOrdenContactada(String solicitudNum, String correoAdmin, ContactarProveedorRequest request, String ipOrigen);
+    MensajeGenericoResponse despacharEntregaRepuestos(String solicitudNum, String correoAlmacenista, String ipOrigen);
 }

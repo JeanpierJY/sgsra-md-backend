@@ -31,6 +31,9 @@ public class Herramienta {
     @Column(name = "estado_actual", length = 30, nullable = false)
     private String estadoActual;
 
+    @Column(name = "imagen_url", length = 255)
+    private String imagenUrl;
+
     public CategoriaHerramienta getCategoriaEnum() {
         return CategoriaHerramienta.fromString(this.categoria);
     }

@@ -73,8 +73,18 @@ public class AutenticacionController {
     public ResponseEntity<MensajeGenericoResponse> cambiarEstadoPorDni(
             @PathVariable("dni") String dni,
             @RequestParam("nuevoEstado") EstadoCuenta nuevoEstado,
+            @RequestParam(value = "correoAdmin", required = false) String correoAdmin,
             HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(autenticacionService.cambiarEstadoCuentaPorDni(dni, nuevoEstado, httpRequest.getRemoteAddr()));
+        return ResponseEntity.ok(autenticacionService.cambiarEstadoCuentaPorDni(dni, nuevoEstado, correoAdmin, httpRequest.getRemoteAddr()));
+    }
+
+    @PutMapping("/usuarios/dni/{dni}/reset-clave")
+    public ResponseEntity<MensajeGenericoResponse> resetearClavePorDni(
+            @PathVariable("dni") String dni,
+            @RequestParam("nuevaClave") String nuevaClave,
+            @RequestParam(value = "correoAdmin", required = false) String correoAdmin,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(autenticacionService.resetearClavePorDni(dni, nuevaClave, correoAdmin, httpRequest.getRemoteAddr()));
     }
 
     @PutMapping("/usuarios/dni/{dni}")

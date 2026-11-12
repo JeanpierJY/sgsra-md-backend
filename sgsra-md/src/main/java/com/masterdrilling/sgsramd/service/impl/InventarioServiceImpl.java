@@ -10,9 +10,11 @@ import com.masterdrilling.sgsramd.model.entity.*;
 import com.masterdrilling.sgsramd.model.enums.CategoriaHerramienta;
 import com.masterdrilling.sgsramd.model.enums.EstadoHerramienta;
 import com.masterdrilling.sgsramd.service.IInventarioService;
+import com.masterdrilling.sgsramd.service.IStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ public class InventarioServiceImpl implements IInventarioService {
     private final Almacenista_DAO almacenistaRepository;
     private final Usuario_DAO usuarioRepository;
     private final Registro_DAO registroRepository;
+    private final IStorageService storageService;
 
     @Override
     @Transactional(readOnly = true)
@@ -125,6 +128,22 @@ public class InventarioServiceImpl implements IInventarioService {
                 .marcaHerramienta(h.getMarcaHerramienta())
                 .categoria(h.getCategoria())
                 .estadoActual(h.getEstadoActual())
+                .imagenUrl(h.getImagenUrl())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public FichaHerramientaResponse subirImagenHerramienta(String codHerramienta, MultipartFile archivo) {
+        Herramienta h = herramientaRepository.findByCodHerramienta(codHerramienta.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Herramienta no encontrada con codigo: " + codHerramienta));
+
+        if (h.getImagenUrl() != null) {
+            storageService.eliminarArchivo(h.getImagenUrl());
+        }
+
+        String nuevaUrl = storageService.guardarArchivo(archivo, "herramientas");
+        h.setImagenUrl(nuevaUrl);
+        return mapearAFicha(herramientaRepository.save(h));
     }
 }

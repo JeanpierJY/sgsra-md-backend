@@ -17,4 +17,5 @@ public interface ICatalogoService {
     RepuestoResponse registrarRepuesto(CrearRepuestoRequest request);
     RepuestoResponse actualizarRepuesto(String codParte, ActualizarRepuestoRequest request);
     MensajeGenericoResponse cambiarEstadoRepuesto(String codParte, boolean activo);
+    RepuestoResponse subirImagenRepuesto(String codParte, org.springframework.web.multipart.MultipartFile archivo);
 }

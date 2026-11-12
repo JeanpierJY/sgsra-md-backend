@@ -17,4 +17,5 @@ public class FichaHerramientaResponse {
     private String marcaHerramienta;
     private String categoria;
     private String estadoActual;
+    private String imagenUrl;
 }

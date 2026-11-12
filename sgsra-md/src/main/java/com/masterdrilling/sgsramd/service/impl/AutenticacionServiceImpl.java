@@ -231,9 +231,55 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     @Override
     @Transactional
     public MensajeGenericoResponse cambiarEstadoCuentaPorDni(String dni, EstadoCuenta nuevoEstado, String ipOrigen) {
-        Usuario usuario = usuarioRepository.findByDni(dni.trim())
+        return cambiarEstadoCuentaPorDni(dni, nuevoEstado, null, ipOrigen);
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse cambiarEstadoCuentaPorDni(String dni, EstadoCuenta nuevoEstado, String correoAdmin, String ipOrigen) {
+        Usuario objetivo = usuarioRepository.findByDni(dni.trim())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con DNI: " + dni));
-        return cambiarEstadoCuenta(usuario.getIdUsuario(), nuevoEstado, ipOrigen);
+
+        if (correoAdmin != null && !correoAdmin.trim().isEmpty()) {
+            Usuario admin = usuarioRepository.findByCorreoCorporativo(correoAdmin.trim())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Administrador no encontrado: " + correoAdmin));
+
+            // REGLA DE JERARQUIA: Un Administrador no puede alterar a otro Administrador
+            if (objetivo.getRol() == RolUsuario.ADMINISTRADOR && !objetivo.getIdUsuario().equals(admin.getIdUsuario())) {
+                throw new AccesoDenegadoException("No tiene privilegios para modificar o suspender cuentas de nivel administrativo.");
+            }
+        }
+
+        return cambiarEstadoCuenta(objetivo.getIdUsuario(), nuevoEstado, ipOrigen);
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse resetearClavePorDni(String dni, String nuevaClave, String correoAdmin, String ipOrigen) {
+        Usuario objetivo = usuarioRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con DNI: " + dni));
+
+        if (correoAdmin != null && !correoAdmin.trim().isEmpty()) {
+            Usuario admin = usuarioRepository.findByCorreoCorporativo(correoAdmin.trim())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Administrador no encontrado: " + correoAdmin));
+
+            if (objetivo.getRol() == RolUsuario.ADMINISTRADOR && !objetivo.getIdUsuario().equals(admin.getIdUsuario())) {
+                throw new AccesoDenegadoException("No tiene privilegios para resetear contraseñas de nivel administrativo.");
+            }
+        }
+
+        objetivo.setContrasenaHash(passwordEncoder.encode(nuevaClave.trim()));
+        objetivo.setIntentosFallidos(0);
+        objetivo.setEstadoCuenta(EstadoCuenta.ACTIVO);
+        usuarioRepository.save(objetivo);
+
+        auditoriaService.registrarAsiento("RESET_CLAVE_" + objetivo.getDni(), objetivo.getIdUsuario(), "RESET_CONTRASENA_ADMIN", ipOrigen);
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Contraseña reseteada exitosamente para el usuario con DNI: " + dni)
+                .dato(dni)
+                .build();
     }
 
     @Override
