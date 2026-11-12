@@ -1,6 +1,9 @@
+import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:universal_html/html.dart' as html;
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
@@ -57,6 +60,14 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
           ..setAttribute('download', nombreArchivo)
           ..click();
         html.Url.revokeObjectUrl(url);
+      } else {
+        // Guardado nativo para Android / iOS sin depender de DOM de navegador
+        final dir = await getApplicationDocumentsDirectory();
+        final archivoLocal = io.File('${dir.path}/$nombreArchivo');
+        await archivoLocal.writeAsBytes(res.data as List<int>);
+
+        _mostrarMensaje('Reporte guardado en: ${archivoLocal.path}');
+        await OpenFilex.open(archivoLocal.path);
       }
     } catch (e) {
       _mostrarMensaje('Error al exportar archivo: $e', esError: true);
