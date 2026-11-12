@@ -135,6 +135,8 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
   - [x] 2.4 Permisos Nativos: Declarar permisos para lectura de almacenamiento e imágenes en `AndroidManifest.xml`
   - [x] 2.5 Parametrización de Red: Configurar `api_constants.dart` con la IP del servidor Spring Boot (`192.168.18.57`)
   - [x] 2.6 Verificación de Build: Adaptaciones completas para el target Android APK sin dependencias exclusivas de navegador
+  - [x] 2.7 Revision de ManualTestingRunner.java para averiguar que metodos, RF y otros faltan.
+  - [x] 2.8 Actualizacion ManualTestingRunner.java con todos los RF y nueva funciones listadas (Notificaciones RF46-RF50, Aprobacion Parcial RF26, Despacho Almacen /entregar, Jerarquia Admin y Reset Clave RF06)
 
 - [ ] Fase 3: UI & Experiencia de Usuario Móvil (Flujos Operativos)
   - [ ] 3.1 Notificaciones: Componente campana con badge reactivo en los 3 paneles + vista de historial
@@ -146,5 +148,5 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
   - [ ] 3.7 Admin: Filtros combinados en Auditoría y barra de búsqueda en Personal
   - [ ] 3.8 Mecánico: Selector de foto (cámara/galería) en catálogo y registro de herramientas
   - [ ] 3.9 Perfil: Bloquear edición de DNI, nombres y correo en Mi Perfil (solo teléfono editable)
-  - [ ] 3.10 Auth: Pantalla/diálogo de bloqueo escalonado con cuenta regresiva y solicitud de desbloqueo
+  - [ ] 3.10 Auth: Pantalla/diálogo de bloqueo escalonado con cuenta regresiva y solicitud de desbloqueo\
 ```

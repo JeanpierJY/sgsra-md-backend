@@ -2,7 +2,7 @@
 -- PROYECTO: SGSRA-MD (Master Drilling)
 -- SCRIPT DDL: CREACION DE TABLAS, RESTRICCIONES, INDICES Y USUARIOS SEMILLA
 -- COMPATIBILIDAD: PostgreSQL 16+ / PostgreSQL 18
--- Base de datos: sgsra_db
+-- Nombre Base de datos: sgsra_db
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------

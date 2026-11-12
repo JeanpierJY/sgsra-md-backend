@@ -36,8 +36,7 @@ import java.util.*;
 @Component
 public class ManualTestingRunner implements CommandLineRunner {
 
-    @Autowired
-    private IAutenticacionService authService;
+    private final IAutenticacionService authService;
 
     @Autowired
     private ICatalogoService catalogoService;
@@ -56,6 +55,9 @@ public class ManualTestingRunner implements CommandLineRunner {
 
     @Autowired
     private IAuditoriaService auditoriaService;
+
+    @Autowired
+    private INotificacionService notificacionService;
 
     @Autowired
     private Prestamo_DAO prestamoRepository;
@@ -90,6 +92,10 @@ public class ManualTestingRunner implements CommandLineRunner {
     // RF13: Carrito de compras temporal en memoria
     private final Map<String, Integer> carritoRepuestos = new LinkedHashMap<>();
 
+    ManualTestingRunner(IAutenticacionService authService) {
+        this.authService = authService;
+    }
+
     @Override
     public void run(String... args) {
         // Ejecucion en hilo separado para permitir que Tomcat inicialice el puerto 8080
@@ -109,9 +115,9 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("\n=========================================================");
             System.out.println("  SGSRA-MD: CONSOLA INTEGRAL MASTER DRILLING (RF01-RF50) ");
             System.out.println("=========================================================");
-            System.out.println("1. [PANEL MECANICO]      -> Catalogo, Carrito, Pedidos, Herramientas, Perfil");
-            System.out.println("2. [PANEL ADMINISTRADOR] -> Bandeja, Metricas, Auditoria, Personal, Catalogo");
-            System.out.println("3. [PANEL ALMACENISTA]   -> Solicitudes Aprobadas, Dashboard, Despacho, Retorno");
+            System.out.println("1. [PANEL MECANICO]      -> Catalogo, Carrito, Pedidos, Notificaciones, Perfil");
+            System.out.println("2. [PANEL ADMINISTRADOR] -> Bandeja, Aprobacion Parcial, Notificaciones, Personal");
+            System.out.println("3. [PANEL ALMACENISTA]   -> Despacho Repuestos, Panol, Notificaciones, Retorno");
             System.out.println("4. Salir (RF03 - Cierre de Sesion)");
             System.out.print("Seleccione una opcion (1-4): ");
 
@@ -140,17 +146,21 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("1. Catalogo de Repuestos (RF09, RF10, RF11, RF12, RF13)");
             System.out.println("2. Mis Pedidos (RF14, RF15, RF16, RF17, RF19, RF20)");
             System.out.println("3. Herramientas Prestadas (RF36, RF40, RF41, RF43)");
-            System.out.println("4. Mi Perfil (RF07)");
-            System.out.println("5. Regresar al Menu Principal");
-            System.out.print("Seleccione (1-5): ");
+            System.out.println("4. Centro de Notificaciones y Alertas (RF47, RF48, RF50)");
+            System.out.println("5. Mi Perfil (RF07)");
+            System.out.println("6. Regresar al Menu Principal");
+            System.out.print("Seleccione (1-6): ");
 
             String op = scanner.nextLine().trim();
             switch (op) {
                 case "1" -> subMenuCatalogoMecanico();
                 case "2" -> subMenuPedidosMecanico();
                 case "3" -> listarHerramientasPrestadasMecanico();
-                case "4" -> subMenuPerfilMecanico();
-                case "5" -> { return; }
+                case "4" -> subMenuNotificacionesUsuario(DNI_MECANICO, "MECANICO");
+                case "5" -> subMenuPerfilMecanico();
+                case "6" -> {
+                    return;
+                }
                 default -> System.out.println("Opcion no valida.");
             }
         }
@@ -182,7 +192,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 List<RepuestoResponse> res = catalogoService.buscarPredictivo(txt);
                 System.out.println("Coincidencias encontradas (" + res.size() + "):");
                 for (RepuestoResponse r : res) {
-                    System.out.printf(" -> [%s] %s | Stock: %d\n", r.getCodParte(), r.getNombreRepuesto(), r.getStockActual());
+                    System.out.printf(" -> [%s] %s | Stock: %d\n", r.getCodParte(), r.getNombreRepuesto(),
+                            r.getStockActual());
                 }
             } else if ("3".equals(sub) || "1.3".equals(sub)) {
                 // RF11: Filtrado selectivo por categoria/familia de componentes
@@ -191,7 +202,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 List<RepuestoResponse> res = catalogoService.buscarPredictivo(tipo);
                 System.out.println("Repuestos filtrados (" + res.size() + "):");
                 for (RepuestoResponse r : res) {
-                    System.out.printf(" -> [%s] %s | Stock: %d\n", r.getCodParte(), r.getNombreRepuesto(), r.getStockActual());
+                    System.out.printf(" -> [%s] %s | Stock: %d\n", r.getCodParte(), r.getNombreRepuesto(),
+                            r.getStockActual());
                 }
             } else if ("4".equals(sub) || "1.4".equals(sub)) {
                 // RF12: Despliegue de ficha tecnica y especificaciones
@@ -202,9 +214,11 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Codigo:      " + r.getCodParte());
                 System.out.println("Stock Actual:" + r.getStockActual());
                 System.out.println("Stock Minimo:" + r.getStockMinimo());
-                System.out.println("Descripcion: " + (r.getDescripcion() != null ? r.getDescripcion() : "Sin descripcion"));
+                System.out.println(
+                        "Descripcion: " + (r.getDescripcion() != null ? r.getDescripcion() : "Sin descripcion"));
             } else if ("5".equals(sub) || "1.5".equals(sub)) {
-                // RF13: Carrito digital para agrupar multiples repuestos antes de formalizar la orden
+                // RF13: Carrito digital para agrupar multiples repuestos antes de formalizar la
+                // orden
                 System.out.print("Codigo de Parte a agregar: ");
                 String cod = scanner.nextLine().trim();
                 RepuestoResponse r = catalogoService.obtenerPorCodigo(cod);
@@ -239,7 +253,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 // RF15: Vinculacion obligatoria de la orden al codigo de la maquinaria afectada
                 System.out.print("Codigo de Maquinaria Afectada (Enter para MD-RB-01): ");
                 String maq = scanner.nextLine().trim();
-                if (maq.isEmpty()) maq = "MD-RB-01";
+                if (maq.isEmpty())
+                    maq = "MD-RB-01";
 
                 // RF14: Seleccion de prioridad de requerimiento
                 System.out.println("Seleccione Nivel de Urgencia (RF14):");
@@ -254,10 +269,12 @@ public class ManualTestingRunner implements CommandLineRunner {
                     default -> PrioridadSolicitud.ALTA;
                 };
 
-                // RF16: Campo de texto para justificar tecnicamente el cambio de pieza (>10 caracteres)
+                // RF16: Campo de texto para justificar tecnicamente el cambio de pieza (>10
+                // caracteres)
                 System.out.print("Justificacion tecnica del cambio (RF16, >10 caracteres): ");
                 String just = scanner.nextLine().trim();
-                if (just.length() < 10) just = "Cambio correctivo urgente por parada de maquina en turno de operacion";
+                if (just.length() < 10)
+                    just = "Cambio correctivo urgente por parada de maquina en turno de operacion";
 
                 List<SolicitudRepuestoRequest.ItemRepuestoRequest> items = new ArrayList<>();
                 for (Map.Entry<String, Integer> entry : carritoRepuestos.entrySet()) {
@@ -271,17 +288,21 @@ public class ManualTestingRunner implements CommandLineRunner {
                         .items(items)
                         .build();
 
-                // RF17: Envio instantaneo del requerimiento a administracion con estado PENDIENTE
+                // RF17: Envio instantaneo del requerimiento a administracion con estado
+                // PENDIENTE
                 MensajeGenericoResponse res = solicitudService.registrarSolicitud(CORREO_MECANICO, req, ipLocal);
                 System.out.println("EXITO (RF17): " + res.getMensaje() + " | Numero Solicitud: " + res.getDato());
                 carritoRepuestos.clear();
             } else if ("2".equals(sub) || "2.2".equals(sub)) {
-                // RF19/RF20: Historial personal cronologico con indicador de estado (Pendiente, Aprobada, Rechazada)
-                Page<SolicitudResumenResponse> hist = solicitudService.listarHistorialMecanico(CORREO_MECANICO, PageRequest.of(0, 10));
+                // RF19/RF20: Historial personal cronologico con indicador de estado (Pendiente,
+                // Aprobada, Rechazada)
+                Page<SolicitudResumenResponse> hist = solicitudService.listarHistorialMecanico(CORREO_MECANICO,
+                        PageRequest.of(0, 10));
                 System.out.println("Historial de Solicitudes (" + hist.getTotalElements() + " registros):");
                 for (SolicitudResumenResponse s : hist.getContent()) {
                     System.out.printf(" -> Num: %s | Maquina: %s | Prioridad: %s | Estado: [%s] | Fecha: %s\n",
-                            s.getSolicitudNum(), s.getCodMaquinaria(), s.getPrioridad(), s.getEstado(), s.getFechaEmision());
+                            s.getSolicitudNum(), s.getCodMaquinaria(), s.getPrioridad(), s.getEstado(),
+                            s.getFechaEmision());
                 }
             }
         } catch (Exception e) {
@@ -289,7 +310,8 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF36, RF40, RF41, RF42, RF43: Historial y estado integral de herramientas prestadas al mecanico
+    // RF36, RF40, RF41, RF42, RF43: Historial y estado integral de herramientas
+    // prestadas al mecanico
     private void listarHerramientasPrestadasMecanico() {
         System.out.println("\n-- Historial Integral de Herramientas Prestadas al Mecanico (RF36, RF40, RF41, RF43) --");
         try {
@@ -307,17 +329,19 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.printf(" -> Prestamo: %s | Estado Prestamo: [%s] | Fecha Salida: %s %s\n",
                         p.getPrestamoNum(), p.getEstadoPrestamo(), p.getFechaPrestamo(), p.getHoraSalida());
 
-                // Resolucion explicita de detalles mediante DAO para evitar errores de sesion Lazy
+                // Resolucion explicita de detalles mediante DAO para evitar errores de sesion
+                // Lazy
                 List<PrestamoDetalle> detalles = prestamoDetalleRepository.findByIdPrestamoNum(p.getPrestamoNum());
                 for (PrestamoDetalle d : detalles) {
-                    String estadoFisicoActual = herramientaRepository.findByCodHerramienta(d.getHerramienta().getCodHerramienta())
+                    String estadoFisicoActual = herramientaRepository
+                            .findByCodHerramienta(d.getHerramienta().getCodHerramienta())
                             .map(Herramienta::getEstadoActual)
                             .orElse(d.getEstadoHerramienta());
 
                     System.out.printf("     * [%s] %s | Estado Entrega: %s | Estado Actual en Taller: [%s]\n",
-                            d.getHerramienta().getCodHerramienta(), 
-                            d.getNombreHerramienta(), 
-                            d.getEstadoHerramienta(), 
+                            d.getHerramienta().getCodHerramienta(),
+                            d.getNombreHerramienta(),
+                            d.getEstadoHerramienta(),
                             estadoFisicoActual);
                 }
             }
@@ -343,7 +367,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                     System.out.println("Nombre:       " + m.getNombreMecanico());
                     System.out.println("Especialidad: " + m.getEspecialidadMecanico());
                     System.out.println("Cargo:        " + m.getCargoMecanico());
-                    System.out.println("Telefono:     " + (m.getTelefono() != null ? m.getTelefono() : "No registrado"));
+                    System.out
+                            .println("Telefono:     " + (m.getTelefono() != null ? m.getTelefono() : "No registrado"));
                     System.out.println("Correo:       " + CORREO_MECANICO);
                 }
             } else if ("2".equals(sub) || "4.2".equals(sub)) {
@@ -373,13 +398,14 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("\n---------------------------------------------------------");
             System.out.println("      MODULO ADMINISTRADOR (JEFE DE TALLER): " + CORREO_ADMIN);
             System.out.println("---------------------------------------------------------");
-            System.out.println("1. Bandeja de Solicitudes (RF21, RF22, RF23, RF24, RF25, RF28, RF31)");
+            System.out.println("1. Bandeja de Solicitudes (RF21, RF22, RF23, RF24, RF26, RF31)");
             System.out.println("2. Metricas y Reportes (RF29, RF30)");
             System.out.println("3. Auditoria Inalterable (RF49)");
-            System.out.println("4. Gestionar Personal (RF07, RF08)");
+            System.out.println("4. Gestionar Personal y Seguridad (RF06, RF07, RF08)");
             System.out.println("5. Gestionar Catalogo de Repuestos (RF32)");
-            System.out.println("6. Regresar al Menu Principal");
-            System.out.print("Seleccione (1-6): ");
+            System.out.println("6. Centro de Notificaciones de Jefatura (RF46, RF50)");
+            System.out.println("7. Regresar al Menu Principal");
+            System.out.print("Seleccione (1-7): ");
 
             String op = scanner.nextLine().trim();
             switch (op) {
@@ -388,7 +414,10 @@ public class ManualTestingRunner implements CommandLineRunner {
                 case "3" -> subMenuAuditoriaAdmin();
                 case "4" -> subMenuPersonalAdmin();
                 case "5" -> subMenuGestionCatalogoAdmin();
-                case "6" -> { return; }
+                case "6" -> subMenuNotificacionesUsuario(null, "ADMINISTRADOR");
+                case "7" -> {
+                    return;
+                }
                 default -> System.out.println("Opcion no valida.");
             }
         }
@@ -404,7 +433,8 @@ public class ManualTestingRunner implements CommandLineRunner {
         try {
             if ("1".equals(sub) || "1.1".equals(sub)) {
                 // RF21: Bandeja unificada de solicitudes entrantes
-                List<SolicitudResumenResponse> pend = solicitudService.listarBandejaAdministrador(EstadoSolicitud.PENDIENTE);
+                List<SolicitudResumenResponse> pend = solicitudService
+                        .listarBandejaAdministrador(EstadoSolicitud.PENDIENTE);
                 System.out.println("Solicitudes Pendientes (" + pend.size() + "):");
                 for (SolicitudResumenResponse s : pend) {
                     System.out.printf(" -> Num: %s | Mecanico: %s | Maquina: %s | Prioridad: %s\n",
@@ -413,10 +443,11 @@ public class ManualTestingRunner implements CommandLineRunner {
 
                 System.out.println("\nAcciones disponibles:");
                 System.out.println(" 1. Aprobar solicitud integramente (RF23)");
-                System.out.println(" 2. Desaprobar / Rechazar solicitud (RF24, RF25)");
-                System.out.println(" 3. Mostrar detalle de la solicitud (RF22)");
-                System.out.println(" 4. Volver");
-                System.out.print("Seleccion (1-4): ");
+                System.out.println(" 2. Desaprobar / Rechazar solicitud total (RF24, RF25)");
+                System.out.println(" 3. Aprobacion / Rechazo Parcial de componentes (RF26)");
+                System.out.println(" 4. Mostrar detalle de la solicitud (RF22)");
+                System.out.println(" 5. Volver");
+                System.out.print("Seleccion (1-5): ");
                 String acc = scanner.nextLine().trim();
 
                 if ("1".equals(acc)) {
@@ -426,19 +457,50 @@ public class ManualTestingRunner implements CommandLineRunner {
                     MensajeGenericoResponse res = solicitudService.aprobarSolicitudTotal(num, CORREO_ADMIN, ipLocal);
                     System.out.println("RESULTADO (RF23): " + res.getMensaje());
                 } else if ("2".equals(acc)) {
-                    // RF24, RF25: Rechazo obligatorio con justificacion tecnica minima de 15 caracteres
+                    // RF24, RF25: Rechazo obligatorio con justificacion tecnica minima de 15
+                    // caracteres
                     System.out.print("Numero de solicitud a desaprobar: ");
                     String num = scanner.nextLine().trim();
                     System.out.print("Justificacion obligatoria de rechazo (RF25, minimo 15 caracteres): ");
                     String just = scanner.nextLine().trim();
-                    if (just.length() < 15) just = "Stock en panol cubre la necesidad inmediata del taller mina";
+                    if (just.length() < 15)
+                        just = "Stock en panol cubre la necesidad inmediata del taller mina";
 
                     DictamenRechazoRequest req = DictamenRechazoRequest.builder()
                             .justificacionRechazo(just)
                             .build();
-                    MensajeGenericoResponse res = solicitudService.rechazarSolicitudTotal(num, CORREO_ADMIN, req, ipLocal);
+                    MensajeGenericoResponse res = solicitudService.rechazarSolicitudTotal(num, CORREO_ADMIN, req,
+                            ipLocal);
                     System.out.println("RESULTADO (RF24): " + res.getMensaje());
                 } else if ("3".equals(acc)) {
+                    // RF26: Aprobacion parcial por item
+                    System.out.print("Numero de solicitud a evaluar parcialmente: ");
+                    String num = scanner.nextLine().trim();
+                    DetalleSolicitudResponse d = solicitudService.obtenerDetalleSolicitud(num);
+
+                    List<AprobacionParcialRequest.ItemAprobacionParcialRequest> itemsDecididos = new ArrayList<>();
+                    System.out.println("Evaluar items para la solicitud " + num + ":");
+                    for (DetalleSolicitudResponse.ItemDetalleResponse it : d.getRepuestos()) {
+                        System.out
+                                .print(" -> Aprobar [" + it.getCodParte() + "] " + it.getNombreRepuesto() + " (S/N): ");
+                        String resp = scanner.nextLine().trim().toUpperCase();
+                        boolean aprobado = !"N".equals(resp);
+
+                        itemsDecididos.add(AprobacionParcialRequest.ItemAprobacionParcialRequest.builder()
+                                .item(it.getItem())
+                                .aprobado(aprobado)
+                                .motivoRechazoItem(aprobado ? null : "Stock alternativo disponible")
+                                .build());
+                    }
+
+                    AprobacionParcialRequest parReq = AprobacionParcialRequest.builder()
+                            .items(itemsDecididos)
+                            .build();
+
+                    MensajeGenericoResponse res = solicitudService.aprobarSolicitudParcial(num, CORREO_ADMIN, parReq,
+                            ipLocal);
+                    System.out.println("RESULTADO (RF26): " + res.getMensaje());
+                } else if ("4".equals(acc)) {
                     // RF22: Vista detallada de componentes solicitados por el mecanico
                     System.out.print("Numero de solicitud a consultar: ");
                     String num = scanner.nextLine().trim();
@@ -450,7 +512,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                     System.out.println("Piezas Solicitadas:");
                     for (DetalleSolicitudResponse.ItemDetalleResponse item : d.getRepuestos()) {
                         System.out.printf("   * [%s] %s | Cantidad: %d | Estado: %s\n",
-                                item.getCodParte(), item.getNombreRepuesto(), item.getCantidadSolicitada(), item.getEstadoItem());
+                                item.getCodParte(), item.getNombreRepuesto(), item.getCantidadSolicitada(),
+                                item.getEstadoItem());
                     }
                     if (d.getRechazo() != null) {
                         System.out.println("DICTAMEN RECHAZO: " + d.getRechazo().getJustificacionRechazo());
@@ -458,7 +521,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 }
             } else if ("2".equals(sub) || "1.2".equals(sub)) {
                 // RF31: Filtros de auditoria y busqueda multicriterio
-                System.out.println("Filtrar por Estado: 1. PENDIENTE | 2. APROBADA | 3. RECHAZADA | 4. ORDEN_CONTACTADA | 5. TODAS");
+                System.out.println(
+                        "Filtrar por Estado: 1. PENDIENTE | 2. APROBADA | 3. RECHAZADA | 4. ORDEN_CONTACTADA | 5. TODAS");
                 String estOpc = scanner.nextLine().trim();
                 EstadoSolicitud estado = switch (estOpc) {
                     case "1" -> EstadoSolicitud.PENDIENTE;
@@ -472,7 +536,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Solicitudes encontradas (" + filtradas.size() + "):");
                 for (SolicitudResumenResponse s : filtradas) {
                     System.out.printf(" -> Num: %s | %s | Maquina: %s | Estado: [%s] | Fecha: %s\n",
-                            s.getSolicitudNum(), s.getNombreMecanico(), s.getCodMaquinaria(), s.getEstado(), s.getFechaEmision());
+                            s.getSolicitudNum(), s.getNombreMecanico(), s.getCodMaquinaria(), s.getEstado(),
+                            s.getFechaEmision());
                 }
             }
         } catch (Exception e) {
@@ -505,7 +570,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Generando exportacion tabular estructurada (CSV / PDF)...");
                 descargarArchivoConsolidadoFisico("CSV", "Reporte_Metricas_SGSRA_MD.csv");
             } else if ("3".equals(sub) || "2.3".equals(sub)) {
-                // RF30: Descarga fisica directa en formato Excel (.xlsx) a la carpeta sgsra-md-backend
+                // RF30: Descarga fisica directa en formato Excel (.xlsx) a la carpeta
+                // sgsra-md-backend
                 descargarArchivoConsolidadoFisico("EXCEL", "Reporte_Consolidado_SGSRA_MD.xlsx");
             }
         } catch (Exception e) {
@@ -558,13 +624,14 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF07, RF08: Gestion y fiscalizacion de personal operativo por DNI
+    // RF07, RF08, Jerarquia Admin y Reset de Clave
     private void subMenuPersonalAdmin() {
-        System.out.println("\n-- Gestionar Personal (RF07, RF08) --");
+        System.out.println("\n-- Gestionar Personal y Seguridad (RF06, RF07, RF08) --");
         System.out.println("4.1 Listar personal registrado");
         System.out.println("4.2 Crear usuario y asignar contrasena desde el panel");
         System.out.println("4.3 Editar usuario por DNI (Sin permiso para editar contrasena)");
-        System.out.println("4.4 Habilitar / Deshabilitar usuario por DNI (Seleccion 1 / 2)");
+        System.out.println("4.4 Habilitar / Deshabilitar usuario por DNI (con Jerarquia Admin)");
+        System.out.println("4.5 Resetear contrasena de operario por DNI (RF06)");
         System.out.print("Opcion: ");
         String sub = scanner.nextLine().trim();
 
@@ -616,7 +683,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Editando a: " + user.getNombre() + " (" + user.getCorreoCorporativo() + ")");
                 System.out.print("Nuevo Nombre Completo (Enter para mantener): ");
                 String nom = scanner.nextLine().trim();
-                if (!nom.isEmpty()) user.setNombre(nom);
+                if (!nom.isEmpty())
+                    user.setNombre(nom);
 
                 System.out.print("Nuevo Telefono (Enter para omitir): ");
                 String tel = scanner.nextLine().trim();
@@ -624,8 +692,10 @@ public class ManualTestingRunner implements CommandLineRunner {
                 usuarioRepository.save(user);
 
                 mecanicoRepository.findByDniMecanico(dni).ifPresent(m -> {
-                    if (!nom.isEmpty()) m.setNombreMecanico(nom);
-                    if (!tel.isEmpty()) m.setTelefono(tel);
+                    if (!nom.isEmpty())
+                        m.setNombreMecanico(nom);
+                    if (!tel.isEmpty())
+                        m.setTelefono(tel);
                     mecanicoRepository.save(m);
                 });
 
@@ -641,11 +711,20 @@ public class ManualTestingRunner implements CommandLineRunner {
                 String estOpc = scanner.nextLine().trim();
                 EstadoCuenta nuevoEstado = "2".equals(estOpc) ? EstadoCuenta.INACTIVO : EstadoCuenta.ACTIVO;
 
-                MensajeGenericoResponse res = authService.cambiarEstadoCuenta(user.getIdUsuario(), nuevoEstado, ipLocal);
-                System.out.println("RESULTADO: " + res.getMensaje());
+                MensajeGenericoResponse res = authService.cambiarEstadoCuentaPorDni(dni, nuevoEstado, CORREO_ADMIN,
+                        ipLocal);
+                System.out.println("RESULTADO (Jerarquia Admin): " + res.getMensaje());
+            } else if ("5".equals(sub) || "4.5".equals(sub)) {
+                System.out.print("DNI del usuario a resetear clave: ");
+                String dni = scanner.nextLine().trim();
+                System.out.print("Nueva clave temporal para el usuario: ");
+                String nuevaClave = scanner.nextLine().trim();
+
+                MensajeGenericoResponse res = authService.resetearClavePorDni(dni, nuevaClave, CORREO_ADMIN, ipLocal);
+                System.out.println("RESULTADO (Reset Clave RF06): " + res.getMensaje());
             }
         } catch (Exception e) {
-            System.out.println("Aviso: " + e.getMessage());
+            System.out.println("Aviso de Seguridad: " + e.getMessage());
         }
     }
 
@@ -664,10 +743,12 @@ public class ManualTestingRunner implements CommandLineRunner {
                 Page<RepuestoResponse> cat = catalogoService.listarCatalogo(PageRequest.of(0, 15));
                 for (RepuestoResponse r : cat.getContent()) {
                     System.out.printf(" -> [%s] %s | Stock: %d | Min: %d | Activo: %s\n",
-                            r.getCodParte(), r.getNombreRepuesto(), r.getStockActual(), r.getStockMinimo(), r.getActivo());
+                            r.getCodParte(), r.getNombreRepuesto(), r.getStockActual(), r.getStockMinimo(),
+                            r.getActivo());
                 }
             } else if ("2".equals(sub) || "5.2".equals(sub)) {
-                // RF27: Visualizacion de enlaces y datos de contacto con proveedores homologados
+                // RF27: Visualizacion de enlaces y datos de contacto con proveedores
+                // homologados
                 System.out.println("\nPROVEEDORES HOMOLOGADOS DISPONIBLES (RF27):");
                 System.out.println(" 1. Bosch Rexroth Peru S.A.  | Contacto: +51 984 123 456 (ventas@rexroth.pe)");
                 System.out.println(" 2. Enerpac Industrial S.A.  | Contacto: +51 998 765 432 (soporte@enerpac.pe)");
@@ -705,19 +786,23 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Repuesto: " + rep.getNombreRepuesto() + " | Stock actual: " + rep.getStockActual());
                 System.out.print("Nuevo Nombre (Enter para mantener): ");
                 String nom = scanner.nextLine().trim();
-                if (!nom.isEmpty()) rep.setNombreRepuesto(nom);
+                if (!nom.isEmpty())
+                    rep.setNombreRepuesto(nom);
 
                 System.out.print("Nuevo Stock Actual (Enter para mantener): ");
                 String stStr = scanner.nextLine().trim();
-                if (!stStr.isEmpty()) rep.setStockActual(Integer.parseInt(stStr));
+                if (!stStr.isEmpty())
+                    rep.setStockActual(Integer.parseInt(stStr));
 
                 System.out.print("Nuevo Stock Minimo (Enter para mantener): ");
                 String smStr = scanner.nextLine().trim();
-                if (!smStr.isEmpty()) rep.setStockMinimo(Integer.parseInt(smStr));
+                if (!smStr.isEmpty())
+                    rep.setStockMinimo(Integer.parseInt(smStr));
 
                 System.out.print("Nueva Descripcion (Enter para mantener): ");
                 String desc = scanner.nextLine().trim();
-                if (!desc.isEmpty()) rep.setDescripcion(desc);
+                if (!desc.isEmpty())
+                    rep.setDescripcion(desc);
 
                 repuestoRepository.save(rep);
                 System.out.println("Repuesto actualizado exitosamente.");
@@ -727,7 +812,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 Repuesto rep = repuestoRepository.findById(cod)
                         .orElseThrow(() -> new RuntimeException("Repuesto no encontrado"));
 
-                System.out.println("Estado actual de " + rep.getCodParte() + ": " + (rep.getActivo() ? "HABILITADO" : "DESHABILITADO"));
+                System.out.println("Estado actual de " + rep.getCodParte() + ": "
+                        + (rep.getActivo() ? "HABILITADO" : "DESHABILITADO"));
                 System.out.println("Seleccion: 1. Habilitar | 2. Deshabilitar (Baja)");
                 String st = scanner.nextLine().trim();
                 rep.setActivo("1".equals(st));
@@ -747,15 +833,16 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("\n---------------------------------------------------------");
             System.out.println("   MODULO ALMACENISTA (PANOL): " + CORREO_ALMACENISTA);
             System.out.println("---------------------------------------------------------");
-            System.out.println("1. Bandeja de Solicitudes APROBADAS (Entrega de Repuestos)");
+            System.out.println("1. Bandeja y Despacho Fisico de Repuestos (Estado ENTREGADA)");
             System.out.println("2. Control y Listado de Prestamos Activos (RF36, RF43)");
             System.out.println("3. Dashboard de Stock de Herramientas (RF33)");
             System.out.println("4. Catalogo de Herramientas del Panol (RF34, RF35, RF45)");
             System.out.println("5. Despacho / Prestamo de Herramienta por DNI (RF36, RF37)");
             System.out.println("6. Recepcion y Devolucion Fisica de Herramienta (RF38, RF39, RF40)");
             System.out.println("7. Reportar Herramienta como Extraviada (RF41, RF42)");
-            System.out.println("8. Regresar al Menu Principal");
-            System.out.print("Seleccione (1-8): ");
+            System.out.println("8. Centro de Notificaciones y Alertas de Panol (RF43, RF48, RF50)");
+            System.out.println("9. Regresar al Menu Principal");
+            System.out.print("Seleccione (1-9): ");
 
             String op = scanner.nextLine().trim();
             switch (op) {
@@ -766,42 +853,60 @@ public class ManualTestingRunner implements CommandLineRunner {
                 case "5" -> registrarPrestamoHerramienta();
                 case "6" -> registrarDevolucionHerramienta();
                 case "7" -> reportarExtravioHerramienta();
-                case "8" -> { return; }
+                case "8" -> subMenuNotificacionesUsuario(null, "ALMACENISTA");
+                case "9" -> {
+                    return;
+                }
                 default -> System.out.println("Opcion no valida.");
             }
         }
     }
 
-    // Requerimientos Aprobados para retiro fisico de piezas de repuesto
+    // Requerimientos Aprobados para retiro fisico y confirmacion de entrega
+    // (descuento de stock)
     private void listarSolicitudesAprobadasParaAlmacen() {
-        System.out.println("\n-- Requerimientos de Repuestos Aprobados para Despacho --");
+        System.out.println("\n-- Requerimientos de Repuestos Aprobados para Despacho Fisico --");
         try {
-            List<SolicitudResumenResponse> aprobadas = solicitudService.listarBandejaAdministrador(EstadoSolicitud.APROBADA);
+            List<SolicitudResumenResponse> aprobadas = new ArrayList<>();
+            aprobadas.addAll(solicitudService.listarBandejaAdministrador(EstadoSolicitud.APROBADA));
+            aprobadas.addAll(solicitudService.listarBandejaAdministrador(EstadoSolicitud.APROBADA_PARCIAL));
+
             if (aprobadas.isEmpty()) {
-                System.out.println("No hay solicitudes aprobadas pendientes de entrega.");
+                System.out.println("No hay solicitudes aprobadas ni aprobadas parcialmente pendientes de entrega.");
                 return;
             }
-            System.out.println("Solicitudes Autorizadas (" + aprobadas.size() + "):");
+            System.out.println("Solicitudes Pendientes de Entrega Fisica (" + aprobadas.size() + "):");
             for (SolicitudResumenResponse s : aprobadas) {
-                System.out.printf(" -> Num: %s | Mecanico: %s | Maquina: %s | Prioridad: %s\n",
-                        s.getSolicitudNum(), s.getNombreMecanico(), s.getCodMaquinaria(), s.getPrioridad());
+                System.out.printf(" -> Num: %s | Mecanico: %s | Maquina: %s | Prioridad: %s | Estado: [%s]\n",
+                        s.getSolicitudNum(), s.getNombreMecanico(), s.getCodMaquinaria(), s.getPrioridad(),
+                        s.getEstado());
             }
-            System.out.print("Ingrese Num de solicitud para ver piezas a entregar (o Enter para volver): ");
+
+            System.out.print("Ingrese Num de solicitud a DESPACHAR y entregar (o Enter para volver): ");
             String num = scanner.nextLine().trim();
             if (!num.isEmpty()) {
                 DetalleSolicitudResponse d = solicitudService.obtenerDetalleSolicitud(num);
                 System.out.println("DESPACHO AUTORIZADO PARA MECANICO: " + d.getNombreMecanico());
                 for (DetalleSolicitudResponse.ItemDetalleResponse it : d.getRepuestos()) {
-                    System.out.printf("   * Cantidad: %d | Codigo: %s | %s\n",
-                            it.getCantidadSolicitada(), it.getCodParte(), it.getNombreRepuesto());
+                    System.out.printf("   * Cantidad: %d | Codigo: %s | %s | Estado: %s\n",
+                            it.getCantidadSolicitada(), it.getCodParte(), it.getNombreRepuesto(), it.getEstadoItem());
+                }
+
+                System.out.print("Confirmar entrega fisica y descontar inventario en PostgreSQL? (S/N): ");
+                String conf = scanner.nextLine().trim().toUpperCase();
+                if ("S".equals(conf)) {
+                    MensajeGenericoResponse res = solicitudService.despacharEntregaRepuestos(num, CORREO_ALMACENISTA,
+                            ipLocal);
+                    System.out.println("RESULTADO (Despacho): " + res.getMensaje());
                 }
             }
         } catch (Exception e) {
-            System.out.println("Aviso: " + e.getMessage());
+            System.out.println("Aviso al despachar repuestos: " + e.getMessage());
         }
     }
 
-    // RF36, RF43: Control y listado integral de prestamos de herramientas con formato unificado
+    // RF36, RF43: Control y listado integral de prestamos de herramientas con
+    // formato unificado
     private void listarTodosLosPrestamosHerramientas() {
         System.out.println("\n-- Registro y Control de Prestamos de Herramientas --");
         try {
@@ -871,7 +976,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Herramientas Registradas (" + lista.size() + "):");
                 for (FichaHerramientaResponse h : lista) {
                     System.out.printf(" -> [%s] %s | Marca: %s | Categoria: %s | Estado: [%s]\n",
-                            h.getCodHerramienta(), h.getNombreHerramienta(), h.getMarcaHerramienta(), h.getCategoria(), h.getEstadoActual());
+                            h.getCodHerramienta(), h.getNombreHerramienta(), h.getMarcaHerramienta(), h.getCategoria(),
+                            h.getEstadoActual());
                 }
             } else if ("2".equals(sub)) {
                 // RF34, RF35: Reconocimiento y muestra de ficha tras lectura QR
@@ -886,7 +992,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Estado:    " + h.getEstadoActual());
             } else if ("3".equals(sub)) {
                 // RF45: Filtros de inventario por familias tecnicas
-                System.out.println("Seleccione Categoria (1. Manuales, 2. Hidraulicas, 3. Neumaticas, 4. Electricas): ");
+                System.out
+                        .println("Seleccione Categoria (1. Manuales, 2. Hidraulicas, 3. Neumaticas, 4. Electricas): ");
                 String catOpc = scanner.nextLine().trim();
                 CategoriaHerramienta cat = switch (catOpc) {
                     case "2" -> CategoriaHerramienta.HIDRAULICAS;
@@ -898,7 +1005,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 List<FichaHerramientaResponse> lista = inventarioService.listarHerramientasPorCategoria(cat);
                 System.out.println("Herramientas en Categoria " + cat.name() + " (" + lista.size() + "):");
                 for (FichaHerramientaResponse h : lista) {
-                    System.out.printf(" -> [%s] %s | Estado: [%s]\n", h.getCodHerramienta(), h.getNombreHerramienta(), h.getEstadoActual());
+                    System.out.printf(" -> [%s] %s | Estado: [%s]\n", h.getCodHerramienta(), h.getNombreHerramienta(),
+                            h.getEstadoActual());
                 }
             }
         } catch (Exception e) {
@@ -906,17 +1014,20 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF36, RF37: Registro de prestamo asignando mecanico y cambio automatico a 'Prestada'
+    // RF36, RF37: Registro de prestamo asignando mecanico y cambio automatico a
+    // 'Prestada'
     private void registrarPrestamoHerramienta() {
         System.out.println("\n-- Despacho Formal de Herramienta a Mecanico (RF36) --");
         try {
             System.out.print("DNI del Mecanico receptor (Enter para " + DNI_MECANICO + "): ");
             String dni = scanner.nextLine().trim();
-            if (dni.isEmpty()) dni = DNI_MECANICO;
+            if (dni.isEmpty())
+                dni = DNI_MECANICO;
 
             System.out.print("Codigo de Herramienta a despachar (Enter para HER-TOR-004): ");
             String cod = scanner.nextLine().trim();
-            if (cod.isEmpty()) cod = "HER-TOR-004";
+            if (cod.isEmpty())
+                cod = "HER-TOR-004";
 
             RegistrarPrestamoRequest req = RegistrarPrestamoRequest.builder()
                     .dniMecanico(dni)
@@ -931,7 +1042,8 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF38, RF39, RF40: Retorno fisico, calificacion tecnica y transicion a 'Disponible' o 'En Mantenimiento'
+    // RF38, RF39, RF40: Retorno fisico, calificacion tecnica y transicion a
+    // 'Disponible' o 'En Mantenimiento'
     private void registrarDevolucionHerramienta() {
         System.out.println("\n-- Recepcion e Inspeccion Fisica de Herramienta (RF38, RF39) --");
         try {
@@ -940,7 +1052,8 @@ public class ManualTestingRunner implements CommandLineRunner {
 
             System.out.print("Codigo de Herramienta devuelta (ej: HER-TOR-004): ");
             String cod = scanner.nextLine().trim();
-            if (cod.isEmpty()) cod = "HER-TOR-004";
+            if (cod.isEmpty())
+                cod = "HER-TOR-004";
 
             System.out.println("Calificacion del estado fisico de retorno (RF39):");
             System.out.println(" 1. BUEN ESTADO (Pasa a Disponible - RF40)");
@@ -958,7 +1071,8 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.print("Detalle de inspeccion o averia: ");
             String obs = scanner.nextLine().trim();
 
-            DevolucionHerramientaRequest.ItemDevolucionRequest item = DevolucionHerramientaRequest.ItemDevolucionRequest.builder()
+            DevolucionHerramientaRequest.ItemDevolucionRequest item = DevolucionHerramientaRequest.ItemDevolucionRequest
+                    .builder()
                     .codHerramienta(cod)
                     .estadoFisico(estadoFisico)
                     .build();
@@ -976,7 +1090,8 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF41, RF42: Reporte manual de extravio y asociacion automatica al ultimo custodio de la bitacora
+    // RF41, RF42: Reporte manual de extravio y asociacion automatica al ultimo
+    // custodio de la bitacora
     private void reportarExtravioHerramienta() {
         System.out.println("\n-- Reportar Herramienta como Extraviada (RF41, RF42) --");
         try {
@@ -984,17 +1099,65 @@ public class ManualTestingRunner implements CommandLineRunner {
             String cod = scanner.nextLine().trim();
             System.out.print("Motivo o circunstancias del extravio (minimo 10 caracteres): ");
             String mot = scanner.nextLine().trim();
-            if (mot.length() < 10) mot = "Herramienta extraviada en labor subterranea mina";
+            if (mot.length() < 10)
+                mot = "Herramienta extraviada en labor subterranea mina";
 
             ReporteExtravioRequest req = ReporteExtravioRequest.builder()
                     .codHerramienta(cod)
                     .motivoExtravio(mot)
                     .build();
 
-            MensajeGenericoResponse res = prestamoService.reportarHerramientaExtraviada(CORREO_ALMACENISTA, req, ipLocal);
-            System.out.println("RESULTADO (RF42): " + res.getMensaje() + " | Responsabilidad imputada a: " + res.getDato());
+            MensajeGenericoResponse res = prestamoService.reportarHerramientaExtraviada(CORREO_ALMACENISTA, req,
+                    ipLocal);
+            System.out.println(
+                    "RESULTADO (RF42): " + res.getMensaje() + " | Responsabilidad imputada a: " + res.getDato());
         } catch (Exception e) {
             System.out.println("Aviso: " + e.getMessage());
+        }
+    }
+
+    // RF46 - RF50: Centro de Notificaciones y Alertas Reactivas
+    private void subMenuNotificacionesUsuario(String dni, String rol) {
+        System.out.println("\n-- Centro de Notificaciones y Alertas (RF46 - RF50) --");
+        try {
+            long noLeidas = notificacionService.contarNoLeidas(dni);
+            System.out.println("Alertas pendientes sin leer (Badge Campana): [" + noLeidas + "]");
+            List<NotificacionResponse> notifs = notificacionService.listarPorUsuario(dni);
+
+            if (notifs.isEmpty()) {
+                System.out.println("Bandeja vacia. No hay notificaciones registradas para este perfil.");
+                return;
+            }
+
+            System.out.println("Historial de Notificaciones (" + notifs.size() + "):");
+            for (NotificacionResponse n : notifs) {
+                System.out.printf(" -> [%s] ID: %d | Tipo: %s | %s: %s | Fecha: %s\n",
+                        n.getLeida() ? "LEIDA" : "NO LEIDA",
+                        n.getIdNotificacion(),
+                        n.getTipoAlerta(),
+                        n.getTitulo(),
+                        n.getMensaje(),
+                        n.getFechaCreacion());
+            }
+
+            System.out.println("\nAcciones:");
+            System.out.println(" 1. Marcar una notificacion especifica como leida");
+            System.out.println(" 2. Marcar TODAS como leidas (Limpiar badge)");
+            System.out.println(" 3. Volver");
+            System.out.print("Seleccion (1-3): ");
+            String op = scanner.nextLine().trim();
+
+            if ("1".equals(op)) {
+                System.out.print("ID de notificacion a marcar como leida: ");
+                long idN = Long.parseLong(scanner.nextLine().trim());
+                MensajeGenericoResponse r = notificacionService.marcarComoLeida(idN);
+                System.out.println("RESULTADO: " + r.getMensaje());
+            } else if ("2".equals(op)) {
+                MensajeGenericoResponse r = notificacionService.marcarTodasComoLeidas(dni);
+                System.out.println("RESULTADO: " + r.getMensaje());
+            }
+        } catch (Exception e) {
+            System.out.println("Aviso en notificaciones: " + e.getMessage());
         }
     }
 }
