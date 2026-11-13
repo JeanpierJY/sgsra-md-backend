@@ -1,5 +1,7 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.service.INotificacionService;
+
 import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
@@ -37,6 +39,7 @@ public class PrestamoServiceImpl implements IPrestamoService {
     private final Devolucion_DAO devolucionRepository;
     private final Usuario_DAO usuarioRepository;
     private final IAuditoriaService auditoriaService;
+    private final INotificacionService notificacionService;
     private final CupoPrestamoValidator cupoValidator;
 
     @Override
@@ -181,6 +184,16 @@ public class PrestamoServiceImpl implements IPrestamoService {
 
         // Se usa el ID del usuario real autenticado que emite el reporte
         auditoriaService.registrarAsiento(herramienta.getCodHerramienta(), usuarioAlmacen.getIdUsuario(), "EXTRAVIO_IMPUTADO_" + custodio, ipOrigen);
+
+        // Matriz 6.1 y 6.2: alerta al Administrador y al mecanico que figura como ultimo custodio
+        String detalle = "La herramienta " + herramienta.getCodHerramienta() + " (" + herramienta.getNombreHerramienta()
+                + ") fue reportada como EXTRAVIADA. Motivo: " + request.getMotivoExtravio().trim();
+        notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Herramienta Extraviada",
+                detalle + ". Custodio imputado: " + custodio, "EXTRAVIO");
+        if (!"SIN_CUSTODIO_PREVIO".equals(custodio)) {
+            notificacionService.enviarNotificacionConTipo(custodio, null, "Herramienta Extraviada a su Cargo",
+                    detalle + ". Usted figura como ultimo custodio registrado; acerquese al panol.", "EXTRAVIO");
+        }
 
         return MensajeGenericoResponse.builder()
                 .exito(true)

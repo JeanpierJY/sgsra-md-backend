@@ -1,5 +1,8 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import com.masterdrilling.sgsramd.DAO.Repuesto_DAO;
 import com.masterdrilling.sgsramd.dto.request.ActualizarRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.request.CrearRepuestoRequest;
@@ -29,8 +32,25 @@ public class CatalogoServiceImpl implements ICatalogoService {
     @Override
     @Transactional(readOnly = true)
     public Page<RepuestoResponse> listarCatalogo(Pageable pageable) {
-        return repuestoRepository.findByActivoTrue(pageable)
+        return repuestoRepository.findByActivoTrue(ordenarPorCodigo(pageable))
                 .map(this::mapearAResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RepuestoResponse> listarCatalogoAdmin(Pageable pageable) {
+        // Vista administrativa: incluye repuestos activos e inactivos con orden estable
+        return repuestoRepository.findAll(ordenarPorCodigo(pageable))
+                .map(this::mapearAResponse);
+    }
+
+    // Sin orden explicito PostgreSQL devuelve las filas editadas o nuevas al final,
+    // lo que las sacaba de la primera pagina del listado (BUG-02)
+    private Pageable ordenarPorCodigo(Pageable pageable) {
+        if (pageable.isUnpaged() || pageable.getSort().isSorted()) {
+            return pageable;
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("codParte").ascending());
     }
 
     @Override
@@ -56,7 +76,7 @@ public class CatalogoServiceImpl implements ICatalogoService {
     @Override
     @Transactional
     public RepuestoResponse registrarRepuesto(CrearRepuestoRequest request) {
-        if (repuestoRepository.existsById(request.getCodParte().trim())) {
+        if (repuestoRepository.existsById(request.getCodParte().trim().toUpperCase())) {
             throw new BadRequestException("El codigo de parte ya se encuentra registrado en el sistema");
         }
 

@@ -20,7 +20,4 @@ public class ActualizarPerfilRequest {
     @NotBlank(message = "El telefono movil es obligatorio")
     @Pattern(regexp = "^[0-9]{9}$", message = "El telefono debe contener exactamente 9 digitos numericos")
     private String telefono;
-
-    @Size(min = 6, message = "La nueva contrasena debe tener al menos 6 caracteres")
-    private String nuevaContrasena;
 }

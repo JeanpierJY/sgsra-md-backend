@@ -41,6 +41,10 @@ public class Prestamo {
     @JoinColumn(name = "dni_mecanico", nullable = false)
     private Mecanico mecanico;
 
+    // Evita repetir el aviso preventivo del dia 6 al mecanico
+    @Column(name = "aviso_preventivo_enviado")
+    private Boolean avisoPreventivoEnviado;
+
     @OneToMany(mappedBy = "prestamo", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PrestamoDetalle> detalles = new ArrayList<>();

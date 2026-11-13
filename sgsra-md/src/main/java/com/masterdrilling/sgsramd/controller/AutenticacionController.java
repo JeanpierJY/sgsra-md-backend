@@ -41,11 +41,12 @@ public class AutenticacionController {
 
     @PostMapping("/recuperar-clave")
     public ResponseEntity<MensajeGenericoResponse> recuperarClave(
-            @RequestParam("correo") String correo,
+            @RequestParam("dni") String dni,
+            @RequestParam("telefono") String telefono,
             @RequestParam(value = "motivo", required = false) String motivo,
             HttpServletRequest httpRequest) {
         return ResponseEntity
-                .ok(autenticacionService.solicitarRecuperacionClave(correo, motivo, httpRequest.getRemoteAddr()));
+                .ok(autenticacionService.solicitarRecuperacionClave(dni, telefono, motivo, httpRequest.getRemoteAddr()));
     }
 
     // Bandeja de solicitudes de recuperacion para el Administrador (estado

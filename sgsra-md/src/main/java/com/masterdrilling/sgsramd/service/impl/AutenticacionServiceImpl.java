@@ -96,21 +96,29 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     }
 
     @Override
-    public MensajeGenericoResponse solicitarRecuperacionClave(String correo) {
-        return solicitarRecuperacionClave(correo, null, "0.0.0.0");
-    }
-
-    @Override
     @Transactional
-    public MensajeGenericoResponse solicitarRecuperacionClave(String correo, String motivo, String ipOrigen) {
-        if (correo == null || correo.isBlank()) {
-            throw new BadRequestException("Debe ingresar su correo corporativo");
+    public MensajeGenericoResponse solicitarRecuperacionClave(String dni, String telefono, String motivo, String ipOrigen) {
+        // REQ-02: el operario valida su identidad solo con DNI y telefono registrado
+        if (dni == null || !dni.trim().matches("^[0-9]{8}$")) {
+            throw new BadRequestException("Debe ingresar un DNI valido de 8 digitos");
         }
-        Usuario usuario = usuarioRepository.findByCorreoCorporativo(correo.trim().toLowerCase())
-                .orElseThrow(() -> new RecursoNoEncontradoException("No existe cuenta corporativa vinculada al correo ingresado"));
+        if (telefono == null || !telefono.trim().matches("^[0-9]{9}$")) {
+            throw new BadRequestException("Debe ingresar un telefono valido de 9 digitos");
+        }
+        final String mensajeInvalido = "Los datos ingresados no coinciden con ningun operario registrado";
+        Usuario usuario = usuarioRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new BadRequestException(mensajeInvalido));
 
         if (usuario.getRol() == RolUsuario.ADMINISTRADOR) {
             throw new AccesoDenegadoException("Las cuentas de Administrador deben gestionar su clave con el area de TI");
+        }
+        String telefonoRegistrado = obtenerTelefonoRegistrado(usuario);
+        if (telefonoRegistrado == null || telefonoRegistrado.isBlank()) {
+            throw new BadRequestException("No tiene un telefono registrado para validar su identidad. Acuda presencialmente a Administracion");
+        }
+        if (!telefonoRegistrado.trim().equals(telefono.trim())) {
+            auditoriaService.registrarAsiento("RECUP_CLAVE_FALLIDA", usuario.getIdUsuario(), "VALIDACION_TELEFONO_FALLIDA", ipOrigen);
+            throw new BadRequestException(mensajeInvalido);
         }
         if (recuperacionRepository.existsByDniSolicitanteAndEstado(usuario.getDni(), EstadoRecuperacion.PENDIENTE)) {
             throw new BadRequestException("Ya tiene una solicitud de recuperacion pendiente de revision por Administracion");
@@ -224,6 +232,23 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
                 .build();
     }
 
+    private String obtenerTelefonoRegistrado(Usuario usuario) {
+        if (usuario.getRol() == RolUsuario.MECANICO) {
+            return mecanicoRepository.findByDniMecanico(usuario.getDni()).map(Mecanico::getTelefono).orElse(null);
+        }
+        if (usuario.getRol() == RolUsuario.ALMACENISTA) {
+            return almacenistaRepository.findByDniAlmacenista(usuario.getDni()).map(Almacenista::getTelefono).orElse(null);
+        }
+        return null;
+    }
+
+    // SEC-01: ningun administrador puede alterar cuentas de nivel administrativo
+    private void validarObjetivoNoAdministrador(Usuario objetivo) {
+        if (objetivo.getRol() == RolUsuario.ADMINISTRADOR) {
+            throw new AccesoDenegadoException("No tiene privilegios para modificar cuentas de nivel administrativo. Gestionelo con el area de TI");
+        }
+    }
+
     private SolicitudRecuperacionClave obtenerRecuperacionPendiente(Long idRecuperacion) {
         SolicitudRecuperacionClave solicitud = recuperacionRepository.findById(idRecuperacion)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Solicitud de recuperacion no encontrada: " + idRecuperacion));
@@ -248,17 +273,19 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
         Usuario usuario = usuarioRepository.findByCorreoCorporativo(correo)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
-        if (request.getNuevaContrasena() != null && !request.getNuevaContrasena().trim().isEmpty()) {
-            usuario.setContrasenaHash(passwordEncoder.encode(request.getNuevaContrasena().trim()));
-            usuarioRepository.save(usuario);
+        // REQ-01: el nombre y el correo son inmutables; solo se actualiza el telefono.
+        // La contrasena se cambia con /cambiar-clave, que exige la contrasena actual
+        if (request.getTelefono() == null || !request.getTelefono().trim().matches("^[0-9]{9}$")) {
+            throw new BadRequestException("El telefono debe contener exactamente 9 digitos numericos");
         }
-
-        mecanicoRepository.findByDniMecanico(usuario.getDni()).ifPresent(m -> {
-            if (request.getTelefono() != null && !request.getTelefono().isBlank()) {
-                m.setTelefono(request.getTelefono().trim());
-                mecanicoRepository.save(m);
-            }
-        });
+        String tel = request.getTelefono().trim();
+        switch (usuario.getRol()) {
+            case MECANICO -> mecanicoRepository.findByDniMecanico(usuario.getDni())
+                    .ifPresent(m -> { m.setTelefono(tel); mecanicoRepository.save(m); });
+            case ALMACENISTA -> almacenistaRepository.findByDniAlmacenista(usuario.getDni())
+                    .ifPresent(a -> { a.setTelefono(tel); almacenistaRepository.save(a); });
+            default -> throw new BadRequestException("El perfil de Administrador no registra telefono de contacto");
+        }
 
         return MensajeGenericoResponse.builder()
                 .exito(true)
@@ -311,6 +338,9 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     @Override
     @Transactional
     public MensajeGenericoResponse registrarUsuario(CrearUsuarioRequest request, String ipOrigen) {
+        if (request.getRol() == RolUsuario.ADMINISTRADOR) {
+            throw new AccesoDenegadoException("Las cuentas de Administrador solo pueden ser creadas por el area de TI");
+        }
         if (usuarioRepository.existsByDni(request.getDni())) {
             throw new BadRequestException("El DNI ingresado ya se encuentra registrado");
         }
@@ -335,8 +365,10 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
                 Mecanico mec = Mecanico.builder()
                         .dniMecanico(usuarioGuardado.getDni())
                         .nombreMecanico(usuarioGuardado.getNombre())
-                        .especialidadMecanico(request.getEspecialidad() != null ? request.getEspecialidad() : "Mantenimiento General")
-                        .cargoMecanico(request.getCargo() != null ? request.getCargo() : "Tecnico de Mantenimiento")
+                        // REQ-01: la especialidad refleja el rol operativo; "cargo" ya no se usa
+                        .especialidadMecanico("Mecanico")
+                        .cargoMecanico("Mecanico")
+                        .telefono(request.getTelefono())
                         .build();
                 mecanicoRepository.save(mec);
             }
@@ -345,6 +377,7 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
                         .dniAlmacenista(usuarioGuardado.getDni())
                         .nombreAlmacenista(usuarioGuardado.getNombre())
                         .sedeAsignada(request.getSedeAsignada() != null ? request.getSedeAsignada() : "Sede Central")
+                        .telefono(request.getTelefono())
                         .build();
                 almacenistaRepository.save(alm);
             }
@@ -372,6 +405,7 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     public MensajeGenericoResponse cambiarEstadoCuenta(Long idUsuario, EstadoCuenta nuevoEstado, String ipOrigen) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con ID: " + idUsuario));
+        validarObjetivoNoAdministrador(usuario);
 
         usuario.setEstadoCuenta(nuevoEstado);
         if (nuevoEstado == EstadoCuenta.ACTIVO) {
@@ -404,10 +438,8 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
             Usuario admin = usuarioRepository.findByCorreoCorporativo(correoAdmin.trim())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Administrador no encontrado: " + correoAdmin));
 
-            if (objetivo.getRol() == RolUsuario.ADMINISTRADOR && !objetivo.getIdUsuario().equals(admin.getIdUsuario())) {
-                throw new AccesoDenegadoException("No tiene privilegios para modificar o suspender cuentas de nivel administrativo.");
-            }
         }
+        validarObjetivoNoAdministrador(objetivo);
 
         return cambiarEstadoCuenta(objetivo.getIdUsuario(), nuevoEstado, ipOrigen);
     }
@@ -415,41 +447,19 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     @Override
     @Transactional
     public MensajeGenericoResponse resetearClavePorDni(String dni, String nuevaClave, String correoAdmin, String ipOrigen) {
+        // REQ-02: el Administrador no cambia contrasenas arbitrariamente; solo resuelve
+        // una solicitud de recuperacion pendiente del propio operario
         Usuario objetivo = usuarioRepository.findByDni(dni.trim())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con DNI: " + dni));
+        validarObjetivoNoAdministrador(objetivo);
 
-        if (correoAdmin != null && !correoAdmin.trim().isEmpty()) {
-            Usuario admin = usuarioRepository.findByCorreoCorporativo(correoAdmin.trim())
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Administrador no encontrado: " + correoAdmin));
-
-            if (objetivo.getRol() == RolUsuario.ADMINISTRADOR && !objetivo.getIdUsuario().equals(admin.getIdUsuario())) {
-                throw new AccesoDenegadoException("No tiene privilegios para resetear contraseñas de nivel administrativo.");
-            }
-        }
-
-        if (objetivo.getRol() != RolUsuario.ADMINISTRADOR) {
-            SolicitudRecuperacionClave pendiente = recuperacionRepository
-                    .findByEstadoOrderByFechaSolicitudAsc(EstadoRecuperacion.PENDIENTE).stream()
-                    .filter(r -> r.getDniSolicitante().equals(objetivo.getDni()))
-                    .findFirst()
-                    .orElse(null);
-            if (pendiente != null) {
-                return aprobarRecuperacionClave(pendiente.getIdRecuperacion(), nuevaClave, correoAdmin, ipOrigen);
-            }
-        }
-
-        objetivo.setContrasenaHash(passwordEncoder.encode(nuevaClave.trim()));
-        objetivo.setIntentosFallidos(0);
-        objetivo.setEstadoCuenta(EstadoCuenta.ACTIVO);
-        usuarioRepository.save(objetivo);
-
-        auditoriaService.registrarAsiento("RESET_CLAVE_" + objetivo.getDni(), objetivo.getIdUsuario(), "RESET_CONTRASENA_ADMIN", ipOrigen);
-
-        return MensajeGenericoResponse.builder()
-                .exito(true)
-                .mensaje("Contraseña reseteada exitosamente para el usuario con DNI: " + dni)
-                .dato(dni)
-                .build();
+        SolicitudRecuperacionClave pendiente = recuperacionRepository
+                .findByEstadoOrderByFechaSolicitudAsc(EstadoRecuperacion.PENDIENTE).stream()
+                .filter(r -> r.getDniSolicitante().equals(objetivo.getDni()))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException(
+                        "El usuario con DNI " + dni + " no tiene una solicitud de recuperacion pendiente"));
+        return aprobarRecuperacionClave(pendiente.getIdRecuperacion(), nuevaClave, correoAdmin, ipOrigen);
     }
 
     @Override
@@ -457,6 +467,7 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     public MensajeGenericoResponse actualizarUsuarioPorDni(String dni, ActualizarPerfilRequest request) {
         Usuario usuario = usuarioRepository.findByDni(dni.trim())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con DNI: " + dni));
+        validarObjetivoNoAdministrador(usuario);
         if (request.getNombre() != null && !request.getNombre().isBlank()) {
             String nombre = request.getNombre().trim();
             usuario.setNombre(nombre);
@@ -467,6 +478,7 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
         }
         if (request.getTelefono() != null && !request.getTelefono().isBlank()) {
             mecanicoRepository.findByDniMecanico(usuario.getDni()).ifPresent(m -> m.setTelefono(request.getTelefono().trim()));
+            almacenistaRepository.findByDniAlmacenista(usuario.getDni()).ifPresent(a -> a.setTelefono(request.getTelefono().trim()));
         }
         return MensajeGenericoResponse.builder()
                 .exito(true)

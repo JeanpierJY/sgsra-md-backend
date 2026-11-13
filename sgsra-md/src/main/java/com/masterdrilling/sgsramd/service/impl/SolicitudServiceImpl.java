@@ -1,5 +1,7 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.model.enums.PrioridadSolicitud;
+
 import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.AprobacionParcialRequest;
 import com.masterdrilling.sgsramd.dto.request.ContactarProveedorRequest;
@@ -96,7 +98,13 @@ public class SolicitudServiceImpl implements ISolicitudService {
 
         solicitudRepository.save(solicitud);
         auditoriaService.registrarAsiento(nuevoId, usuario.getIdUsuario(), "SOLICITUD_CREADA", ipOrigen);
-        notificacionService.enviarNotificacion("ADMINISTRACION", "Nueva Solicitud", "Solicitud " + nuevoId + " ingresada por mecanico");
+        // Matriz 6.1: el Administrador solo es notificado de solicitudes de prioridad ALTA
+        if (request.getPrioridad() == PrioridadSolicitud.ALTA) {
+            notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Solicitud de Prioridad ALTA",
+                    "La solicitud " + nuevoId + " del mecanico " + mecanico.getNombreMecanico()
+                            + " para la maquinaria " + maquinaria.getCodMaquinaria() + " requiere atencion inmediata",
+                    "PRIORIDAD_ALTA");
+        }
 
         return MensajeGenericoResponse.builder()
                 .exito(true)
@@ -190,7 +198,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
         solicitudRepository.save(s);
 
         auditoriaService.registrarAsiento(s.getSolicitudNum(), adminUsuario.getIdUsuario(), "SOLICITUD_APROBADA_TOTAL", ipOrigen);
-        notificacionService.enviarNotificacion(s.getMecanico().getDniMecanico(), "Solicitud Aprobada", "La orden " + s.getSolicitudNum() + " fue autorizada");
+        notificarAprobacion(s);
 
         return MensajeGenericoResponse.builder().exito(true).mensaje("Solicitud aprobada integramente").dato(s.getSolicitudNum()).build();
     }
@@ -237,7 +245,6 @@ public class SolicitudServiceImpl implements ISolicitudService {
 
         dictamenRepository.save(dictamen);
         auditoriaService.registrarAsiento(s.getSolicitudNum(), usuario.getIdUsuario(), "SOLICITUD_RECHAZADA_TOTAL", ipOrigen);
-        notificacionService.enviarNotificacion(s.getMecanico().getDniMecanico(), "Solicitud Rechazada", "La orden " + s.getSolicitudNum() + " fue denegada");
 
         return MensajeGenericoResponse.builder().exito(true).mensaje("Solicitud rechazada formalmente").dato(s.getSolicitudNum()).build();
     }
@@ -282,7 +289,9 @@ public class SolicitudServiceImpl implements ISolicitudService {
 
         solicitudRepository.save(s);
         auditoriaService.registrarAsiento(s.getSolicitudNum(), adminUsuario.getIdUsuario(), "SOLICITUD_APROBADA_PARCIAL", ipOrigen);
-        notificacionService.enviarNotificacion(s.getMecanico().getDniMecanico(), "Resolucion Mixta", "Orden " + s.getSolicitudNum() + " resuelta parcialmente");
+        if (s.getEstadoSolicitud() != EstadoSolicitud.RECHAZADA) {
+            notificarAprobacion(s);
+        }
 
         return MensajeGenericoResponse.builder().exito(true).mensaje("Dictamen parcial aplicado").dato(s.getSolicitudNum()).build();
     }
@@ -320,37 +329,56 @@ public class SolicitudServiceImpl implements ISolicitudService {
         Usuario almacUsuario = usuarioRepository.findByCorreoCorporativo(correoAlmacenista)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Almacenista no registrado"));
 
-        // Descontar inventario fisico para cada repuesto aprobado
+        // Descontar inventario fisico para cada repuesto aprobado (misma transaccion: todo o nada)
+        StringBuilder resumenStock = new StringBuilder();
+        int itemsDescontados = 0;
         for (SolicitudDetalle det : s.getDetalles()) {
             if (det.getEstadoItem() == EstadoItemSolicitud.APROBADO) {
-                Repuesto rep = det.getRepuesto();
+                Repuesto rep = repuestoRepository.findById(det.getRepuesto().getCodParte())
+                        .orElseThrow(() -> new RecursoNoEncontradoException("Repuesto no encontrado: " + det.getRepuesto().getCodParte()));
                 if (rep.getStockActual() < det.getCantidadRepuesto()) {
                     throw new BadRequestException("Stock insuficiente para el repuesto: " + rep.getCodParte() + 
                             ". Disponible: " + rep.getStockActual() + ", Solicitado: " + det.getCantidadRepuesto());
                 }
-                rep.setStockActual(rep.getStockActual() - det.getCantidadRepuesto());
-                repuestoRepository.save(rep);
-
-                // Alerta si cae bajo stock minimo
-                if (rep.getStockActual() <= rep.getStockMinimo()) {
-                    notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Stock Critico",
-                            "El repuesto " + rep.getNombreRepuesto() + " (" + rep.getCodParte() + ") ha alcanzado nivel critico: " + rep.getStockActual() + " unidades", "STOCK_MINIMO");
-                }
+                int stockAnterior = rep.getStockActual();
+                rep.setStockActual(stockAnterior - det.getCantidadRepuesto());
+                repuestoRepository.saveAndFlush(rep);
+                itemsDescontados++;
+                resumenStock.append(String.format(" [%s: %d -> %d]", rep.getCodParte(), stockAnterior, rep.getStockActual()));
             }
+        }
+
+        if (itemsDescontados == 0) {
+            throw new BadRequestException("La solicitud no tiene items aprobados para despachar");
         }
 
         s.setEstadoSolicitud(EstadoSolicitud.ENTREGADA);
         solicitudRepository.save(s);
 
         auditoriaService.registrarAsiento(s.getSolicitudNum(), almacUsuario.getIdUsuario(), "ENTREGA_DESPACHO_REPUESTOS", ipOrigen);
-        notificacionService.enviarNotificacionConTipo(s.getMecanico().getDniMecanico(), "MECANICO", "Repuestos Entregados",
-                "Los repuestos de la solicitud " + s.getSolicitudNum() + " han sido entregados en almacen.", "INFO");
 
         return MensajeGenericoResponse.builder()
                 .exito(true)
-                .mensaje("Repuestos despachados y stock actualizado exitosamente")
+                .mensaje("Repuestos despachados y stock actualizado exitosamente." + resumenStock)
                 .dato(s.getSolicitudNum())
                 .build();
+    }
+
+    // Matriz 6.2 y 6.3: el mecanico recibe toda aprobacion (total o parcial) y el almacenista
+    // las aprobaciones de prioridad ALTA para coordinar el retiro urgente en panol
+    private void notificarAprobacion(Solicitud s) {
+        boolean parcial = s.getEstadoSolicitud() == EstadoSolicitud.APROBADA_PARCIAL;
+        notificacionService.enviarNotificacionConTipo(s.getMecanico().getDniMecanico(), null,
+                parcial ? "Solicitud Aprobada Parcialmente" : "Solicitud Aprobada",
+                "La solicitud " + s.getSolicitudNum() + (parcial ? " fue aprobada parcialmente" : " fue aprobada")
+                        + ". Puede retirar los repuestos aprobados en el panol.",
+                "SOLICITUD_APROBADA");
+        if (s.getPrioridadSolicitud() == PrioridadSolicitud.ALTA) {
+            notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Despacho Urgente - Prioridad ALTA",
+                    "La solicitud " + s.getSolicitudNum() + " de " + s.getMecanico().getNombreMecanico()
+                            + " (prioridad ALTA) fue aprobada. Prepare el despacho fisico.",
+                    "PRIORIDAD_ALTA");
+        }
     }
 
     private SolicitudResumenResponse mapearAResumen(Solicitud s) {

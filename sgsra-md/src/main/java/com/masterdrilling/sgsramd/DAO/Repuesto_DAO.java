@@ -19,7 +19,7 @@ public interface Repuesto_DAO extends JpaRepository<Repuesto, String> {
 
     @Query("SELECT r FROM Repuesto r WHERE r.activo = true AND " +
            "(LOWER(r.nombreRepuesto) LIKE LOWER(CONCAT('%', :termino, '%')) OR " +
-           "LOWER(r.codParte) LIKE LOWER(CONCAT('%', :termino, '%')))")
+           "LOWER(r.codParte) LIKE LOWER(CONCAT('%', :termino, '%'))) ORDER BY r.codParte")
     List<Repuesto> buscarPredictivo(@Param("termino") String termino);
 
     @Query("SELECT r FROM Repuesto r WHERE r.activo = true AND r.stockActual <= r.stockMinimo")
