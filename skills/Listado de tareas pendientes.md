@@ -127,6 +127,7 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
   - [x] 1.8 Notificaciones Persistidas: Endpoints listar, paginar, contar no leídas y marcar lectura
   - [x] 1.9 Despacho de Repuestos: Estado `ENTREGADA` y endpoint `/entregar` con descuento de stock
   - [x] 1.10 Auditoría JPQL: Corrección de casting de parámetros nulos (evitar error SQL 42P18)
+  - [x] 1.11 Normalización DB: Mapeo seguro en `FirebaseNotificacionServiceImpl` contra check constraint PostgreSQL
 
 - [x] Fase 2: Adaptaciones Flutter para Android APK (Arquitectura & Compilación)
   - [x] 2.1 Paquetes en `pubspec.yaml`: Agregar `image_picker: ^1.1.2`, `path_provider: ^2.1.4`, `open_filex: ^4.5.0`
@@ -136,17 +137,60 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
   - [x] 2.5 Parametrización de Red: Configurar `api_constants.dart` con la IP del servidor Spring Boot (`192.168.18.57`)
   - [x] 2.6 Verificación de Build: Adaptaciones completas para el target Android APK sin dependencias exclusivas de navegador
   - [x] 2.7 Revision de ManualTestingRunner.java para averiguar que metodos, RF y otros faltan.
-  - [x] 2.8 Actualizacion ManualTestingRunner.java con todos los RF y nueva funciones listadas (Notificaciones RF46-RF50, Aprobacion Parcial RF26, Despacho Almacen /entregar, Jerarquia Admin y Reset Clave RF06)
+  - [x] 2.8 Actualizacion ManualTestingRunner.java con todos los RF y nuevas funciones (conmutable de mecanicos, modo TI)
 
-- [ ] Fase 3: UI & Experiencia de Usuario Móvil (Flujos Operativos)
-  - [ ] 3.1 Notificaciones: Componente campana con badge reactivo en los 3 paneles + vista de historial
-  - [ ] 3.2 Pañol: Catálogo agrupado de herramientas y alerta roja de mora en préstamos
-  - [ ] 3.3 Pañol: Botón directo de devolución al escanear QR (`Buen Estado`, `Avería`, `Incompleta`)
-  - [ ] 3.4 Pañol: Bandeja de despacho físico de repuestos aprobados (`PUT /entregar`)
-  - [ ] 3.5 Admin: Ordenamiento FIFO de solicitudes pendientes (más antiguas arriba)
-  - [ ] 3.6 Admin: Modal de aprobación/rechazo parcial con motivo general simplificado
-  - [ ] 3.7 Admin: Filtros combinados en Auditoría y barra de búsqueda en Personal
-  - [ ] 3.8 Mecánico: Selector de foto (cámara/galería) en catálogo y registro de herramientas
-  - [ ] 3.9 Perfil: Bloquear edición de DNI, nombres y correo en Mi Perfil (solo teléfono editable)
-  - [ ] 3.10 Auth: Pantalla/diálogo de bloqueo escalonado con cuenta regresiva y solicitud de desbloqueo\
+- [x] Fase 2.9: Cierre de Calibración Backend (Ajustes Previos a UI)
+  - [x] 2.9.1 Lógica de Devolución: Ajustar `PrestamoServiceImpl` para que herramientas devueltas como `INCOMPLETA` pasen a `En Mantenimiento` / retenidas con incidencia (no `Disponible`).
+  - [x] 2.9.2 Historial de Préstamo: Actualizar `hora_retorno` en `prestamo_detalle` al devolver para que no figure siempre `"EN POSESION / ACTIVO"`.
+  - [x] 2.9.3 Alerta de Mora: Al pasar préstamo a `MORA` en `verificarAlertasPrestamos()`, actualizar las herramientas en `herramienta` a `estado_actual = 'En Mora'` (RF43).
+  - [x] 2.9.4 Evidencia Selfie en Recuperación: Agregar columna `foto_selfie_url` en `SolicitudRecuperacionClave`, soporte multipart en `POST /api/v1/auth/recuperar-clave` con guardado en `./uploads/selfies/` y exponer URL en `SolicitudRecuperacionResponse` para revisión visual del Administrador.
+
+- [ ] Fase 3: Core Móvil, Red WiFi & Componentes Transversales (Android APK Ready)
+  - [ ] 3.1 Eliminación limpia de `dart:html` / `universal_html` en `reportes_analiticos_screen.dart` asegurando exportación nativa de Excel/CSV a descargas del teléfono.
+  - [ ] 3.2 Parametrización de red local: Centralizar en `api_constants.dart` la IP IPv4 dinámica de la laptop host y verificar `usesCleartextTraffic` en `AndroidManifest.xml`.
+  - [ ] 3.3 Centro Universal de Notificaciones (`RF50`): Ícono de campana en AppBar con badge dinámico en los 3 módulos (`MecanicoMainScreen`, `AdminMainScreen`, `AlmacenMainScreen`) y pantalla/modal con pestañas _No leídas_ / _Leídas_ y botón _"Marcar todas como leídas"_.
+  - [ ] 3.4 Seguridad, Bloqueo Escalonado y Recuperación con Selfie (`RF04`, `RF06`, `REQ-02`):
+    - Diálogo de bloqueo temporal reactivo con cuenta regresiva escalonada: primeros 3 fallos espera 5 minutos; siguientes 3 fallos espera 10 minutos; tras 9 fallos se bloquea permanentemente (`BLOQUEADO`).
+    - Formulario modal para solicitar restablecer contraseña con validación de DNI (8 dígitos) y teléfono (9 dígitos).
+    - Captura obligatoria de foto selfie en vivo con la cámara frontal (`image_picker` con `CameraDevice.front`) enviada como evidencia al Administrador para fiscalizar identidad antes de asignar clave temporal.
+  - [ ] 3.5 Pantalla Mi Perfil Universal (`RF07`, `REQ-01`): Bloqueo estricto de DNI, nombre, correo y cargo (`readOnly = true`); permitir editar únicamente el teléfono (9 dígitos) y cambio de contraseña propia.
+
+- [ ] Fase 4: Flujos Operativos y Vistas Especializadas por Rol
+  - [ ] 4.1 Módulo Mecánico:
+    - [ ] 4.1.1 Despliegue de fotos de repuestos en catálogo y modal de ficha técnica (`RF09`, `RF12`) con fallback `errorBuilder` corporativo.
+    - [ ] 4.1.2 Despliegue automático de la vista del carrito de repuestos al pulsar "Crear Solicitud" (`REQ-03`) y limpieza post-envío (`BUG-04`).
+    - [ ] 4.1.3 Historial cromático personal de solicitudes (`RF19`, `RF20`) y consulta de herramientas prestadas bajo su custodia (`RF36`, `RF40`).
+  - [ ] 4.2 Módulo Administrador:
+    - [ ] 4.2.1 Ordenamiento FIFO de solicitudes pendientes (más antiguas arriba en la bandeja - `RF21`).
+    - [ ] 4.2.2 Modal de aprobación parcial por ítem (`RF26`) con motivo general obligatorio si hay ítems denegados.
+    - [ ] 4.2.3 Barra de búsqueda dinámica y selector por rol en Gestión de Personal (`admin/`).
+    - [ ] 4.2.4 Filtros avanzados combinados en Auditoría (`RF31`): rango de fechas, usuario/DNI, acción y código de máquina.
+    - [ ] 4.2.5 Selector fotográfico (`image_picker`) con cámara o galería en mantenimiento de repuestos (`RF32`).
+  - [ ] 4.3 Módulo Almacenista (Ergonomía de Pañol Consolidada):
+    - [ ] 4.3.1 Rediseño a 4 pestañas principales: Operaciones/Dashboard, Herramientas, Historial de Devoluciones y Mi Perfil.
+    - [ ] 4.3.2 Botón Flotante Central (FAB) para Escáner QR inteligente: si la herramienta está `Disponible` abre _"Registrar Préstamo"_; si está `Prestada` abre _"Registrar Devolución e Inspección Física"_ (`Buen Estado`, `Con Avería`, `Incompleta`).
+    - [ ] 4.3.3 Resaltado en rojo brillante con ícono de reloj en la tabla de préstamos para activos con mora vencida (`RF43`).
+    - [ ] 4.3.4 Bandeja de despacho de repuestos aprobados (`PUT /api/v1/solicitudes/{id}/entregar`) con confirmación de entrega y descuento de stock en tiempo real.
+    - [ ] 4.3.5 Selector fotográfico (`image_picker`) para registro de nuevas herramientas en pañol (`RF44`, `RF45`).
+
+- [ ] Fase 5: Pruebas Integradas E2E en Red WiFi, Compilación APK y Despliegue
+  - [ ] 5.1 Conectividad WiFi LAN: Validar ping y consumo HTTP entre los 3 celulares físicos y la laptop Spring Boot en el puerto 8080.
+  - [ ] 5.2 Ciclo Cruzado E2E: Mecánico solicita $\rightarrow$ Admin aprueba/parcial $\rightarrow$ Almacenista despacha repuestos; Almacén presta herramienta $\rightarrow$ Mecánico custodia $\rightarrow$ Almacén liquida por QR.
+  - [ ] 5.3 Compilación APK Release: Ejecutar `flutter build apk --release` verificando 0 advertencias críticas y 0 imports web.
+  - [ ] 5.4 Instalación y Puesta en Marcha: Instalar el APK en los 3 dispositivos Android de Master Drilling Perú S.A. y verificar operatividad 100% offline de internet externo.
 ```
+
+---
+
+## 🖼️ 4. Inventario de Recursos Multimedia Requeridos
+
+Consulte el documento completo [recursos_multimedia_requeridos.md](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/skills/recursos_multimedia_requeridos.md) para las especificaciones detalladas.
+
+| Tipo de Recurso | Cantidad | Ubicación Destino | Especificación Técnica |
+| :--- | :---: | :--- | :--- |
+| **Identidad Visual** | 3 archivos | `sgsra_mobile/assets/images/` | Logo Master Drilling (512x512 PNG), Isotipo y Avatar genérico |
+| **Ícono App Android** | 1 set | `android/app/src/main/res/mipmap-*/` | `ic_launcher.png` adaptable para launcher Android |
+| **Fotos Repuestos** | 10 a 25 fotos | Servidor Spring Boot `./uploads/imagenes/` | Formato JPG/PNG < 5 MB (bombas, válvulas, filtros, motores, mangueras) |
+| **Fotos Herramientas** | 10 a 25 fotos | Servidor Spring Boot `./uploads/imagenes/` | Formato JPG/PNG < 5 MB (torquímetros, pistolas neumáticas, multímetros, gatos) |
+| **Códigos QR de Prueba** | 5 códigos | Proyección en pantalla o impresos | Textos planos de prueba: `HER-TOR-004`, `HER-PIS-012`, `HER-FLU-001`, etc. |
+

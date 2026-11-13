@@ -27,5 +27,6 @@ public class SolicitudRecuperacionResponse {
     private LocalDateTime fechaResolucion;
     private String dniAdministrador;
     private String observacionAdmin;
+    private String fotoSelfieUrl;
 }
 

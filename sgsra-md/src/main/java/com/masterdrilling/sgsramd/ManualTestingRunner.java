@@ -840,9 +840,11 @@ public class ManualTestingRunner implements CommandLineRunner {
                     return;
                 }
                 for (SolicitudRecuperacionResponse r : pendientes) {
-                    System.out.printf(" -> ID #%d | DNI: %s | %s (%s) | Motivo: %s | Fecha: %s\n",
+                    System.out.printf(" -> ID #%d | DNI: %s | %s (%s) | Motivo: %s | Selfie: %s | Fecha: %s\n",
                             r.getIdRecuperacion(), r.getDniSolicitante(), r.getNombreSolicitante(),
-                            r.getRolSolicitante(), r.getMotivo(), r.getFechaSolicitud());
+                            r.getRolSolicitante(), r.getMotivo(),
+                            (r.getFotoSelfieUrl() != null ? r.getFotoSelfieUrl() : "Sin selfie"),
+                            r.getFechaSolicitud());
                 }
                 System.out.print("Ingrese ID de Solicitud a procesar (o Enter para cancelar): ");
                 String idStr = scanner.nextLine().trim();

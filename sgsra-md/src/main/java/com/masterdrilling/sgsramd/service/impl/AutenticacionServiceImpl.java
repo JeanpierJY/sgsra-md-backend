@@ -47,6 +47,7 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     private final IAuditoriaService auditoriaService;
     private final INotificacionService notificacionService;
     private final SolicitudRecuperacionClave_DAO recuperacionRepository;
+    private final com.masterdrilling.sgsramd.service.IStorageService storageService;
 
     private static final int UMBRAL_BLOQUEO_INTENTOS = 3;
 
@@ -142,6 +143,12 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     @Override
     @Transactional
     public MensajeGenericoResponse solicitarRecuperacionClavePorDniYTelefono(String dni, String telefono, String motivo, String ipOrigen) {
+        return solicitarRecuperacionClavePorDniYTelefono(dni, telefono, motivo, null, ipOrigen);
+    }
+
+    @Override
+    @Transactional
+    public MensajeGenericoResponse solicitarRecuperacionClavePorDniYTelefono(String dni, String telefono, String motivo, org.springframework.web.multipart.MultipartFile fotoSelfie, String ipOrigen) {
         if (dni == null || dni.trim().length() != 8) {
             throw new BadRequestException("El DNI debe tener exactamente 8 digitos numericos");
         }
@@ -173,12 +180,18 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
             throw new BadRequestException("Ya tiene una solicitud de recuperacion pendiente de revision por Administracion");
         }
 
+        String selfieUrl = null;
+        if (fotoSelfie != null && !fotoSelfie.isEmpty()) {
+            selfieUrl = storageService.guardarArchivo(fotoSelfie, "selfies");
+        }
+
         SolicitudRecuperacionClave solicitud = recuperacionRepository.save(SolicitudRecuperacionClave.builder()
                 .dniSolicitante(usuario.getDni())
                 .nombreSolicitante(usuario.getNombre())
                 .correoSolicitante(usuario.getCorreoCorporativo())
                 .rolSolicitante(usuario.getRol())
                 .motivo(motivo != null && !motivo.isBlank() ? motivo.trim() : "Recuperacion de contrasena solicitada desde login con validacion de DNI y telefono")
+                .fotoSelfieUrl(selfieUrl)
                 .estado(EstadoRecuperacion.PENDIENTE)
                 .fechaSolicitud(LocalDateTime.now())
                 .build());
@@ -214,6 +227,7 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
                 .fechaResolucion(r.getFechaResolucion())
                 .dniAdministrador(r.getDniAdministrador())
                 .observacionAdmin(r.getObservacionAdmin())
+                .fotoSelfieUrl(r.getFotoSelfieUrl())
                 .build()).toList();
     }
 

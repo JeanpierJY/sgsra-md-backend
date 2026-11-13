@@ -16,8 +16,10 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -39,21 +41,25 @@ public class AutenticacionController {
         return ResponseEntity.ok(autenticacionService.autenticar(request, ipOrigen));
     }
 
-    @PostMapping("/recuperar-clave")
+    @PostMapping(value = "/recuperar-clave", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE,
+            MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.ALL_VALUE })
     public ResponseEntity<MensajeGenericoResponse> recuperarClave(
             @RequestParam(value = "correo", required = false) String correo,
             @RequestParam(value = "dni", required = false) String dni,
             @RequestParam(value = "telefono", required = false) String telefono,
             @RequestParam(value = "motivo", required = false) String motivo,
+            @RequestPart(value = "fotoSelfie", required = false) MultipartFile fotoSelfie,
             HttpServletRequest httpRequest) {
         String ip = httpRequest.getRemoteAddr();
         if (dni != null && !dni.isBlank() && telefono != null && !telefono.isBlank()) {
-            return ResponseEntity.ok(autenticacionService.solicitarRecuperacionClavePorDniYTelefono(dni, telefono, motivo, ip));
+            return ResponseEntity.ok(autenticacionService.solicitarRecuperacionClavePorDniYTelefono(dni, telefono,
+                    motivo, fotoSelfie, ip));
         }
         if (correo != null && !correo.isBlank()) {
             return ResponseEntity.ok(autenticacionService.solicitarRecuperacionClave(correo, motivo, ip));
         }
-        throw new com.masterdrilling.sgsramd.exception.BadRequestException("Debe proporcionar DNI y telefono, o correo corporativo para solicitar recuperacion");
+        throw new com.masterdrilling.sgsramd.exception.BadRequestException(
+                "Debe proporcionar DNI y telefono, o correo corporativo para solicitar recuperacion");
     }
 
     // Bandeja de solicitudes de recuperacion para el Administrador (estado

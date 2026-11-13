@@ -133,7 +133,8 @@ public class PrestamoServiceImpl implements IPrestamoService {
             Herramienta herramienta = herramientaRepository.findByCodHerramienta(itemReq.getCodHerramienta())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Herramienta no encontrada: " + itemReq.getCodHerramienta()));
 
-            if (itemReq.getEstadoFisico() == EstadoDevolucion.CON_AVERIA) {
+            // RF40: Con Averia o Incompleta pasan a En Mantenimiento (nunca Disponible si faltan partes)
+            if (itemReq.getEstadoFisico() == EstadoDevolucion.CON_AVERIA || itemReq.getEstadoFisico() == EstadoDevolucion.INCOMPLETA) {
                 herramienta.setEstadoActual(EstadoHerramienta.EN_MANTENIMIENTO.getDescripcionSql());
             } else {
                 herramienta.setEstadoActual(EstadoHerramienta.DISPONIBLE.getDescripcionSql());
@@ -148,6 +149,14 @@ public class PrestamoServiceImpl implements IPrestamoService {
                     .build();
 
             devolucion.getDetalles().add(det);
+        }
+
+        // RF40: Actualizar hora de retorno efectiva en los detalles del prestamo original
+        LocalTime horaCierre = LocalTime.now();
+        List<PrestamoDetalle> detallesPrestamo = prestamoDetalleRepository.findByIdPrestamoNum(prestamo.getPrestamoNum());
+        for (PrestamoDetalle pd : detallesPrestamo) {
+            pd.setHoraRetorno(horaCierre);
+            prestamoDetalleRepository.save(pd);
         }
 
         prestamo.setEstadoPrestamo(EstadoPrestamo.CERRADO);
@@ -229,6 +238,16 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 // Transicion a MORA y alertas (6.2.2, 6.3.1)
                 p.setEstadoPrestamo(EstadoPrestamo.MORA);
                 prestamoRepository.save(p);
+
+                // RF43: Actualizar estado de las herramientas del prestamo a 'En Mora' para el tablero de panol
+                List<PrestamoDetalle> detallesMora = prestamoDetalleRepository.findByIdPrestamoNum(p.getPrestamoNum());
+                for (PrestamoDetalle d : detallesMora) {
+                    Herramienta h = d.getHerramienta();
+                    if (h != null && EstadoHerramienta.PRESTADA.getDescripcionSql().equalsIgnoreCase(h.getEstadoActual())) {
+                        h.setEstadoActual(EstadoHerramienta.EN_MORA.getDescripcionSql());
+                        herramientaRepository.save(h);
+                    }
+                }
 
                 // Almacenista: aviso de mora (6.3.1)
                 notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Prestamo en Mora / Atrasado",

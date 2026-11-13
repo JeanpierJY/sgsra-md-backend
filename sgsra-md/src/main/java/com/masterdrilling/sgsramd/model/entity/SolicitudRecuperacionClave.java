@@ -56,5 +56,8 @@ public class SolicitudRecuperacionClave {
 
     @Column(name = "observacion_admin", columnDefinition = "TEXT")
     private String observacionAdmin;
+
+    @Column(name = "foto_selfie_url", length = 255)
+    private String fotoSelfieUrl;
 }
 
