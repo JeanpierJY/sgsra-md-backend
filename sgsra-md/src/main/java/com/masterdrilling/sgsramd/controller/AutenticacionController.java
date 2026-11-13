@@ -41,11 +41,19 @@ public class AutenticacionController {
 
     @PostMapping("/recuperar-clave")
     public ResponseEntity<MensajeGenericoResponse> recuperarClave(
-            @RequestParam("correo") String correo,
+            @RequestParam(value = "correo", required = false) String correo,
+            @RequestParam(value = "dni", required = false) String dni,
+            @RequestParam(value = "telefono", required = false) String telefono,
             @RequestParam(value = "motivo", required = false) String motivo,
             HttpServletRequest httpRequest) {
-        return ResponseEntity
-                .ok(autenticacionService.solicitarRecuperacionClave(correo, motivo, httpRequest.getRemoteAddr()));
+        String ip = httpRequest.getRemoteAddr();
+        if (dni != null && !dni.isBlank() && telefono != null && !telefono.isBlank()) {
+            return ResponseEntity.ok(autenticacionService.solicitarRecuperacionClavePorDniYTelefono(dni, telefono, motivo, ip));
+        }
+        if (correo != null && !correo.isBlank()) {
+            return ResponseEntity.ok(autenticacionService.solicitarRecuperacionClave(correo, motivo, ip));
+        }
+        throw new com.masterdrilling.sgsramd.exception.BadRequestException("Debe proporcionar DNI y telefono, o correo corporativo para solicitar recuperacion");
     }
 
     // Bandeja de solicitudes de recuperacion para el Administrador (estado

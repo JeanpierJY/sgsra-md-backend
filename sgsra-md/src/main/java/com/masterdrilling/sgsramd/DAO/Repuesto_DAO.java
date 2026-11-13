@@ -17,6 +17,8 @@ public interface Repuesto_DAO extends JpaRepository<Repuesto, String> {
 
     Page<Repuesto> findByActivoTrue(Pageable pageable);
 
+    Page<Repuesto> findByActivoTrueOrderByCodParteAsc(Pageable pageable);
+
     @Query("SELECT r FROM Repuesto r WHERE r.activo = true AND " +
            "(LOWER(r.nombreRepuesto) LIKE LOWER(CONCAT('%', :termino, '%')) OR " +
            "LOWER(r.codParte) LIKE LOWER(CONCAT('%', :termino, '%')))")

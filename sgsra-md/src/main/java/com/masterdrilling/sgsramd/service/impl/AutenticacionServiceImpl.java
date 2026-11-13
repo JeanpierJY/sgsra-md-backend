@@ -140,6 +140,63 @@ public class AutenticacionServiceImpl implements IAutenticacionService {
     }
 
     @Override
+    @Transactional
+    public MensajeGenericoResponse solicitarRecuperacionClavePorDniYTelefono(String dni, String telefono, String motivo, String ipOrigen) {
+        if (dni == null || dni.trim().length() != 8) {
+            throw new BadRequestException("El DNI debe tener exactamente 8 digitos numericos");
+        }
+        if (telefono == null || !telefono.trim().matches("^9\\d{8}$")) {
+            throw new BadRequestException("El numero telefonico debe tener exactamente 9 digitos y comenzar con 9");
+        }
+
+        Usuario usuario = usuarioRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe usuario registrado con el DNI: " + dni.trim()));
+
+        if (usuario.getRol() == RolUsuario.ADMINISTRADOR) {
+            throw new AccesoDenegadoException("Las cuentas de Administrador deben gestionar su clave con el area de TI");
+        }
+
+        if (usuario.getRol() == RolUsuario.MECANICO) {
+            mecanicoRepository.findByDniMecanico(usuario.getDni()).ifPresent(m -> {
+                if (m.getTelefono() != null && !m.getTelefono().isBlank()) {
+                    if (!m.getTelefono().trim().equals(telefono.trim())) {
+                        throw new BadRequestException("El numero telefonico ingresado no coincide con el registrado en su ficha");
+                    }
+                } else {
+                    m.setTelefono(telefono.trim());
+                    mecanicoRepository.save(m);
+                }
+            });
+        }
+
+        if (recuperacionRepository.existsByDniSolicitanteAndEstado(usuario.getDni(), EstadoRecuperacion.PENDIENTE)) {
+            throw new BadRequestException("Ya tiene una solicitud de recuperacion pendiente de revision por Administracion");
+        }
+
+        SolicitudRecuperacionClave solicitud = recuperacionRepository.save(SolicitudRecuperacionClave.builder()
+                .dniSolicitante(usuario.getDni())
+                .nombreSolicitante(usuario.getNombre())
+                .correoSolicitante(usuario.getCorreoCorporativo())
+                .rolSolicitante(usuario.getRol())
+                .motivo(motivo != null && !motivo.isBlank() ? motivo.trim() : "Recuperacion de contrasena solicitada desde login con validacion de DNI y telefono")
+                .estado(EstadoRecuperacion.PENDIENTE)
+                .fechaSolicitud(LocalDateTime.now())
+                .build());
+
+        auditoriaService.registrarAsiento("RECUP_CLAVE_" + solicitud.getIdRecuperacion(), usuario.getIdUsuario(), "SOLICITUD_RECUPERACION_CLAVE_DNI", ipOrigen);
+        notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Solicitud de Recuperacion de Contrasena",
+                usuario.getNombre() + " (" + usuario.getRol() + ", DNI " + usuario.getDni() + ") solicita restablecer su contrasena. "
+                        + "Telefono: " + telefono.trim() + ". Solicitud #" + solicitud.getIdRecuperacion() + ". Revisela en Gestionar Personal.",
+                "RECUPERACION_CLAVE");
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Solicitud de recuperacion #" + solicitud.getIdRecuperacion() + " enviada a Administracion. Sera notificado cuando sea resuelta")
+                .dato(solicitud.getIdRecuperacion())
+                .build();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<SolicitudRecuperacionResponse> listarSolicitudesRecuperacion(EstadoRecuperacion estado) {
         List<SolicitudRecuperacionClave> lista = (estado != null)

@@ -27,6 +27,8 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
     private final Notificacion_DAO notificacionRepository;
     private final Usuario_DAO usuarioRepository;
 
+    private record RolInfo(String dni, String rol) {}
+
     @Override
     @Transactional
     public void enviarNotificacion(String destinatario, String titulo, String mensaje) {
@@ -44,6 +46,10 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
             rol = "TODOS";
         } else {
             dni = destinatario;
+            rol = usuarioRepository.findByDni(dni)
+                    .map(Usuario::getRol)
+                    .map(Enum::name)
+                    .orElse(null);
         }
 
         Notificacion notificacion = Notificacion.builder()
@@ -77,8 +83,8 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
     @Override
     @Transactional(readOnly = true)
     public List<NotificacionResponse> listarPorUsuario(String dni) {
-        String rol = obtenerRolPorDni(dni);
-        return notificacionRepository.listarPorDestinatario(dni, rol).stream()
+        RolInfo info = resolverDestinatario(dni);
+        return notificacionRepository.listarPorDestinatario(info.dni(), info.rol()).stream()
                 .map(this::mapearADto)
                 .toList();
     }
@@ -86,16 +92,16 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
     @Override
     @Transactional(readOnly = true)
     public Page<NotificacionResponse> listarPorUsuarioPaginado(String dni, Pageable pageable) {
-        String rol = obtenerRolPorDni(dni);
-        return notificacionRepository.listarPorDestinatarioPaginado(dni, rol, pageable)
+        RolInfo info = resolverDestinatario(dni);
+        return notificacionRepository.listarPorDestinatarioPaginado(info.dni(), info.rol(), pageable)
                 .map(this::mapearADto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public long contarNoLeidas(String dni) {
-        String rol = obtenerRolPorDni(dni);
-        return notificacionRepository.contarNoLeidas(dni, rol);
+        RolInfo info = resolverDestinatario(dni);
+        return notificacionRepository.contarNoLeidas(info.dni(), info.rol());
     }
 
     @Override
@@ -115,8 +121,8 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
     @Override
     @Transactional
     public MensajeGenericoResponse marcarTodasComoLeidas(String dni) {
-        String rol = obtenerRolPorDni(dni);
-        notificacionRepository.marcarTodasComoLeidas(dni, rol);
+        RolInfo info = resolverDestinatario(dni);
+        notificacionRepository.marcarTodasComoLeidas(info.dni(), info.rol());
         return MensajeGenericoResponse.builder()
                 .exito(true)
                 .mensaje("Todas las notificaciones fueron marcadas como leidas")
@@ -124,12 +130,28 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
                 .build();
     }
 
-    private String obtenerRolPorDni(String dni) {
-        if (dni == null || dni.trim().isEmpty()) return "TODOS";
-        return usuarioRepository.findByDni(dni.trim())
+    private RolInfo resolverDestinatario(String identificador) {
+        if (identificador == null || identificador.trim().isEmpty()) {
+            return new RolInfo(null, null);
+        }
+        String clean = identificador.trim();
+        if ("ADMINISTRACION".equalsIgnoreCase(clean) || "ADMINISTRADOR".equalsIgnoreCase(clean)) {
+            return new RolInfo(null, "ADMINISTRADOR");
+        }
+        if ("ALMACEN".equalsIgnoreCase(clean) || "ALMACENISTA".equalsIgnoreCase(clean)) {
+            return new RolInfo(null, "ALMACENISTA");
+        }
+        if ("MECANICO".equalsIgnoreCase(clean)) {
+            return new RolInfo(null, "MECANICO");
+        }
+        if ("TODOS".equalsIgnoreCase(clean)) {
+            return new RolInfo(null, "TODOS");
+        }
+        String rol = usuarioRepository.findByDni(clean)
                 .map(Usuario::getRol)
                 .map(Enum::name)
-                .orElse("TODOS");
+                .orElse(null);
+        return new RolInfo(clean, rol);
     }
 
     private NotificacionResponse mapearADto(Notificacion n) {

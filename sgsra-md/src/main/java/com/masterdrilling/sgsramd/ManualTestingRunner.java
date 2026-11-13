@@ -87,7 +87,9 @@ public class ManualTestingRunner implements CommandLineRunner {
     private final String CORREO_MECANICO = "carlos.baro@masterdrilling.com";
     private final String DNI_MECANICO = "70000001";
     private final String CORREO_ADMIN = "leao.chura@masterdrilling.com";
+    private final String DNI_ADMIN = "10293847";
     private final String CORREO_ALMACENISTA = "marcos.baro@masterdrilling.com";
+    private final String DNI_ALMACENISTA = "70000002";
 
     // RF13: Carrito de compras temporal en memoria
     private final Map<String, Integer> carritoRepuestos = new LinkedHashMap<>();
@@ -115,18 +117,20 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("\n=========================================================");
             System.out.println("  SGSRA-MD: CONSOLA INTEGRAL MASTER DRILLING (RF01-RF50) ");
             System.out.println("=========================================================");
-            System.out.println("1. [PANEL MECANICO]      -> Catalogo, Carrito, Pedidos, Notificaciones, Perfil");
+            System.out.println("1. [PANEL MECANICO]      -> Catalogo, Carrito, Solicitudes, Notificaciones, Perfil");
             System.out.println("2. [PANEL ADMINISTRADOR] -> Bandeja, Aprobacion Parcial, Notificaciones, Personal");
             System.out.println("3. [PANEL ALMACENISTA]   -> Despacho Repuestos, Panol, Notificaciones, Retorno");
-            System.out.println("4. Salir (RF03 - Cierre de Sesion)");
-            System.out.print("Seleccione una opcion (1-4): ");
+            System.out.println("4. Olvide mi contrasena (Mecanico / Almacenista - RF06)");
+            System.out.println("5. Salir (RF03 - Cierre de Sesion)");
+            System.out.print("Seleccione una opcion (1-5): ");
 
             String opc = scanner.nextLine().trim();
             switch (opc) {
                 case "1" -> flujoPanelMecanico();
                 case "2" -> flujoPanelAdministrador();
                 case "3" -> flujoPanelAlmacenista();
-                case "4" -> {
+                case "4" -> flujoRecuperacionClaveConsola();
+                case "5" -> {
                     System.out.println("Cerrando sesion interactiva. El servidor Spring Boot sigue activo.");
                     return;
                 }
@@ -144,7 +148,7 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("      MODULO MECANICO: " + CORREO_MECANICO + " (DNI: " + DNI_MECANICO + ")");
             System.out.println("---------------------------------------------------------");
             System.out.println("1. Catalogo de Repuestos (RF09, RF10, RF11, RF12, RF13)");
-            System.out.println("2. Mis Pedidos (RF14, RF15, RF16, RF17, RF19, RF20)");
+            System.out.println("2. Solicitudes (RF14 - RF20)");
             System.out.println("3. Herramientas Prestadas (RF36, RF40, RF41, RF43)");
             System.out.println("4. Centro de Notificaciones y Alertas (RF47, RF48, RF50)");
             System.out.println("5. Mi Perfil (RF07)");
@@ -237,21 +241,25 @@ public class ManualTestingRunner implements CommandLineRunner {
     }
 
     private void subMenuPedidosMecanico() {
-        System.out.println("\n-- Mis Pedidos --");
-        System.out.println("2.1 Transmitir solicitud vinculada al carrito (RF14, RF15, RF16, RF17)");
+        System.out.println("\n-- Solicitudes (RF14 - RF20) --");
+        System.out.println("2.1 Crear / Transmitir solicitud vinculada al carrito (RF14 - RF17)");
         System.out.println("2.2 Historial y estado de solicitudes (RF19, RF20)");
         System.out.print("Opcion: ");
         String sub = scanner.nextLine().trim();
 
         try {
             if ("1".equals(sub) || "2.1".equals(sub)) {
+                System.out.println("\n--- Contenido Actual del Carrito de Repuestos (REQ-03) ---");
                 if (carritoRepuestos.isEmpty()) {
                     System.out.println("El carrito esta vacio. Primero agregue repuestos desde el catalogo.");
                     return;
                 }
+                carritoRepuestos.forEach((cod, cant) -> {
+                    System.out.printf("  * Repuesto: %-15s | Cantidad Solicitada: %d\n", cod, cant);
+                });
 
                 // RF15: Vinculacion obligatoria de la orden al codigo de la maquinaria afectada
-                System.out.print("Codigo de Maquinaria Afectada (Enter para MD-RB-01): ");
+                System.out.print("\nCodigo de Maquinaria Afectada (Enter para MD-RB-01): ");
                 String maq = scanner.nextLine().trim();
                 if (maq.isEmpty())
                     maq = "MD-RB-01";
@@ -293,6 +301,7 @@ public class ManualTestingRunner implements CommandLineRunner {
                 MensajeGenericoResponse res = solicitudService.registrarSolicitud(CORREO_MECANICO, req, ipLocal);
                 System.out.println("EXITO (RF17): " + res.getMensaje() + " | Numero Solicitud: " + res.getDato());
                 carritoRepuestos.clear();
+                System.out.println("Carrito de repuestos vaciado exitosamente (BUG-04).");
             } else if ("2".equals(sub) || "2.2".equals(sub)) {
                 // RF19/RF20: Historial personal cronologico con indicador de estado (Pendiente,
                 // Aprobada, Rechazada)
@@ -350,40 +359,44 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF07: Consulta y edicion de perfil basico del operario
+    // RF07: Consulta y edicion de perfil basico del operario (REQ-01)
     private void subMenuPerfilMecanico() {
-        System.out.println("\n-- Mi Perfil (RF07) --");
-        System.out.println("4.1 Mostrar informacion");
-        System.out.println("4.2 Editar informacion de contacto");
+        System.out.println("\n-- Mi Perfil (Mecanico - RF07 / REQ-01) --");
+        System.out.println("5.1 Mostrar informacion del perfil");
+        System.out.println("5.2 Editar telefono de contacto (9 digitos)");
+        System.out.println("5.3 Cambiar contrasena propia");
         System.out.print("Opcion: ");
         String sub = scanner.nextLine().trim();
 
         try {
-            if ("1".equals(sub) || "4.1".equals(sub)) {
+            if ("1".equals(sub) || "5.1".equals(sub)) {
                 Optional<Mecanico> optM = mecanicoRepository.findByDniMecanico(DNI_MECANICO);
                 if (optM.isPresent()) {
                     Mecanico m = optM.get();
-                    System.out.println("DNI:          " + m.getDniMecanico());
-                    System.out.println("Nombre:       " + m.getNombreMecanico());
-                    System.out.println("Especialidad: " + m.getEspecialidadMecanico());
-                    System.out.println("Cargo:        " + m.getCargoMecanico());
-                    System.out
-                            .println("Telefono:     " + (m.getTelefono() != null ? m.getTelefono() : "No registrado"));
-                    System.out.println("Correo:       " + CORREO_MECANICO);
+                    System.out.println("DNI:          " + m.getDniMecanico() + " [Solo Lectura]");
+                    System.out.println("Nombre:       " + m.getNombreMecanico() + " [Solo Lectura]");
+                    System.out.println("Especialidad: Mecanico");
+                    System.out.println("Telefono:     " + (m.getTelefono() != null ? m.getTelefono() : "No registrado"));
+                    System.out.println("Correo:       " + CORREO_MECANICO + " [Solo Lectura]");
                 }
-            } else if ("2".equals(sub) || "4.2".equals(sub)) {
-                System.out.print("Nuevo Nombre Completo: ");
-                String nom = scanner.nextLine().trim();
-                System.out.print("Nuevo Telefono (9 digitos): ");
+            } else if ("2".equals(sub) || "5.2".equals(sub)) {
+                System.out.print("Nuevo Telefono (exactamente 9 digitos, ej: 987654321): ");
                 String tel = scanner.nextLine().trim();
 
                 ActualizarPerfilRequest req = ActualizarPerfilRequest.builder()
-                        .nombre(nom)
                         .telefono(tel)
                         .build();
 
                 MensajeGenericoResponse res = authService.actualizarPerfil(CORREO_MECANICO, req);
                 System.out.println("RESULTADO (RF07): " + res.getMensaje());
+            } else if ("3".equals(sub) || "5.3".equals(sub)) {
+                System.out.print("Contrasena actual: ");
+                String actual = scanner.nextLine().trim();
+                System.out.print("Nueva contrasena: ");
+                String nueva = scanner.nextLine().trim();
+
+                MensajeGenericoResponse res = authService.cambiarContrasenaPropia(CORREO_MECANICO, actual, nueva, ipLocal);
+                System.out.println("RESULTADO (Cambio Clave): " + res.getMensaje());
             }
         } catch (Exception e) {
             System.out.println("Aviso: " + e.getMessage());
@@ -404,8 +417,9 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("4. Gestionar Personal y Seguridad (RF06, RF07, RF08)");
             System.out.println("5. Gestionar Catalogo de Repuestos (RF32)");
             System.out.println("6. Centro de Notificaciones de Jefatura (RF46, RF50)");
-            System.out.println("7. Regresar al Menu Principal");
-            System.out.print("Seleccione (1-7): ");
+            System.out.println("7. Mi Perfil (Administrador - REQ-01)");
+            System.out.println("8. Regresar al Menu Principal");
+            System.out.print("Seleccione (1-8): ");
 
             String op = scanner.nextLine().trim();
             switch (op) {
@@ -414,8 +428,9 @@ public class ManualTestingRunner implements CommandLineRunner {
                 case "3" -> subMenuAuditoriaAdmin();
                 case "4" -> subMenuPersonalAdmin();
                 case "5" -> subMenuGestionCatalogoAdmin();
-                case "6" -> subMenuNotificacionesUsuario(null, "ADMINISTRADOR");
-                case "7" -> {
+                case "6" -> subMenuNotificacionesUsuario(DNI_ADMIN, "ADMINISTRADOR");
+                case "7" -> subMenuPerfilAdmin();
+                case "8" -> {
                     return;
                 }
                 default -> System.out.println("Opcion no valida.");
@@ -558,9 +573,24 @@ public class ManualTestingRunner implements CommandLineRunner {
             LocalDate fin = LocalDate.now();
 
             if ("1".equals(sub) || "2.1".equals(sub)) {
-                // RF29: Graficos estadisticos y metricas de piezas mas demandadas
-                List<EstadisticaDemandaResponse> metricas = reporteService.obtenerTopRepuestosDemandados(inicio, fin);
-                System.out.println("Top Repuestos mas demandados en los ultimos 180 dias:");
+                // RF29 & REQ-04: Graficos estadisticos y metricas con filtros de 30, 60, 90 y 180 dias
+                System.out.println("Seleccione rango temporal (REQ-04):");
+                System.out.println(" 1. 30 dias");
+                System.out.println(" 2. 60 dias");
+                System.out.println(" 3. 90 dias");
+                System.out.println(" 4. 180 dias (default)");
+                System.out.print("Seleccion (1-4, defecto 4): ");
+                String rOpc = scanner.nextLine().trim();
+                int diasFiltro = switch (rOpc) {
+                    case "1" -> 30;
+                    case "2" -> 60;
+                    case "3" -> 90;
+                    default -> 180;
+                };
+
+                LocalDate fInicio = LocalDate.now().minusDays(diasFiltro);
+                List<EstadisticaDemandaResponse> metricas = reporteService.obtenerTopRepuestosDemandados(fInicio, fin);
+                System.out.println("Top Repuestos mas demandados en los ultimos " + diasFiltro + " dias:");
                 for (EstadisticaDemandaResponse m : metricas) {
                     System.out.printf(" -> [%s] %s | Total Solicitado: %d unidades\n",
                             m.getCodParte(), m.getNombreRepuesto(), m.getCantidadTotalSolicitada());
@@ -624,42 +654,46 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF07, RF08, Jerarquia Admin y Reset de Clave
+    // RF07, RF08, Jerarquia Admin y Reset de Clave (SEC-01 / REQ-02)
     private void subMenuPersonalAdmin() {
-        System.out.println("\n-- Gestionar Personal y Seguridad (RF06, RF07, RF08) --");
+        System.out.println("\n-- Gestionar Personal y Seguridad (RF06, RF07, RF08 / SEC-01) --");
         System.out.println("4.1 Listar personal registrado");
-        System.out.println("4.2 Crear usuario y asignar contrasena desde el panel");
-        System.out.println("4.3 Editar usuario por DNI (Sin permiso para editar contrasena)");
-        System.out.println("4.4 Habilitar / Deshabilitar usuario por DNI (con Jerarquia Admin)");
-        System.out.println("4.5 Resetear contrasena de operario por DNI (RF06)");
+        System.out.println("4.2 Crear usuario operativo (Mecanico / Almacenista - TI restringe Admin)");
+        System.out.println("4.3 Editar datos de contacto de operario por DNI");
+        System.out.println("4.4 Habilitar / Deshabilitar operario por DNI (con Jerarquia Admin)");
+        System.out.println("4.5 Bandeja de Solicitudes de Recuperacion de Clave (Aprobar / Denegar - REQ-02)");
         System.out.print("Opcion: ");
         String sub = scanner.nextLine().trim();
 
         try {
             if ("1".equals(sub) || "4.1".equals(sub)) {
-                Page<UsuarioResumenResponse> users = authService.listarUsuarios(null, PageRequest.of(0, 15));
+                Page<UsuarioResumenResponse> users = authService.listarUsuarios(null, PageRequest.of(0, 50));
                 System.out.println("Personal en BD (" + users.getTotalElements() + "):");
                 for (UsuarioResumenResponse u : users.getContent()) {
                     System.out.printf(" -> DNI: %s | %s | %s | Rol: %s | Estado: %s\n",
                             u.getDni(), u.getNombre(), u.getCorreoCorporativo(), u.getRol(), u.getEstadoCuenta());
                 }
             } else if ("2".equals(sub) || "4.2".equals(sub)) {
+                System.out.println("Seleccione Rol Operativo (1. MECANICO, 2. ALMACENISTA): ");
+                String rolOpc = scanner.nextLine().trim();
+                RolUsuario rol;
+                if ("2".equals(rolOpc)) {
+                    rol = RolUsuario.ALMACENISTA;
+                } else if ("1".equals(rolOpc)) {
+                    rol = RolUsuario.MECANICO;
+                } else {
+                    System.out.println("ACCESO DENEGADO (SEC-01): La creacion de cuentas de Administrador esta restringida al area de TI.");
+                    return;
+                }
+
                 System.out.print("DNI (8 digitos exactos): ");
                 String dni = scanner.nextLine().trim();
                 System.out.print("Nombre Completo: ");
                 String nom = scanner.nextLine().trim();
                 System.out.print("Correo Corporativo (@masterdrilling.com): ");
                 String cor = scanner.nextLine().trim();
-                System.out.print("Contrasena a asignar: ");
+                System.out.print("Contrasena inicial a asignar: ");
                 String pass = scanner.nextLine().trim();
-
-                System.out.println("Seleccione Rol (1. MECANICO, 2. ALMACENISTA, 3. ADMINISTRADOR): ");
-                String rolOpc = scanner.nextLine().trim();
-                RolUsuario rol = switch (rolOpc) {
-                    case "2" -> RolUsuario.ALMACENISTA;
-                    case "3" -> RolUsuario.ADMINISTRADOR;
-                    default -> RolUsuario.MECANICO;
-                };
 
                 CrearUsuarioRequest req = CrearUsuarioRequest.builder()
                         .dni(dni)
@@ -667,8 +701,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                         .correoCorporativo(cor)
                         .contrasena(pass)
                         .rol(rol)
-                        .especialidad("Mantenimiento Mina")
-                        .cargo("Tecnico Operativo")
+                        .especialidad(rol == RolUsuario.MECANICO ? "Mecanico" : "Almacenista")
+                        .cargo(rol == RolUsuario.MECANICO ? "Mecanico de Planta" : "Almacenista")
                         .sedeAsignada("Sede Lurin")
                         .build();
 
@@ -679,6 +713,11 @@ public class ManualTestingRunner implements CommandLineRunner {
                 String dni = scanner.nextLine().trim();
                 Usuario user = usuarioRepository.findByDni(dni)
                         .orElseThrow(() -> new RuntimeException("Usuario no encontrado con DNI: " + dni));
+
+                if (user.getRol() == RolUsuario.ADMINISTRADOR) {
+                    System.out.println("ACCESO DENEGADO (SEC-01): No se permite modificar los datos de otras cuentas de nivel administrativo.");
+                    return;
+                }
 
                 System.out.println("Editando a: " + user.getNombre() + " (" + user.getCorreoCorporativo() + ")");
                 System.out.print("Nuevo Nombre Completo (Enter para mantener): ");
@@ -706,6 +745,11 @@ public class ManualTestingRunner implements CommandLineRunner {
                 Usuario user = usuarioRepository.findByDni(dni)
                         .orElseThrow(() -> new RuntimeException("Usuario no encontrado con DNI: " + dni));
 
+                if (user.getRol() == RolUsuario.ADMINISTRADOR) {
+                    System.out.println("ACCESO DENEGADO (SEC-01): No se permite deshabilitar o suspender cuentas de nivel administrativo.");
+                    return;
+                }
+
                 System.out.println("Usuario: " + user.getNombre() + " | Estado actual: " + user.getEstadoCuenta());
                 System.out.println("Seleccion: 1. Habilitar (ACTIVO) | 2. Deshabilitar (INACTIVO)");
                 String estOpc = scanner.nextLine().trim();
@@ -715,23 +759,45 @@ public class ManualTestingRunner implements CommandLineRunner {
                         ipLocal);
                 System.out.println("RESULTADO (Jerarquia Admin): " + res.getMensaje());
             } else if ("5".equals(sub) || "4.5".equals(sub)) {
-                System.out.print("DNI del usuario a resetear clave: ");
-                String dni = scanner.nextLine().trim();
-                System.out.print("Nueva clave temporal para el usuario: ");
-                String nuevaClave = scanner.nextLine().trim();
+                System.out.println("\n--- Solicitudes de Recuperacion de Contrasena Pendientes (REQ-02) ---");
+                List<SolicitudRecuperacionResponse> pendientes = authService.listarSolicitudesRecuperacion(EstadoRecuperacion.PENDIENTE);
+                if (pendientes.isEmpty()) {
+                    System.out.println("No hay solicitudes de recuperacion pendientes. El administrador no puede cambiar claves arbitrariamente.");
+                    return;
+                }
+                for (SolicitudRecuperacionResponse r : pendientes) {
+                    System.out.printf(" -> ID #%d | DNI: %s | %s (%s) | Motivo: %s | Fecha: %s\n",
+                            r.getIdRecuperacion(), r.getDniSolicitante(), r.getNombreSolicitante(),
+                            r.getRolSolicitante(), r.getMotivo(), r.getFechaSolicitud());
+                }
+                System.out.print("Ingrese ID de Solicitud a procesar (o Enter para cancelar): ");
+                String idStr = scanner.nextLine().trim();
+                if (idStr.isEmpty()) return;
+                Long idRecup = Long.parseLong(idStr);
 
-                MensajeGenericoResponse res = authService.resetearClavePorDni(dni, nuevaClave, CORREO_ADMIN, ipLocal);
-                System.out.println("RESULTADO (Reset Clave RF06): " + res.getMensaje());
+                System.out.println("Accion: 1. APROBAR (asignar clave temporal) | 2. RECHAZAR (denegar)");
+                String acc = scanner.nextLine().trim();
+                if ("1".equals(acc)) {
+                    System.out.print("Ingrese nueva clave temporal a asignar: ");
+                    String claveTemp = scanner.nextLine().trim();
+                    MensajeGenericoResponse res = authService.aprobarRecuperacionClave(idRecup, claveTemp, CORREO_ADMIN, ipLocal);
+                    System.out.println("RESULTADO: " + res.getMensaje());
+                } else if ("2".equals(acc)) {
+                    System.out.print("Ingrese motivo de rechazo: ");
+                    String motRechazo = scanner.nextLine().trim();
+                    MensajeGenericoResponse res = authService.rechazarRecuperacionClave(idRecup, motRechazo, CORREO_ADMIN, ipLocal);
+                    System.out.println("RESULTADO: " + res.getMensaje());
+                }
             }
         } catch (Exception e) {
             System.out.println("Aviso de Seguridad: " + e.getMessage());
         }
     }
 
-    // RF32: Alta y modificacion de componentes homologados en catalogo
+    // RF32 & BUG-02: Alta y modificacion de componentes homologados en catalogo
     private void subMenuGestionCatalogoAdmin() {
         System.out.println("\n-- Gestionar Catalogo de Repuestos (RF32) --");
-        System.out.println("5.1 Listar catalogo");
+        System.out.println("5.1 Listar catalogo completo (ordenado y visible)");
         System.out.println("5.2 Crear repuesto (con informacion de proveedores homologados - RF27)");
         System.out.println("5.3 Editar repuesto (Nombre, stock, descripcion)");
         System.out.println("5.4 Habilitar / Deshabilitar Repuesto (Baja tecnica)");
@@ -740,9 +806,10 @@ public class ManualTestingRunner implements CommandLineRunner {
 
         try {
             if ("1".equals(sub) || "5.1".equals(sub)) {
-                Page<RepuestoResponse> cat = catalogoService.listarCatalogo(PageRequest.of(0, 15));
+                Page<RepuestoResponse> cat = catalogoService.listarCatalogo(PageRequest.of(0, 100));
+                System.out.println("Catalogo de Repuestos Registrados (" + cat.getTotalElements() + " repuestos):");
                 for (RepuestoResponse r : cat.getContent()) {
-                    System.out.printf(" -> [%s] %s | Stock: %d | Min: %d | Activo: %s\n",
+                    System.out.printf(" -> [%s] %-30s | Stock: %-4d | Min: %-4d | Activo: %s\n",
                             r.getCodParte(), r.getNombreRepuesto(), r.getStockActual(), r.getStockMinimo(),
                             r.getActivo());
                 }
@@ -831,18 +898,20 @@ public class ManualTestingRunner implements CommandLineRunner {
     private void flujoPanelAlmacenista() {
         while (true) {
             System.out.println("\n---------------------------------------------------------");
-            System.out.println("   MODULO ALMACENISTA (PANOL): " + CORREO_ALMACENISTA);
+            System.out.println("   MODULO ALMACENISTA (PANOL): " + CORREO_ALMACENISTA + " (DNI: " + DNI_ALMACENISTA + ")");
             System.out.println("---------------------------------------------------------");
             System.out.println("1. Bandeja y Despacho Fisico de Repuestos (Estado ENTREGADA)");
             System.out.println("2. Control y Listado de Prestamos Activos (RF36, RF43)");
-            System.out.println("3. Dashboard de Stock de Herramientas (RF33)");
+            System.out.println("3. Dashboard de Stock de Herramientas (RF33 / DUDA-02)");
             System.out.println("4. Catalogo de Herramientas del Panol (RF34, RF35, RF45)");
             System.out.println("5. Despacho / Prestamo de Herramienta por DNI (RF36, RF37)");
             System.out.println("6. Recepcion y Devolucion Fisica de Herramienta (RF38, RF39, RF40)");
             System.out.println("7. Reportar Herramienta como Extraviada (RF41, RF42)");
             System.out.println("8. Centro de Notificaciones y Alertas de Panol (RF43, RF48, RF50)");
-            System.out.println("9. Regresar al Menu Principal");
-            System.out.print("Seleccione (1-9): ");
+            System.out.println("9. Verificar Alertas Preventivas y Moras de Prestamos (6.2.2 / 6.3.1)");
+            System.out.println("10. Mi Perfil (Almacenista - REQ-01)");
+            System.out.println("11. Regresar al Menu Principal");
+            System.out.print("Seleccione (1-11): ");
 
             String op = scanner.nextLine().trim();
             switch (op) {
@@ -853,8 +922,13 @@ public class ManualTestingRunner implements CommandLineRunner {
                 case "5" -> registrarPrestamoHerramienta();
                 case "6" -> registrarDevolucionHerramienta();
                 case "7" -> reportarExtravioHerramienta();
-                case "8" -> subMenuNotificacionesUsuario(null, "ALMACENISTA");
+                case "8" -> subMenuNotificacionesUsuario(DNI_ALMACENISTA, "ALMACENISTA");
                 case "9" -> {
+                    MensajeGenericoResponse res = prestamoService.verificarAlertasPrestamos();
+                    System.out.println("RESULTADO AUDITORIA PRESTAMOS: " + res.getMensaje());
+                }
+                case "10" -> subMenuPerfilAlmacenista();
+                case "11" -> {
                     return;
                 }
                 default -> System.out.println("Opcion no valida.");
@@ -947,7 +1021,7 @@ public class ManualTestingRunner implements CommandLineRunner {
         }
     }
 
-    // RF33: Tablero y contadores de stock actual de herramientas de taller
+    // RF33 & DUDA-02: Tablero y contadores de stock actual de herramientas de taller con listado resumido
     private void mostrarDashboardHerramientas() {
         System.out.println("\n-- Dashboard de Stock de Herramientas en Panol (RF33) --");
         try {
@@ -957,6 +1031,18 @@ public class ManualTestingRunner implements CommandLineRunner {
             System.out.println("En Retraso / Mora:       " + dash.getTotalEnMora());
             System.out.println("En Taller Mantenimiento: " + dash.getTotalEnMantenimiento());
             System.out.println("Extraviadas:             " + dash.getTotalExtraviadas());
+
+            System.out.print("\n¿Desea listar el resumen de herramientas (codigo, nombre, stock y disponibilidad)? (s/n): ");
+            String resp = scanner.nextLine().trim();
+            if ("s".equalsIgnoreCase(resp)) {
+                List<FichaHerramientaResponse> lista = inventarioService.listarHerramientasPorCategoria(null);
+                System.out.println("\n--- Resumen de Herramientas (DUDA-02) ---");
+                for (FichaHerramientaResponse h : lista) {
+                    boolean disp = "DISPONIBLE".equalsIgnoreCase(h.getEstadoActual());
+                    System.out.printf(" -> [%s] %-30s | Estado: %-12s | Disponible: %s\n",
+                            h.getCodHerramienta(), h.getNombreHerramienta(), h.getEstadoActual(), disp ? "SI" : "NO");
+                }
+            }
         } catch (Exception e) {
             System.out.println("Aviso: " + e.getMessage());
         }
@@ -1158,6 +1244,89 @@ public class ManualTestingRunner implements CommandLineRunner {
             }
         } catch (Exception e) {
             System.out.println("Aviso en notificaciones: " + e.getMessage());
+        }
+    }
+
+    // REQ-01: Apartado "Mi Perfil" para Administrador
+    private void subMenuPerfilAdmin() {
+        System.out.println("\n-- Mi Perfil (Administrador - REQ-01) --");
+        System.out.println("7.1 Mostrar informacion del perfil");
+        System.out.println("7.2 Cambiar contrasena propia");
+        System.out.print("Opcion: ");
+        String sub = scanner.nextLine().trim();
+
+        try {
+            if ("1".equals(sub) || "7.1".equals(sub)) {
+                Usuario user = usuarioRepository.findByCorreoCorporativo(CORREO_ADMIN)
+                        .orElseThrow(() -> new RuntimeException("Administrador no encontrado"));
+                System.out.println("DNI:          " + user.getDni() + " [Solo Lectura]");
+                System.out.println("Nombre:       " + user.getNombre() + " [Solo Lectura]");
+                System.out.println("Especialidad: Administrador");
+                System.out.println("Correo:       " + CORREO_ADMIN + " [Solo Lectura]");
+                System.out.println("Estado:       " + user.getEstadoCuenta());
+            } else if ("2".equals(sub) || "7.2".equals(sub)) {
+                System.out.print("Contrasena actual: ");
+                String actual = scanner.nextLine().trim();
+                System.out.print("Nueva contrasena: ");
+                String nueva = scanner.nextLine().trim();
+
+                MensajeGenericoResponse res = authService.cambiarContrasenaPropia(CORREO_ADMIN, actual, nueva, ipLocal);
+                System.out.println("RESULTADO (Cambio Clave): " + res.getMensaje());
+            }
+        } catch (Exception e) {
+            System.out.println("Aviso: " + e.getMessage());
+        }
+    }
+
+    // REQ-01: Apartado "Mi Perfil" para Almacenista
+    private void subMenuPerfilAlmacenista() {
+        System.out.println("\n-- Mi Perfil (Almacenista - REQ-01) --");
+        System.out.println("10.1 Mostrar informacion del perfil");
+        System.out.println("10.2 Cambiar contrasena propia");
+        System.out.print("Opcion: ");
+        String sub = scanner.nextLine().trim();
+
+        try {
+            if ("1".equals(sub) || "10.1".equals(sub)) {
+                Usuario user = usuarioRepository.findByCorreoCorporativo(CORREO_ALMACENISTA)
+                        .orElseThrow(() -> new RuntimeException("Almacenista no encontrado"));
+                System.out.println("DNI:          " + user.getDni() + " [Solo Lectura]");
+                System.out.println("Nombre:       " + user.getNombre() + " [Solo Lectura]");
+                System.out.println("Especialidad: Almacenista");
+                System.out.println("Correo:       " + CORREO_ALMACENISTA + " [Solo Lectura]");
+                System.out.println("Estado:       " + user.getEstadoCuenta());
+            } else if ("2".equals(sub) || "10.2".equals(sub)) {
+                System.out.print("Contrasena actual: ");
+                String actual = scanner.nextLine().trim();
+                System.out.print("Nueva contrasena: ");
+                String nueva = scanner.nextLine().trim();
+
+                MensajeGenericoResponse res = authService.cambiarContrasenaPropia(CORREO_ALMACENISTA, actual, nueva, ipLocal);
+                System.out.println("RESULTADO (Cambio Clave): " + res.getMensaje());
+            }
+        } catch (Exception e) {
+            System.out.println("Aviso: " + e.getMessage());
+        }
+    }
+
+    // RF06 & REQ-02: Flujo de olvido y solicitud de recuperacion de contrasena
+    private void flujoRecuperacionClaveConsola() {
+        System.out.println("\n---------------------------------------------------------");
+        System.out.println("   RECUPERACION DE CONTRASENA (MECANICO / ALMACENISTA)   ");
+        System.out.println("---------------------------------------------------------");
+        try {
+            System.out.print("Ingrese su DNI (8 digitos exactos): ");
+            String dni = scanner.nextLine().trim();
+            System.out.print("Ingrese su numero telefonico (9 digitos, ej: 987654321): ");
+            String tel = scanner.nextLine().trim();
+            System.out.print("Motivo o justificacion (opcional): ");
+            String mot = scanner.nextLine().trim();
+
+            MensajeGenericoResponse res = authService.solicitarRecuperacionClavePorDniYTelefono(dni, tel, mot, ipLocal);
+            System.out.println("\nRESULTADO: " + res.getMensaje());
+            System.out.println("La solicitud fue registrada y una notificacion reactiva ha sido dirigida a la Administracion.");
+        } catch (Exception e) {
+            System.out.println("Error en recuperacion: " + e.getMessage());
         }
     }
 }

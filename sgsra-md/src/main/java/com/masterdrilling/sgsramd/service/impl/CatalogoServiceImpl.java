@@ -29,7 +29,7 @@ public class CatalogoServiceImpl implements ICatalogoService {
     @Override
     @Transactional(readOnly = true)
     public Page<RepuestoResponse> listarCatalogo(Pageable pageable) {
-        return repuestoRepository.findByActivoTrue(pageable)
+        return repuestoRepository.findByActivoTrueOrderByCodParteAsc(pageable)
                 .map(this::mapearAResponse);
     }
 

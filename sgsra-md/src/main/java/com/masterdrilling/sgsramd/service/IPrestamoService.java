@@ -13,4 +13,5 @@ public interface IPrestamoService {
     MensajeGenericoResponse reportarHerramientaExtraviada(String correoAlmacenista, ReporteExtravioRequest request, String ipOrigen);
     List<com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse> listarTodosLosPrestamos();
     List<com.masterdrilling.sgsramd.dto.response.PrestamoResumenResponse> listarPrestamosPorMecanico(String dniMecanico);
+    MensajeGenericoResponse verificarAlertasPrestamos();
 }

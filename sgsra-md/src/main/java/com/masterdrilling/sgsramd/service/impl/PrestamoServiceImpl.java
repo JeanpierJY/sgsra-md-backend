@@ -13,16 +13,17 @@ import com.masterdrilling.sgsramd.model.enums.EstadoDevolucion;
 import com.masterdrilling.sgsramd.model.enums.EstadoHerramienta;
 import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
+import com.masterdrilling.sgsramd.service.INotificacionService;
 import com.masterdrilling.sgsramd.service.IPrestamoService;
 import com.masterdrilling.sgsramd.service.validator.CupoPrestamoValidator;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +38,9 @@ public class PrestamoServiceImpl implements IPrestamoService {
     private final Devolucion_DAO devolucionRepository;
     private final Usuario_DAO usuarioRepository;
     private final IAuditoriaService auditoriaService;
+    private final INotificacionService notificacionService;
     private final CupoPrestamoValidator cupoValidator;
+    private final PrestamoDetalle_DAO prestamoDetalleRepository;
 
     @Override
     @Transactional
@@ -182,6 +185,15 @@ public class PrestamoServiceImpl implements IPrestamoService {
         // Se usa el ID del usuario real autenticado que emite el reporte
         auditoriaService.registrarAsiento(herramienta.getCodHerramienta(), usuarioAlmacen.getIdUsuario(), "EXTRAVIO_IMPUTADO_" + custodio, ipOrigen);
 
+        String detalle = "La herramienta " + herramienta.getCodHerramienta() + " (" + herramienta.getNombreHerramienta()
+                + ") fue reportada como EXTRAVIADA. Motivo: " + request.getMotivoExtravio().trim();
+        notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Herramienta Extraviada",
+                detalle + ". Custodio responsable: " + custodio, "EXTRAVIO");
+        if (!"SIN_CUSTODIO_PREVIO".equals(custodio)) {
+            notificacionService.enviarNotificacionConTipo(custodio, "MECANICO", "Herramienta Extraviada a su Cargo",
+                    detalle + ". Usted figura como ultimo custodio; acerquese al panol.", "EXTRAVIO");
+        }
+
         return MensajeGenericoResponse.builder()
                 .exito(true)
                 .mensaje("Herramienta marcada como extraviada. Se asocio la responsabilidad a la bitacora de custodia")
@@ -189,8 +201,56 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .build();
     }
 
-    @Autowired
-    private PrestamoDetalle_DAO prestamoDetalleRepository;
+    @Override
+    @Transactional
+    public MensajeGenericoResponse verificarAlertasPrestamos() {
+        List<Prestamo> prestamosActivos = prestamoRepository.findAll().stream()
+                .filter(p -> p.getEstadoPrestamo() == EstadoPrestamo.ACTIVO)
+                .toList();
+
+        int preventivas = 0;
+        int moras = 0;
+        LocalDate hoy = LocalDate.now();
+
+        for (Prestamo p : prestamosActivos) {
+            long dias = ChronoUnit.DAYS.between(p.getFechaPrestamo(), hoy);
+            String dniMec = p.getMecanico() != null ? p.getMecanico().getDniMecanico() : null;
+            String nomMec = p.getMecanico() != null ? p.getMecanico().getNombreMecanico() : "Mecanico";
+
+            if (dias >= 5 && dias < 7) {
+                // Alerta preventiva al mecanico (6.2.2)
+                if (dniMec != null) {
+                    notificacionService.enviarNotificacionConTipo(dniMec, "MECANICO", "Aviso Preventivo de Devolucion",
+                            "Su prestamo " + p.getPrestamoNum() + " tiene " + dias + " dias de antiguedad. Recuerde devolver las herramientas antes de cumplir 7 dias para evitar sanciones.",
+                            "ALERTA_PREVENTIVA");
+                    preventivas++;
+                }
+            } else if (dias >= 7) {
+                // Transicion a MORA y alertas (6.2.2, 6.3.1)
+                p.setEstadoPrestamo(EstadoPrestamo.MORA);
+                prestamoRepository.save(p);
+
+                // Almacenista: aviso de mora (6.3.1)
+                notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Prestamo en Mora / Atrasado",
+                        "El prestamo " + p.getPrestamoNum() + " del mecanico " + nomMec + " ha superado el plazo de 7 dias y paso a estado MORA.",
+                        "MORA");
+
+                // Mecanico: aviso de mora
+                if (dniMec != null) {
+                    notificacionService.enviarNotificacionConTipo(dniMec, "MECANICO", "Prestamo Vencido en Mora",
+                            "Su prestamo " + p.getPrestamoNum() + " ha superado el plazo maximo de 7 dias sin devolverse. Su cupo para nuevos prestamos queda bloqueado.",
+                            "MORA");
+                }
+                moras++;
+            }
+        }
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Verificacion de prestamos ejecutada: " + preventivas + " alertas preventivas emitidas, " + moras + " prestamos en MORA.")
+                .dato(preventivas + moras)
+                .build();
+    }
 
     @Override
     @Transactional(readOnly = true)

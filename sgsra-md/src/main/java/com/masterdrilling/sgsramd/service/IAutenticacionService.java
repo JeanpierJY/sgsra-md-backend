@@ -20,6 +20,7 @@ public interface IAutenticacionService {
     LoginResponse autenticar(LoginRequest request, String ipOrigen);
     MensajeGenericoResponse solicitarRecuperacionClave(String correo);
     MensajeGenericoResponse solicitarRecuperacionClave(String correo, String motivo, String ipOrigen);
+    MensajeGenericoResponse solicitarRecuperacionClavePorDniYTelefono(String dni, String telefono, String motivo, String ipOrigen);
     List<SolicitudRecuperacionResponse> listarSolicitudesRecuperacion(EstadoRecuperacion estado);
     MensajeGenericoResponse aprobarRecuperacionClave(Long idRecuperacion, String nuevaClaveTemporal, String correoAdmin, String ipOrigen);
     MensajeGenericoResponse rechazarRecuperacionClave(Long idRecuperacion, String motivoRechazo, String correoAdmin, String ipOrigen);

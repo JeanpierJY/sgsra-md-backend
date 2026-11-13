@@ -13,7 +13,9 @@ import java.util.List;
 public interface Notificacion_DAO extends JpaRepository<Notificacion, Long> {
 
     @Query("SELECT n FROM Notificacion n WHERE " +
-           "(n.dniDestinatario = :dni OR n.rolDestinatario = :rol OR n.rolDestinatario = 'TODOS') " +
+           "(:dni IS NOT NULL AND n.dniDestinatario = :dni) OR " +
+           "(:rol IS NOT NULL AND n.rolDestinatario = :rol) OR " +
+           "(n.rolDestinatario = 'TODOS') " +
            "ORDER BY n.fechaCreacion DESC")
     List<Notificacion> listarPorDestinatario(
             @Param("dni") String dni,
@@ -21,7 +23,9 @@ public interface Notificacion_DAO extends JpaRepository<Notificacion, Long> {
     );
 
     @Query("SELECT n FROM Notificacion n WHERE " +
-           "(n.dniDestinatario = :dni OR n.rolDestinatario = :rol OR n.rolDestinatario = 'TODOS') " +
+           "(:dni IS NOT NULL AND n.dniDestinatario = :dni) OR " +
+           "(:rol IS NOT NULL AND n.rolDestinatario = :rol) OR " +
+           "(n.rolDestinatario = 'TODOS') " +
            "ORDER BY n.fechaCreacion DESC")
     Page<Notificacion> listarPorDestinatarioPaginado(
             @Param("dni") String dni,
@@ -30,7 +34,9 @@ public interface Notificacion_DAO extends JpaRepository<Notificacion, Long> {
     );
 
     @Query("SELECT COUNT(n) FROM Notificacion n WHERE " +
-           "(n.dniDestinatario = :dni OR n.rolDestinatario = :rol OR n.rolDestinatario = 'TODOS') AND n.leida = false")
+           "((:dni IS NOT NULL AND n.dniDestinatario = :dni) OR " +
+           " (:rol IS NOT NULL AND n.rolDestinatario = :rol) OR " +
+           " (n.rolDestinatario = 'TODOS')) AND n.leida = false")
     long contarNoLeidas(
             @Param("dni") String dni,
             @Param("rol") String rol
@@ -38,10 +44,11 @@ public interface Notificacion_DAO extends JpaRepository<Notificacion, Long> {
 
     @Modifying
     @Query("UPDATE Notificacion n SET n.leida = true WHERE " +
-           "(n.dniDestinatario = :dni OR n.rolDestinatario = :rol OR n.rolDestinatario = 'TODOS')")
+           "(:dni IS NOT NULL AND n.dniDestinatario = :dni) OR " +
+           "(:rol IS NOT NULL AND n.rolDestinatario = :rol) OR " +
+           "(n.rolDestinatario = 'TODOS')")
     void marcarTodasComoLeidas(
             @Param("dni") String dni,
             @Param("rol") String rol
     );
 }
-
