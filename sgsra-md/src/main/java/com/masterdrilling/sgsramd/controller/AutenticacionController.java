@@ -5,42 +5,92 @@ import com.masterdrilling.sgsramd.dto.request.CrearUsuarioRequest;
 import com.masterdrilling.sgsramd.dto.request.LoginRequest;
 import com.masterdrilling.sgsramd.dto.response.LoginResponse;
 import com.masterdrilling.sgsramd.dto.response.MensajeGenericoResponse;
+import com.masterdrilling.sgsramd.dto.response.SolicitudRecuperacionResponse;
 import com.masterdrilling.sgsramd.dto.response.UsuarioResumenResponse;
 import com.masterdrilling.sgsramd.model.enums.EstadoCuenta;
+import com.masterdrilling.sgsramd.model.enums.EstadoRecuperacion;
 import com.masterdrilling.sgsramd.model.enums.RolUsuario;
 import com.masterdrilling.sgsramd.service.IAutenticacionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 // Endpoints de autenticacion, recuperacion, perfiles y gestion administrativa de usuarios (RF01-RF08)
 @RestController
 @RequestMapping("/api/v1/auth")
-@RequiredArgsConstructor
 public class AutenticacionController {
 
     private final IAutenticacionService autenticacionService;
 
+    public AutenticacionController(IAutenticacionService autenticacionService) {
+        this.autenticacionService = autenticacionService;
+    }
+
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> iniciarSesion(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<LoginResponse> iniciarSesion(@Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
         String ipOrigen = httpRequest.getRemoteAddr();
         return ResponseEntity.ok(autenticacionService.autenticar(request, ipOrigen));
     }
 
     @PostMapping("/recuperar-clave")
-    public ResponseEntity<MensajeGenericoResponse> recuperarClave(@RequestParam("correo") String correo) {
-        return ResponseEntity.ok(autenticacionService.solicitarRecuperacionClave(correo));
+    public ResponseEntity<MensajeGenericoResponse> recuperarClave(
+            @RequestParam("correo") String correo,
+            @RequestParam(value = "motivo", required = false) String motivo,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity
+                .ok(autenticacionService.solicitarRecuperacionClave(correo, motivo, httpRequest.getRemoteAddr()));
+    }
+
+    // Bandeja de solicitudes de recuperacion para el Administrador (estado
+    // opcional)
+    @GetMapping("/recuperaciones")
+    public ResponseEntity<List<SolicitudRecuperacionResponse>> listarRecuperaciones(
+            @RequestParam(value = "estado", required = false) EstadoRecuperacion estado) {
+        return ResponseEntity.ok(autenticacionService.listarSolicitudesRecuperacion(estado));
+    }
+
+    @PutMapping("/recuperaciones/{id}/aprobar")
+    public ResponseEntity<MensajeGenericoResponse> aprobarRecuperacion(
+            @PathVariable("id") Long id,
+            @RequestParam("nuevaClave") String nuevaClave,
+            @RequestParam("correoAdmin") String correoAdmin,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(autenticacionService.aprobarRecuperacionClave(id, nuevaClave, correoAdmin,
+                httpRequest.getRemoteAddr()));
+    }
+
+    @PutMapping("/recuperaciones/{id}/rechazar")
+    public ResponseEntity<MensajeGenericoResponse> rechazarRecuperacion(
+            @PathVariable("id") Long id,
+            @RequestParam("motivo") String motivo,
+            @RequestParam("correoAdmin") String correoAdmin,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(
+                autenticacionService.rechazarRecuperacionClave(id, motivo, correoAdmin, httpRequest.getRemoteAddr()));
     }
 
     @PutMapping("/perfil")
-    public ResponseEntity<MensajeGenericoResponse> actualizarPerfil(@RequestParam("correo") String correo,
-                                                                    @Valid @RequestBody ActualizarPerfilRequest request) {
+    public ResponseEntity<MensajeGenericoResponse> actualizarPerfil(
+            @RequestParam("correo") String correo,
+            @Valid @RequestBody ActualizarPerfilRequest request) {
         return ResponseEntity.ok(autenticacionService.actualizarPerfil(correo, request));
+    }
+
+    @PutMapping("/cambiar-clave")
+    public ResponseEntity<MensajeGenericoResponse> cambiarContrasenaPropia(
+            @RequestParam("correo") String correo,
+            @RequestParam("claveActual") String claveActual,
+            @RequestParam("claveNueva") String claveNueva,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(autenticacionService.cambiarContrasenaPropia(correo, claveActual, claveNueva,
+                httpRequest.getRemoteAddr()));
     }
 
     // Endpoints administrativos de gestion de usuarios
@@ -75,7 +125,8 @@ public class AutenticacionController {
             @RequestParam("nuevoEstado") EstadoCuenta nuevoEstado,
             @RequestParam(value = "correoAdmin", required = false) String correoAdmin,
             HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(autenticacionService.cambiarEstadoCuentaPorDni(dni, nuevoEstado, correoAdmin, httpRequest.getRemoteAddr()));
+        return ResponseEntity.ok(autenticacionService.cambiarEstadoCuentaPorDni(dni, nuevoEstado, correoAdmin,
+                httpRequest.getRemoteAddr()));
     }
 
     @PutMapping("/usuarios/dni/{dni}/reset-clave")
@@ -84,7 +135,8 @@ public class AutenticacionController {
             @RequestParam("nuevaClave") String nuevaClave,
             @RequestParam(value = "correoAdmin", required = false) String correoAdmin,
             HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(autenticacionService.resetearClavePorDni(dni, nuevaClave, correoAdmin, httpRequest.getRemoteAddr()));
+        return ResponseEntity.ok(
+                autenticacionService.resetearClavePorDni(dni, nuevaClave, correoAdmin, httpRequest.getRemoteAddr()));
     }
 
     @PutMapping("/usuarios/dni/{dni}")
