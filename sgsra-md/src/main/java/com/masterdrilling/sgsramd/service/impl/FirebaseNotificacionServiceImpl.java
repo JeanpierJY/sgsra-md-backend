@@ -67,17 +67,39 @@ public class FirebaseNotificacionServiceImpl implements INotificacionService {
     @Override
     @Transactional
     public void enviarNotificacionConTipo(String dniDestinatario, String rolDestinatario, String titulo, String mensaje, String tipoAlerta) {
-        log.info("[ALERTA PERSISTIDA] DNI: {} | Rol: {} | Titulo: {} | Tipo: {}", dniDestinatario, rolDestinatario, titulo, tipoAlerta);
+        String tipoNormalizado = normalizarTipoAlerta(tipoAlerta);
+        log.info("[ALERTA PERSISTIDA] DNI: {} | Rol: {} | Titulo: {} | Tipo: {} (BD: {})",
+                dniDestinatario, rolDestinatario, titulo, tipoAlerta, tipoNormalizado);
         Notificacion notificacion = Notificacion.builder()
                 .dniDestinatario(dniDestinatario)
                 .rolDestinatario(rolDestinatario)
                 .titulo(titulo)
                 .mensaje(mensaje)
-                .tipoAlerta(tipoAlerta != null ? tipoAlerta : "INFO")
+                .tipoAlerta(tipoNormalizado)
                 .leida(false)
                 .fechaCreacion(LocalDateTime.now())
                 .build();
         notificacionRepository.save(notificacion);
+    }
+
+    /**
+     * Mapea el tipo de alerta a los valores estrictos del check constraint en PostgreSQL:
+     * ('INFO', 'SOLICITUD', 'APROBACION', 'RECHAZO', 'MORA', 'EXTRAVIO', 'STOCK_MINIMO')
+     */
+    private String normalizarTipoAlerta(String tipoAlerta) {
+        if (tipoAlerta == null || tipoAlerta.isBlank()) {
+            return "INFO";
+        }
+        String upper = tipoAlerta.trim().toUpperCase();
+        return switch (upper) {
+            case "SOLICITUD", "PRIORIDAD_ALTA", "NUEVA_SOLICITUD" -> "SOLICITUD";
+            case "APROBACION", "SOLICITUD_APROBADA", "SOLICITUD_APROBADA_PARCIAL", "DESPACHO_URGENTE", "ENTREGA" -> "APROBACION";
+            case "RECHAZO", "SOLICITUD_RECHAZADA" -> "RECHAZO";
+            case "MORA", "ALERTA_PREVENTIVA", "PREVENTIVA" -> "MORA";
+            case "EXTRAVIO" -> "EXTRAVIO";
+            case "STOCK_MINIMO", "STOCK_CRITICO" -> "STOCK_MINIMO";
+            default -> "INFO"; // Cubre RECUPERACION_CLAVE, DESBLOQUEO, INFO, SEGURIDAD
+        };
     }
 
     @Override

@@ -118,3 +118,68 @@ Asegurar que el sistema de notificaciones funcione bajo las siguientes reglas es
 | **Baja**  | REQ-01  | Todos              | Perfiles: bloquear nombre/correo, eliminar campo cargo y corregir especialidad  |
 | **Baja**  | REQ-03  | Mecánico           | Renombrar menú a Solicitudes y desplegar carrito                                |
 | **Baja**  | DUDA-02 | Almacenista        | Definir necesidad de listado dentro del dashboard de herramientas               |
+
+## 8. Nuevo Análisis: Resolución de Bugs y Consultas de Arquitectura
+
+### BUG-05 (RESUELTO) · Violación del Check Constraint `notificacion_tipo_alerta_check` en PostgreSQL
+
+- **Síntomas Observados:**
+  1. Al enviar solicitud de recuperación de clave: `violates check constraint "notificacion_tipo_alerta_check"` (intentaba insertar `tipo_alerta = 'RECUPERACION_CLAVE'`).
+  2. Al aprobar solicitud parcial: `violates check constraint "notificacion_tipo_alerta_check"` (intentaba insertar `tipo_alerta = 'SOLICITUD_APROBADA_PARCIAL'`).
+  3. Al registrar solicitud con prioridad ALTA: `violates check constraint "notificacion_tipo_alerta_check"` (intentaba insertar `tipo_alerta = 'PRIORIDAD_ALTA'`).
+- **Causa Raíz:**
+  La tabla `notificacion` en PostgreSQL (`Query_sgsra_db.sql:281`) posee una restricción fija:
+  `CHECK (tipo_alerta IN ('INFO', 'SOLICITUD', 'APROBACION', 'RECHAZO', 'MORA', 'EXTRAVIO', 'STOCK_MINIMO'))`.
+  Al recibir cadenas descriptivas no contenidas en el `CHECK`, PostgreSQL rechazaba la transacción con `SQLState: 23514`.
+- **Solución Implementada:**
+  En `FirebaseNotificacionServiceImpl.java` se incorporó el método `normalizarTipoAlerta(String tipoAlerta)` que mapea automáticamente cualquier tipo a los 7 valores estándar de base de datos:
+  - `PRIORIDAD_ALTA`, `NUEVA_SOLICITUD` $\rightarrow$ `'SOLICITUD'`
+  - `SOLICITUD_APROBADA_PARCIAL`, `DESPACHO_URGENTE`, `ENTREGA` $\rightarrow$ `'APROBACION'`
+  - `SOLICITUD_RECHAZADA` $\rightarrow$ `'RECHAZO'`
+  - `ALERTA_PREVENTIVA` $\rightarrow$ `'MORA'`
+  - `RECUPERACION_CLAVE`, `DESBLOQUEO`, `SEGURIDAD` $\rightarrow$ `'INFO'`
+  - `EXTRAVIO` $\rightarrow$ `'EXTRAVIO'`
+  - `STOCK_CRITICO` $\rightarrow$ `'STOCK_MINIMO'`
+  El detalle específico se conserva intacto en el título y cuerpo del mensaje, garantizando que el `INSERT` siempre cumpla el constraint en PostgreSQL.
+
+---
+
+### DUDA-03 · Privacidad y Aislamiento de Solicitudes por Mecánico
+
+- **Pregunta:** _"Si inicio sesión como otro mecánico, ¿las solicitudes están vinculadas SOLO a mi usuario o todos pueden verlas?"_
+- **Respuesta Arquitectónica:**
+  - **Aislamiento Total por Usuario:** En la base de datos, cada registro en la tabla `solicitud` posee la clave foránea `dni_mecanico REFERENCES usuario(dni)`.
+  - En la API REST (`GET /api/v1/solicitudes/historial`), el backend consulta exclusivamente:
+    `solicitudRepository.findByMecanicoDniMecanicoOrderByFechaEmisionDescHoraEmisionDesc(usuario.getDni(), pageable)`.
+  - **Resultado:** Un mecánico **solo ve sus propias solicitudes**. Jamás puede ver las solicitudes de otros mecánicos en su historial. Los únicos roles con visión global son el `ADMINISTRADOR` (evaluación y dictamen) y el `ALMACENISTA` (despacho de aprobadas).
+- **Ajuste en Consola de Pruebas (`ManualTestingRunner`):**
+  - Se agregó la opción **`1.6 Cambiar Mecánico Activo`** en el menú de Mecánico para alternar dinámicamente entre mecánicos registrados (p. ej. Carlos Baro `70000001` vs. Jeanpierre Quispe `60828394`), permitiendo validar de forma interactiva que cada cuenta tiene su propio historial y carrito independiente.
+
+---
+
+### BUG-06 / SEC-02 · Gestión de Administradores desde Consola TI vs. Frontend Móvil
+
+- **Pregunta / Caso:** _"En consola el de TI sí debería tener acceso a hacer lo que quiera con los demás administradores, ¿cómo configuramos esto?"_
+- **Estrategia Implementada:**
+  - **En la Aplicación Móvil (Flutter / REST):** Se mantiene la regla jerárquica estricta (SEC-01). Ningún usuario desde el teléfono puede modificar, suspender o alterar a otro Administrador.
+  - **En la Consola de Pruebas (`ManualTestingRunner`):** Al representar la herramienta directa del área de Sistemas / Soporte TI:
+    1. **Opción 4.2:** Permite crear usuarios con rol `ADMINISTRADOR` (`3. ADMINISTRADOR [TI Consola]`), persistiendo en `Usuario` y `Administrador`.
+    2. **Opción 4.3:** Permite editar datos de contacto de cualquier usuario, incluyendo administradores.
+    3. **Opción 4.4:** Permite suspender o reactivar administradores secundarios (protegiendo únicamente la cuenta raíz `10293847` Leao Chura para evitar bloqueos totales del sistema).
+    4. **Opción 4.6 (Nueva):** Permite **restablecer directamente contraseñas por DNI** en modo soporte TI sin requerir el flujo de solicitud previa.
+
+---
+
+### DUDA-04 · Optimización y Fusión de Pantallas en el Rol Almacenista
+
+- **Pregunta:** _"Me he dado cuenta de que el almacenista tiene muchas cosas, ¿se pueden combinar algunas pantallas?"_
+- **Propuesta de Unificación UI/UX:**
+  Actualmente se contemplaban 6 pestañas en la barra inferior de navegación, lo cual satura la interfaz en móviles:
+  1. **El Escáner QR (`escanear_qr_screen.dart`) NO debe ser una pestaña fija:**
+     - Debe ser un **Botón Flotante Central (FAB)** o un botón en la barra superior (AppBar) accesible desde cualquier pestaña.
+     - **Comportamiento Reactivo Inteligente:** Al escanear una herramienta, si está `Disponible`, la app abre automáticamente el modal _"Registrar Préstamo"_; si está `Prestada`, abre _"Registrar Devolución e Inspección Física"_ (RF38 - RF40). Esto ahorra 2 pestañas y agiliza el trabajo del pañolero.
+  2. **Estructura Reducida a 4 Pestañas Limpias:**
+     - **Pestaña 1: Operaciones / Dashboard:** Préstamos activos en taller, alertas rojas de mora y despacho de repuestos aprobados.
+     - **Pestaña 2: Herramientas:** Catálogo general con búsqueda, filtro por categoría y botón `+` para alta de nueva herramienta (foto + ficha).
+     - **Pestaña 3: Historial:** Registro histórico de devoluciones, averías e incidencias.
+     - **Pestaña 4: Mi Perfil:** Teléfono y cambio de contraseña propia.
