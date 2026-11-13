@@ -88,7 +88,7 @@ Asegurar que el sistema de notificaciones funcione bajo las siguientes reglas es
 ### 6.1 Notificaciones para el Administrador
 
 1. **Solicitudes:** Únicamente solicitudes con **Prioridad ALTA** emitidas por mecánicos.
-2. **Extravíos:** Alerta inmediata cuando una herramienta/repuesto sea declarado como **extraviado** en mina (con imputación del custodio).
+2. **Extravíos:** Alerta inmediata cuando una herramienta/repuesto sea declarado como **extraviado** (con imputación del custodio).
 3. **Seguridad:** Solicitudes de **cambio / recuperación de contraseña** emitidas por personal operativo.
 
 ### 6.2 Notificaciones para el Mecánico
