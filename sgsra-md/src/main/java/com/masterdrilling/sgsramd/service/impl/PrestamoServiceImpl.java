@@ -1,5 +1,7 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.service.INotificacionService;
+
 import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
@@ -194,13 +196,14 @@ public class PrestamoServiceImpl implements IPrestamoService {
         // Se usa el ID del usuario real autenticado que emite el reporte
         auditoriaService.registrarAsiento(herramienta.getCodHerramienta(), usuarioAlmacen.getIdUsuario(), "EXTRAVIO_IMPUTADO_" + custodio, ipOrigen);
 
+        // Matriz 6.1 y 6.2: alerta al Administrador y al mecanico que figura como ultimo custodio
         String detalle = "La herramienta " + herramienta.getCodHerramienta() + " (" + herramienta.getNombreHerramienta()
                 + ") fue reportada como EXTRAVIADA. Motivo: " + request.getMotivoExtravio().trim();
         notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Herramienta Extraviada",
-                detalle + ". Custodio responsable: " + custodio, "EXTRAVIO");
+                detalle + ". Custodio imputado: " + custodio, "EXTRAVIO");
         if (!"SIN_CUSTODIO_PREVIO".equals(custodio)) {
-            notificacionService.enviarNotificacionConTipo(custodio, "MECANICO", "Herramienta Extraviada a su Cargo",
-                    detalle + ". Usted figura como ultimo custodio; acerquese al panol.", "EXTRAVIO");
+            notificacionService.enviarNotificacionConTipo(custodio, null, "Herramienta Extraviada a su Cargo",
+                    detalle + ". Usted figura como ultimo custodio registrado; acerquese al panol.", "EXTRAVIO");
         }
 
         return MensajeGenericoResponse.builder()
@@ -295,6 +298,11 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .orElse("Mecanico no registrado");
 
         List<PrestamoDetalle> detalles = prestamoDetalleRepository.findByIdPrestamoNum(p.getPrestamoNum());
+        com.masterdrilling.sgsramd.model.entity.Devolucion dev = devolucionRepository.findByPrestamoPrestamoNum(p.getPrestamoNum()).orElse(null);
+        java.util.Map<String, String> estadoRetorno = new java.util.HashMap<>();
+        if (dev != null && dev.getDetalles() != null) {
+            dev.getDetalles().forEach(dd -> estadoRetorno.put(dd.getHerramienta().getCodHerramienta(), dd.getEstadoHerramienta()));
+        }
         List<PrestamoResumenResponse.ItemHerramientaPrestamo> items = detalles.stream().map(d -> {
             String estadoFisico = herramientaRepository.findByCodHerramienta(d.getHerramienta().getCodHerramienta())
                     .map(Herramienta::getEstadoActual)
@@ -304,6 +312,8 @@ public class PrestamoServiceImpl implements IPrestamoService {
                     .nombreHerramienta(d.getNombreHerramienta())
                     .estadoHerramienta(d.getEstadoHerramienta())
                     .estadoFisicoActual(estadoFisico)
+                    .estadoAlEntregar("Operativa")
+                    .estadoAlDevolver(estadoRetorno.get(d.getHerramienta().getCodHerramienta()))
                     .build();
         }).toList();
 
@@ -314,6 +324,12 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .estadoPrestamo(p.getEstadoPrestamo())
                 .fechaPrestamo(p.getFechaPrestamo())
                 .horaSalida(p.getHoraSalida())
+                .nombreAlmacenistaEntrega(p.getAlmacenista() != null ? p.getAlmacenista().getNombreAlmacenista() : null)
+                .devolucionNum(dev != null ? dev.getDevolucionNum() : null)
+                .fechaDevolucion(dev != null ? dev.getFechaDevolucion() : null)
+                .horaRetorno(dev != null ? dev.getHoraRetorno() : null)
+                .nombreAlmacenistaRecepcion(dev != null && dev.getAlmacenista() != null ? dev.getAlmacenista().getNombreAlmacenista() : null)
+                .detalleIncidencia(dev != null ? dev.getDetalleIncidencia() : null)
                 .herramientas(items)
                 .build();
     }

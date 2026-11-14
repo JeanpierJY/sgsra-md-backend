@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/auth/presentation/screens/editar_perfil_screen.dart';
+import '../../features/auth/presentation/screens/mi_perfil_screen.dart';
 
 /// [RF02, RF08] Enrutador y middleware de control de accesos por roles
 class AppRouter {
@@ -9,7 +9,7 @@ class AppRouter {
       case '/':
         return MaterialPageRoute(builder: (_) => const LoginScreen());
       case '/perfil':
-        return MaterialPageRoute(builder: (_) => const EditarPerfilScreen());
+        return MaterialPageRoute(builder: (_) => const MiPerfilScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

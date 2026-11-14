@@ -30,11 +30,18 @@ class DioClient {
         },
         onError: (DioException e, handler) {
           if (e.response?.statusCode == 423) {
-            // [RF06] Bloqueo por intentos excedidos
+            // [RF04, RF06] Bloqueo escalonado: el backend informa los segundos restantes
+            final data = e.response?.data;
+            final mensaje = data is Map && data['mensaje'] is String
+                ? data['mensaje'] as String
+                : 'Cuenta bloqueada temporalmente por seguridad.';
+            final segundos = data is Map ? (data['segundosRestantes'] as num?)?.toInt() ?? 0 : 0;
+            final permanente = data is Map ? data['bloqueoPermanente'] == true : false;
             return handler.reject(
               DioException(
                 requestOptions: e.requestOptions,
-                error: CuentaBloqueadaException('Acceso bloqueado. Superó los 3 intentos permitidos.'),
+                response: e.response,
+                error: CuentaBloqueadaException(mensaje, segundos, permanente),
               ),
             );
           }

@@ -20,4 +20,8 @@ public class ErrorDetalle {
     private String mensaje;
     private String ruta;
     private List<String> erroresValidacion;
+
+    // RF04: datos de bloqueo para que el cliente muestre la cuenta regresiva
+    private Long segundosRestantes;
+    private Boolean bloqueoPermanente;
 }

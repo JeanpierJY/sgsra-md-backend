@@ -23,6 +23,10 @@ public class Almacenista {
     @Column(name = "sede_asignada", length = 50, nullable = false)
     private String sedeAsignada;
 
+    // Usado en Mi Perfil y para validar la identidad en la recuperacion de clave
+    @Column(name = "telefono", length = 9)
+    private String telefono;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dni_almacenista", referencedColumnName = "dni", insertable = false, updatable = false)
     private Usuario usuario;

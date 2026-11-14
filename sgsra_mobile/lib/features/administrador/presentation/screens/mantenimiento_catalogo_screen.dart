@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
 import 'proveedores_modal.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class MantenimientoCatalogoScreen extends StatefulWidget {
   const MantenimientoCatalogoScreen({Key? key}) : super(key: key);
@@ -208,6 +209,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
         title: const Text('Catalogo Maestro de Repuestos [RF32]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(
             icon: const Icon(Icons.business_center_rounded),
             tooltip: 'Proveedores Homologados [RF27]',

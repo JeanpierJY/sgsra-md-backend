@@ -18,6 +18,13 @@ public class PrestamoResumenResponse {
     private EstadoPrestamo estadoPrestamo;
     private LocalDate fechaPrestamo;
     private LocalTime horaSalida;
+    // PRE-01: antes (entrega) y despues (devolucion) del prestamo
+    private String nombreAlmacenistaEntrega;
+    private String devolucionNum;
+    private LocalDate fechaDevolucion;
+    private LocalTime horaRetorno;
+    private String nombreAlmacenistaRecepcion;
+    private String detalleIncidencia;
     private List<ItemHerramientaPrestamo> herramientas;
 
     @Data
@@ -29,5 +36,7 @@ public class PrestamoResumenResponse {
         private String nombreHerramienta;
         private String estadoHerramienta;
         private String estadoFisicoActual;
+        private String estadoAlEntregar;
+        private String estadoAlDevolver;
     }
 }

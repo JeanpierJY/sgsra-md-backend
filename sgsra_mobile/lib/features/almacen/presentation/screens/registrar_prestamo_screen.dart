@@ -3,9 +3,12 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class RegistrarPrestamoScreen extends StatefulWidget {
-  const RegistrarPrestamoScreen({Key? key}) : super(key: key);
+  /// [ALM-01] true cuando se muestra como pestaña dentro de DespachoScreen (sin AppBar propio)
+  final bool embebido;
+  const RegistrarPrestamoScreen({Key? key, this.embebido = false}) : super(key: key);
 
   @override
   State<RegistrarPrestamoScreen> createState() => _RegistrarPrestamoScreenState();
@@ -123,18 +126,10 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundGray,
-      appBar: AppBar(
-        title: const Text('Despacho / Prestamo [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.primaryBlue,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDatos),
-        ],
-      ),
-      body: _cargando
+    final cuerpo = _cargando
           ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
           : SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(20),
               child: Center(
                 child: Container(
@@ -216,7 +211,21 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
                   ),
                 ),
               ),
-            ),
+            );
+    if (widget.embebido) {
+      return RefreshIndicator(onRefresh: _cargarDatos, child: cuerpo);
+    }
+    return Scaffold(
+      backgroundColor: AppColors.backgroundGray,
+      appBar: AppBar(
+        title: const Text('Despacho / Prestamo [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.primaryBlue,
+        actions: [
+          const NotificacionBell(),
+          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDatos),
+        ],
+      ),
+      body: cuerpo,
     );
   }
 }

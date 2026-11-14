@@ -1,12 +1,10 @@
-import 'dart:io' as io;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:universal_html/html.dart' as html;
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/utils/file_saver.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class ReportesAnaliticosScreen extends StatefulWidget {
   const ReportesAnaliticosScreen({Key? key}) : super(key: key);
@@ -36,7 +34,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      _mostrarMensaje('Error al obtener demanda analítica: $e', esError: true);
+      _mostrarMensaje('No se pudo cargar la demanda: ${mensajeDeError(e)}', esError: true);
     }
   }
 
@@ -53,28 +51,16 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
           ? 'Reporte_Consolidado_SGSRA_MD.xlsx'
           : 'Reporte_Metricas_SGSRA_MD.csv';
 
-      if (kIsWeb) {
-        final blob = html.Blob([res.data]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        html.AnchorElement(href: url)
-          ..setAttribute('download', nombreArchivo)
-          ..click();
-        html.Url.revokeObjectUrl(url);
-      } else {
-        // Guardado nativo para Android / iOS sin depender de DOM de navegador
-        final dir = await getApplicationDocumentsDirectory();
-        final archivoLocal = io.File('${dir.path}/$nombreArchivo');
-        await archivoLocal.writeAsBytes(res.data as List<int>);
-
-        _mostrarMensaje('Reporte guardado en: ${archivoLocal.path}');
-        await OpenFilex.open(archivoLocal.path);
-      }
+      // [RF30] Guardado nativo en Android (Descargas + apertura automatica) o descarga en Web
+      final ruta = await guardarYAbrirArchivo(res.data as List<int>, nombreArchivo);
+      _mostrarMensaje('Reporte guardado: $ruta');
     } catch (e) {
-      _mostrarMensaje('Error al exportar archivo: $e', esError: true);
+      _mostrarMensaje('No se pudo exportar el reporte: ${mensajeDeError(e)}', esError: true);
     }
   }
 
   void _mostrarMensaje(String texto, {bool esError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(texto), backgroundColor: esError ? AppColors.errorRed : AppColors.primaryBlue),
     );
@@ -95,6 +81,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
         title: const Text('Métricas y Reportes Oficiales [RF29]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDemanda),
         ],
       ),

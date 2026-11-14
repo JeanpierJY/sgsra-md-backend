@@ -38,8 +38,6 @@ public class CrearUsuarioRequest {
     private RolUsuario rol;
 
     // Campos especificos segun rol asignado
-    private String especialidad;
-    private String cargo;
     private String telefono;
     private String sedeAsignada;
 }

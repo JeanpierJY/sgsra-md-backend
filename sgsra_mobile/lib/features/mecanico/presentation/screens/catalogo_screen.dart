@@ -3,8 +3,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../domain/entities/repuesto_entity.dart';
 import '../../data/datasources/repuesto_remote_datasource.dart';
 import '../../../../core/network/dio_client.dart';
-import 'detalle_repuesto_modal.dart';
 import 'carrito_pedido_screen.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class CatalogoScreen extends StatefulWidget {
   final Map<RepuestoEntity, int> carritoGlobal;
@@ -82,7 +82,8 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             children: [
               Text(item.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               Text('Código: ${item.codParte}'),
-              Text('Stock disponible: ${item.stockDisponible}'),
+              const SizedBox(height: 8),
+              _StockResumen(item: item, enCarrito: widget.carritoGlobal[item] ?? 0),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -92,14 +93,14 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                   ),
                   Text('$cantidad'),
                   IconButton(
-                    onPressed: cantidad < item.stockDisponible
+                    onPressed: cantidad < item.stockLibre - (widget.carritoGlobal[item] ?? 0)
                         ? () => setModalState(() => cantidad++)
                         : null,
                     icon: const Icon(Icons.add),
                   ),
                   const Spacer(),
                   ElevatedButton(
-                    onPressed: item.stockDisponible > 0
+                    onPressed: item.stockLibre - (widget.carritoGlobal[item] ?? 0) > 0
                         ? () {
                             Navigator.pop(context);
                             _agregarAlCarrito(item, cantidad);
@@ -126,6 +127,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
         title: const Text('Catalogo de Repuestos [RF09]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -229,7 +231,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                         itemCount: _repuestos.length,
                         itemBuilder: (context, index) {
                           final item = _repuestos[index];
-                          final tieneStock = item.stockDisponible > 0;
+                          final tieneStock = item.stockLibre > 0;
 
                           return Card(
                             color: AppColors.pureWhite,
@@ -245,7 +247,14 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                               title: Text('${item.nombre} (${item.codParte})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                               subtitle: Padding(
                                 padding: const EdgeInsets.only(top: 6.0),
-                                child: Text('Stock Actual: ${item.stockDisponible} | Min: ${item.stockMinimo}\n${item.descripcion}'),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _StockResumen(item: item, enCarrito: widget.carritoGlobal[item] ?? 0),
+                                    const SizedBox(height: 4),
+                                    Text(item.descripcion, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
                               ),
                               trailing: IconButton(
                                 icon: const Icon(Icons.add_shopping_cart, color: AppColors.primaryBlue),
@@ -261,4 +270,40 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
       ),
     );
   }
+}
+
+/// [MEC-01] Stock en lenguaje claro: disponible para pedir, reservado y en su carrito.
+/// El stock físico se descuenta recién cuando el almacén entrega los repuestos.
+class _StockResumen extends StatelessWidget {
+  final RepuestoEntity item;
+  final int enCarrito;
+  const _StockResumen({required this.item, required this.enCarrito});
+
+  @override
+  Widget build(BuildContext context) {
+    final libre = item.stockLibre;
+    final critico = libre <= item.stockMinimo;
+    final color = libre == 0 ? AppColors.errorRed : (critico ? Colors.orange[800]! : Colors.green[700]!);
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        _chip(libre == 0 ? 'Sin stock libre' : '$libre disponibles', color, Icons.inventory_2_outlined),
+        if (item.stockReservado > 0)
+          _chip('${item.stockReservado} reservados', Colors.blueGrey, Icons.schedule_rounded),
+        if (enCarrito > 0) _chip('$enCarrito en su carrito', AppColors.primaryBlue, Icons.shopping_cart_outlined),
+        _chip('Físico: ${item.stockDisponible} · Mín: ${item.stockMinimo}', Colors.grey[700]!, Icons.warehouse_outlined),
+      ],
+    );
+  }
+
+  Widget _chip(String t, Color c, IconData i) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(i, size: 13, color: c),
+          const SizedBox(width: 4),
+          Text(t, style: TextStyle(fontSize: 11.5, color: c, fontWeight: FontWeight.w600)),
+        ]),
+      );
 }

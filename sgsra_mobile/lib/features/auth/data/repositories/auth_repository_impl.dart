@@ -14,20 +14,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<UserEntity> login(String correo, String password) async {
-    // Sincronizado con los parámetros corregidos en AuthRemoteDataSource
     final response = await remoteDataSource.login(correo, password);
-    await localDataSource.guardarToken(response.token);
+    // Persistimos token + datos del usuario (antes solo se guardaba el token y los
+    // perfiles mostraban datos fijos de ejemplo)
+    await localDataSource.guardarSesion(response);
     return response;
-  }
-
-  @override
-  Future<void> recuperarClave(String correo) async {
-    await remoteDataSource.recuperarClave(correo);
-  }
-
-  @override
-  Future<void> actualizarPerfil(String correo, String nombre, [String telefono = '']) async {
-    await remoteDataSource.actualizarPerfil(correo, nombre, telefono);
   }
 
   @override

@@ -22,10 +22,13 @@ public interface IAutenticacionService {
     MensajeGenericoResponse solicitarRecuperacionClave(String correo, String motivo, String ipOrigen);
     MensajeGenericoResponse solicitarRecuperacionClavePorDniYTelefono(String dni, String telefono, String motivo, String ipOrigen);
     MensajeGenericoResponse solicitarRecuperacionClavePorDniYTelefono(String dni, String telefono, String motivo, org.springframework.web.multipart.MultipartFile fotoSelfie, String ipOrigen);
+    MensajeGenericoResponse solicitarRecuperacionClave(String dni, String telefono, String motivo, String ipOrigen);
     List<SolicitudRecuperacionResponse> listarSolicitudesRecuperacion(EstadoRecuperacion estado);
     MensajeGenericoResponse aprobarRecuperacionClave(Long idRecuperacion, String nuevaClaveTemporal, String correoAdmin, String ipOrigen);
     MensajeGenericoResponse rechazarRecuperacionClave(Long idRecuperacion, String motivoRechazo, String correoAdmin, String ipOrigen);
     MensajeGenericoResponse actualizarPerfil(String correo, ActualizarPerfilRequest request);
+    com.masterdrilling.sgsramd.dto.response.PerfilResponse obtenerPerfil(String correo);
+    MensajeGenericoResponse actualizarFotoPerfil(String correo, org.springframework.web.multipart.MultipartFile foto);
     MensajeGenericoResponse cambiarContrasenaPropia(String correo, String claveActual, String claveNueva, String ipOrigen);
     
     // Metodos para gestion de usuarios

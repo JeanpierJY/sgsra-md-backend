@@ -27,6 +27,10 @@ public class Usuario {
     @Column(name = "nombre", length = 100, nullable = false)
     private String nombre;
 
+    // AUT-03: foto de perfil usada para validar la identidad en la recuperacion de clave
+    @Column(name = "foto_perfil_url", length = 255)
+    private String fotoPerfilUrl;
+
     @Column(name = "correo_corporativo", length = 100, nullable = false, unique = true)
     private String correoCorporativo;
 
@@ -45,6 +49,10 @@ public class Usuario {
     @Column(name = "intentos_fallidos", nullable = false)
     @Builder.Default
     private Integer intentosFallidos = 0;
+
+    // RF04: fin del bloqueo temporal escalonado (null = sin bloqueo temporal)
+    @Column(name = "bloqueado_hasta")
+    private LocalDateTime bloqueadoHasta;
 
     @Column(name = "creado_en")
     @Builder.Default

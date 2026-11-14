@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class BandejaSolicitudesScreen extends StatefulWidget {
   const BandejaSolicitudesScreen({Key? key}) : super(key: key);
@@ -25,7 +26,7 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
   }
 
   Future<String> _obtenerCorreoAdmin() async {
-    return await _storage.read(key: 'correo_admin') ?? 'leao.chura@masterdrilling.com';
+    return await _storage.read(key: 'correo_usuario') ?? 'leao.chura@masterdrilling.com';
   }
 
   Future<void> _cargarBandeja() async {
@@ -250,6 +251,7 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
         title: const Text('Bandeja de Requerimientos [RF21]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarBandeja),
         ],
       ),

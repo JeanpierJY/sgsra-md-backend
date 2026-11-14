@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/widgets/detalle_prestamo_sheet.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class DevolucionInspeccionScreen extends StatefulWidget {
   const DevolucionInspeccionScreen({Key? key}) : super(key: key);
@@ -83,27 +86,28 @@ class _DevolucionInspeccionScreenState extends State<DevolucionInspeccionScreen>
         );
 
         setState(() => _enviando = false);
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Retorno Concluido [RF40]', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
-            content: Text('Herramienta $codHerramienta recibida e inspeccionada en panol.\n\nCalificacion: $_estadoFisico\nPrestamo: $_prestamoSeleccionado cerrado.'),
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _cargarPrestamos();
-                },
-                child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+        final prestamoNum = _prestamoSeleccionado!;
+        // [PRE-01] Al cerrar el préstamo se muestra directamente el antes y después
+        Map<String, dynamic>? detalle;
+        try {
+          final todos = await _dataSource.listarPrestamos();
+          detalle = todos.where((p) => p.prestamoNum == prestamoNum).map((p) => p.raw).firstOrNull;
+        } catch (_) {}
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Herramienta $codHerramienta recibida. Préstamo $prestamoNum cerrado.'),
+            backgroundColor: Colors.green[700],
           ),
         );
+        if (detalle != null && detalle.isNotEmpty) {
+          await mostrarDetallePrestamo(context, detalle);
+        }
+        _cargarPrestamos();
       } catch (e) {
         setState(() => _enviando = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al procesar retorno: $e'), backgroundColor: AppColors.errorRed),
+          SnackBar(content: Text('Error al procesar retorno: ${mensajeDeError(e)}'), backgroundColor: AppColors.errorRed),
         );
       }
     }
@@ -117,6 +121,7 @@ class _DevolucionInspeccionScreenState extends State<DevolucionInspeccionScreen>
         title: const Text('Retorno e Inspeccion [RF38]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarPrestamos),
         ],
       ),

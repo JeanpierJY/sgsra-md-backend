@@ -38,6 +38,8 @@ class PrestamoEntity {
   final String fechaPrestamo;
   final String horaSalida;
   final List<String> herramientas;
+  /// [PRE-01] JSON completo del préstamo (incluye datos de entrega y devolución)
+  final Map<String, dynamic> raw;
 
   const PrestamoEntity({
     required this.prestamoNum,
@@ -47,5 +49,6 @@ class PrestamoEntity {
     required this.fechaPrestamo,
     required this.horaSalida,
     required this.herramientas,
+    this.raw = const {},
   });
 }

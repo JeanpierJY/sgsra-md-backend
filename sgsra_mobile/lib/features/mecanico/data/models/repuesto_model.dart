@@ -11,6 +11,7 @@ class RepuestoModel extends RepuestoEntity {
     required String marca,
     required int stockDisponible,
     required int stockMinimo,
+    int stockReservado = 0,
     required this.activo,
     String? urlFoto,
   }) : super(
@@ -21,6 +22,7 @@ class RepuestoModel extends RepuestoEntity {
           marca: marca,
           stockDisponible: stockDisponible,
           stockMinimo: stockMinimo,
+          stockReservado: stockReservado,
           urlFoto: urlFoto,
         );
 
@@ -33,6 +35,7 @@ class RepuestoModel extends RepuestoEntity {
       marca: json['marca']?.toString() ?? 'Bosch Rexroth / Parker',
       stockDisponible: json['stockActual'] is num ? (json['stockActual'] as num).toInt() : 0,
       stockMinimo: json['stockMinimo'] is num ? (json['stockMinimo'] as num).toInt() : 0,
+      stockReservado: json['stockReservado'] is num ? (json['stockReservado'] as num).toInt() : 0,
       activo: json['activo'] ?? true,
       urlFoto: json['urlFoto']?.toString(),
     );

@@ -6,15 +6,19 @@ import '../../domain/entities/solicitud_entity.dart';
 import '../../data/datasources/repuesto_remote_datasource.dart';
 import '../../data/datasources/repuesto_local_datasource.dart';
 import '../../data/models/solicitud_request.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class CarritoPedidoScreen extends StatefulWidget {
   final Map<RepuestoEntity, int> carrito;
   final VoidCallback onCarritoActualizado;
+  /// Se invoca con el número de la solicitud creada para mostrarla en "Pedidos"
+  final void Function(String solicitudNum)? onPedidoEnviado;
 
   const CarritoPedidoScreen({
     Key? key,
     required this.carrito,
     required this.onCarritoActualizado,
+    this.onPedidoEnviado,
   }) : super(key: key);
 
   @override
@@ -61,20 +65,46 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
         });
         widget.onCarritoActualizado();
 
-        showDialog(
+        _justificacionCtrl.clear();
+        if (!mounted) return;
+        final num = RegExp(r'SOL-\d{4}-\d+').firstMatch(codSolicitud)?.group(0) ?? codSolicitud;
+        await showDialog(
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            title: const Text('Requerimiento Transmitido [RF17]', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
-            content: Text('Su solicitud ha sido enviada formalmente con el correlativo:\n\n$codSolicitud\n\nEstado asignado: PENDIENTE'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            icon: Icon(Icons.check_circle_rounded, color: Colors.green[700], size: 56),
+            title: const Text('¡Solicitud enviada!', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(num, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.amber[800], borderRadius: BorderRadius.circular(20)),
+                  child: const Text('Pendiente', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Administración revisará su solicitud. Puede seguir su estado en la pestaña "Pedidos".\n'
+                  'El stock se descuenta cuando el almacén entrega los repuestos; mientras tanto figura como reservado.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ],
+            ),
+            actionsAlignment: MainAxisAlignment.center,
             actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Seguir comprando')),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
                 onPressed: () {
-                  // Cierra UNICAMENTE el cuadro de diálogo modal sin desmontar la pantalla
                   Navigator.pop(ctx);
+                  widget.onPedidoEnviado?.call(num);
                 },
-                child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
+                icon: const Icon(Icons.receipt_long_rounded),
+                label: const Text('Ver detalle'),
               ),
             ],
           ),
@@ -113,6 +143,7 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
         title: const Text('Requerimiento / Carrito [RF13]', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: const [NotificacionBell()],
         backgroundColor: AppColors.primaryBlue,
       ),
       body: widget.carrito.isEmpty

@@ -17,6 +17,8 @@ public class AuditoriaResponse {
     private Long idAuditoria;
     private String idOperacion;
     private Long idUsuario;
+    private String nombreUsuario;
+    private String rolUsuario;
     private String accion;
     private String ipOrigen;
     private LocalDateTime timestamp;

@@ -90,11 +90,26 @@ public class AutenticacionController {
                 autenticacionService.rechazarRecuperacionClave(id, motivo, correoAdmin, httpRequest.getRemoteAddr()));
     }
 
+    // RF07: ficha de Mi Perfil universal (solo lectura salvo telefono)
+    @GetMapping("/perfil")
+    public ResponseEntity<com.masterdrilling.sgsramd.dto.response.PerfilResponse> obtenerPerfil(
+            @RequestParam("correo") String correo) {
+        return ResponseEntity.ok(autenticacionService.obtenerPerfil(correo));
+    }
+
     @PutMapping("/perfil")
     public ResponseEntity<MensajeGenericoResponse> actualizarPerfil(
             @RequestParam("correo") String correo,
             @Valid @RequestBody ActualizarPerfilRequest request) {
         return ResponseEntity.ok(autenticacionService.actualizarPerfil(correo, request));
+    }
+
+    // AUT-03: foto de perfil (todos los roles)
+    @PostMapping(value = "/perfil/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MensajeGenericoResponse> actualizarFotoPerfil(
+            @RequestParam("correo") String correo,
+            @RequestPart("foto") org.springframework.web.multipart.MultipartFile foto) {
+        return ResponseEntity.ok(autenticacionService.actualizarFotoPerfil(correo, foto));
     }
 
     @PutMapping("/cambiar-clave")

@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class EscanearQrScreen extends StatefulWidget {
   const EscanearQrScreen({Key? key}) : super(key: key);
@@ -82,6 +83,7 @@ class _EscanearQrScreenState extends State<EscanearQrScreen> {
         title: const Text('Escáner de Activos QR [RF34, RF35]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(
             icon: const Icon(Icons.flash_on),
             tooltip: 'Linterna',

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/widgets/detalle_prestamo_sheet.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class DashboardAlmacenScreen extends StatefulWidget {
   const DashboardAlmacenScreen({Key? key}) : super(key: key);
@@ -85,6 +87,7 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
         title: const Text('Dashboard de Pañol [RF33]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDatos),
         ],
       ),
@@ -112,7 +115,7 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text('Control y Listado de Préstamos Activos [RF36, RF43]:',
+                const Text('Control y Listado de Préstamos [RF36, RF43]:',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
                 const SizedBox(height: 8),
                 if (_prestamos.isEmpty)
@@ -129,12 +132,16 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                         margin: const EdgeInsets.only(bottom: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         child: ListTile(
-                          leading: const CircleAvatar(backgroundColor: AppColors.primaryBlue, child: Icon(Icons.handyman, color: Colors.white, size: 20)),
+                          onTap: () => mostrarDetallePrestamo(context, p.raw.isEmpty
+                              ? {'prestamoNum': p.prestamoNum, 'nombreMecanico': p.nombreMecanico, 'dniMecanico': p.dniMecanico,
+                                 'estadoPrestamo': p.estadoPrestamo, 'fechaPrestamo': p.fechaPrestamo, 'horaSalida': p.horaSalida}
+                              : p.raw),
+                          leading: CircleAvatar(backgroundColor: colorEstadoPrestamo(p.estadoPrestamo), child: const Icon(Icons.handyman, color: Colors.white, size: 20)),
                           title: Text('${p.prestamoNum} | Mecánico: ${p.nombreMecanico}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('DNI: ${p.dniMecanico} | Fecha: ${p.fechaPrestamo} ${p.horaSalida}\nHerramientas: ${p.herramientas.join(", ")}'),
+                          subtitle: Text('DNI: ${p.dniMecanico} | Fecha: ${p.fechaPrestamo} ${p.horaSalida}\nHerramientas: ${p.herramientas.join(", ")}\nToque para ver el antes y después'),
                           trailing: Chip(
-                            label: Text(p.estadoPrestamo, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            backgroundColor: p.estadoPrestamo == 'DEVUELTO' ? Colors.green[700] : (p.estadoPrestamo == 'EN_MORA' ? AppColors.errorRed : AppColors.primaryBlue),
+                            label: Text(etiquetaEstadoPrestamo(p.estadoPrestamo), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            backgroundColor: colorEstadoPrestamo(p.estadoPrestamo),
                           ),
                           isThreeLine: true,
                         ),

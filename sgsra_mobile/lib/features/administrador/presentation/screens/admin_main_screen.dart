@@ -17,25 +17,35 @@ class AdminMainScreen extends StatefulWidget {
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const BandejaSolicitudesScreen(),
-    const AuditoriaScreen(),
-    const MantenimientoCatalogoScreen(),
-    const ReportesAnaliticosScreen(),
-    const GestionPersonalScreen(),
-    const PerfilAdminScreen(),
-  ];
+  // [ADM-02] Cada visita a Bandeja, Auditoría o Personal recarga sus datos
+  // (antes la bitácora se cargaba una sola vez y no mostraba las acciones nuevas)
+  final List<int> _visitas = List.filled(6, 0);
+
+  void _irA(int index) {
+    setState(() {
+      if (index != _currentIndex && (index == 0 || index == 1 || index == 4)) _visitas[index]++;
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = <Widget>[
+      BandejaSolicitudesScreen(key: ValueKey('bandeja-${_visitas[0]}')),
+      AuditoriaScreen(key: ValueKey('audit-${_visitas[1]}')),
+      const MantenimientoCatalogoScreen(),
+      const ReportesAnaliticosScreen(),
+      GestionPersonalScreen(key: ValueKey('personal-${_visitas[4]}')),
+      const PerfilAdminScreen(),
+    ];
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: _irA,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: Colors.grey,

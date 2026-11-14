@@ -16,6 +16,7 @@ public class RepuestoResponse {
     private String nombreRepuesto;
     private Integer stockActual;
     private Integer stockMinimo;
+    private Integer stockReservado; // en solicitudes pendientes/aprobadas aun no despachadas
     private String descripcion;
     private Boolean activo;
     private String imagenUrl;

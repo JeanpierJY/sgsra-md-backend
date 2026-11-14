@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'dashboard_almacen_screen.dart';
-import 'registrar_prestamo_screen.dart';
+import 'despacho_screen.dart';
 import 'devolucion_inspeccion_screen.dart';
 import 'escanear_qr_screen.dart';
 import 'registrar_herramienta_screen.dart';
@@ -17,25 +17,34 @@ class AlmacenMainScreen extends StatefulWidget {
 class _AlmacenMainScreenState extends State<AlmacenMainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    DashboardAlmacenScreen(),
-    RegistrarPrestamoScreen(),
-    DevolucionInspeccionScreen(),
-    EscanearQrScreen(),
-    RegistrarHerramientaScreen(),
-    PerfilAlmacenistaScreen(),
-  ];
+  // Dashboard, despacho y retorno se vuelven a crear en cada visita para mostrar datos actualizados
+  final List<int> _visitas = [0, 0, 0];
+
+  void _irA(int index) {
+    setState(() {
+      if (index < _visitas.length && index != _currentIndex) _visitas[index]++;
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = <Widget>[
+      DashboardAlmacenScreen(key: ValueKey('dash-${_visitas[0]}')),
+      DespachoScreen(key: ValueKey('desp-${_visitas[1]}')),
+      DevolucionInspeccionScreen(key: ValueKey('dev-${_visitas[2]}')),
+      const EscanearQrScreen(),
+      const RegistrarHerramientaScreen(),
+      const PerfilAlmacenistaScreen(),
+    ];
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: _irA,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: Colors.grey,

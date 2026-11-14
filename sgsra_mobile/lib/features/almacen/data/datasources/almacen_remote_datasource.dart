@@ -105,8 +105,29 @@ class AlmacenRemoteDataSource {
     await _dioClient.dio.post('/inventario/herramientas', data: data);
   }
 
-  Future<List<dynamic>> listarSolicitudesAprobadas() async {
-    final res = await _dioClient.dio.get('/solicitudes/bandeja', queryParameters: {'estado': 'APROBADA'});
-    return res.data is List ? res.data : [];
+  Future<List<dynamic>> listarSolicitudesAprobadas() => listarSolicitudesPorEstado('APROBADA');
+
+  /// [ALM-01] Solicitudes de repuestos por estado (APROBADA, APROBADA_PARCIAL, ENTREGADA...)
+  Future<List<Map<String, dynamic>>> listarSolicitudesPorEstado(String estado) async {
+    final res = await _dioClient.dio.get('/solicitudes/bandeja', queryParameters: {'estado': estado});
+    if (res.data is! List) return [];
+    return (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// [ALM-01] Detalle de la solicitud con el stock actual de cada repuesto
+  Future<Map<String, dynamic>> obtenerDetalleSolicitud(String solicitudNum) async {
+    final res = await _dioClient.dio.get('/solicitudes/$solicitudNum');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// [ALM-01] Salida formal de repuestos: descuenta stock y marca la solicitud como ENTREGADA.
+  /// Devuelve el mensaje del backend, que incluye el resumen de stock "[COD: antes -> después]".
+  Future<String> despacharSolicitud(String solicitudNum) async {
+    final correo = await obtenerCorreoAlmacenista();
+    final res = await _dioClient.dio.put(
+      '/solicitudes/$solicitudNum/entregar',
+      queryParameters: {'correoAlmacenista': correo},
+    );
+    return res.data['mensaje']?.toString() ?? 'Repuestos despachados';
   }
 }

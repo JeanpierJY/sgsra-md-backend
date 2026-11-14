@@ -56,9 +56,11 @@ public class GlobalExceptionHandler {
         ErrorDetalle error = ErrorDetalle.builder()
                 .timestamp(LocalDateTime.now())
                 .codigoEstado(HttpStatus.LOCKED.value())
-                .error("Cuenta bloqueada temporalmente")
+                .error(ex.isBloqueoPermanente() ? "Cuenta bloqueada" : "Cuenta bloqueada temporalmente")
                 .mensaje(ex.getMessage())
                 .ruta(req.getRequestURI())
+                .segundosRestantes(ex.getSegundosRestantes())
+                .bloqueoPermanente(ex.isBloqueoPermanente())
                 .build();
         return ResponseEntity.status(HttpStatus.LOCKED).body(error);
     }

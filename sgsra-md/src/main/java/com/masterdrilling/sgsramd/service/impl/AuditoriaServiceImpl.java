@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 public class AuditoriaServiceImpl implements IAuditoriaService {
 
     private final AuditoriaOperacion_DAO auditoriaRepository;
+    private final com.masterdrilling.sgsramd.DAO.Usuario_DAO usuarioRepository;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -42,15 +43,26 @@ public class AuditoriaServiceImpl implements IAuditoriaService {
     @Override
     @Transactional(readOnly = true)
     public Page<AuditoriaResponse> consultarBitacora(String idOperacion, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable) {
-        return auditoriaRepository.filtrarAuditoria(idOperacion, fechaInicio, fechaFin, pageable)
-                .map(a -> AuditoriaResponse.builder()
-                        .idAuditoria(a.getIdAuditoria())
-                        .idOperacion(a.getIdOperacion())
-                        .idUsuario(a.getIdUsuario())
-                        .accion(a.getAccion())
-                        .ipOrigen(a.getIpOrigen())
-                        .timestamp(a.getTimestamp())
-                        .hashSha256(a.getHashSha256())
-                        .build());
+        LocalDateTime inicio = fechaInicio != null ? fechaInicio : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime fin = fechaFin != null ? fechaFin : LocalDateTime.now().plusYears(1);
+        Page<AuditoriaOperacion> pagina = (idOperacion == null || idOperacion.isBlank())
+                ? auditoriaRepository.filtrarPorFechas(inicio, fin, pageable)
+                : auditoriaRepository.filtrarPorTermino(idOperacion.trim(), inicio, fin, pageable);
+        java.util.Map<Long, com.masterdrilling.sgsramd.model.entity.Usuario> cache = new java.util.HashMap<>();
+        return pagina.map(a -> {
+            var u = a.getIdUsuario() == null ? null
+                    : cache.computeIfAbsent(a.getIdUsuario(), id -> usuarioRepository.findById(id).orElse(null));
+            return AuditoriaResponse.builder()
+                    .idAuditoria(a.getIdAuditoria())
+                    .idOperacion(a.getIdOperacion())
+                    .idUsuario(a.getIdUsuario())
+                    .nombreUsuario(u != null ? u.getNombre() : null)
+                    .rolUsuario(u != null ? u.getRol().name() : null)
+                    .accion(a.getAccion())
+                    .ipOrigen(a.getIpOrigen())
+                    .timestamp(a.getTimestamp())
+                    .hashSha256(a.getHashSha256())
+                    .build();
+        });
     }
 }

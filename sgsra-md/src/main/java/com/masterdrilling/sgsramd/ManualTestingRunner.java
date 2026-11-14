@@ -795,6 +795,8 @@ public class ManualTestingRunner implements CommandLineRunner {
                 almacenistaRepository.findByDniAlmacenista(dni).ifPresent(a -> {
                     if (!nom.isEmpty())
                         a.setNombreAlmacenista(nom);
+                    if (!tel.isEmpty())
+                        a.setTelefono(tel);
                     almacenistaRepository.save(a);
                 });
 
@@ -1388,6 +1390,7 @@ public class ManualTestingRunner implements CommandLineRunner {
         System.out.println("\n-- Mi Perfil (Almacenista - REQ-01) --");
         System.out.println("10.1 Mostrar informacion del perfil");
         System.out.println("10.2 Cambiar contrasena propia");
+        System.out.println("10.3 Editar telefono de contacto (9 digitos)");
         System.out.print("Opcion: ");
         String sub = scanner.nextLine().trim();
 
@@ -1399,6 +1402,9 @@ public class ManualTestingRunner implements CommandLineRunner {
                 System.out.println("Nombre:       " + user.getNombre() + " [Solo Lectura]");
                 System.out.println("Especialidad: Almacenista");
                 System.out.println("Correo:       " + CORREO_ALMACENISTA + " [Solo Lectura]");
+                String telAlm = almacenistaRepository.findByDniAlmacenista(user.getDni())
+                        .map(Almacenista::getTelefono).orElse(null);
+                System.out.println("Telefono:     " + (telAlm != null ? telAlm : "No registrado"));
                 System.out.println("Estado:       " + user.getEstadoCuenta());
             } else if ("2".equals(sub) || "10.2".equals(sub)) {
                 System.out.print("Contrasena actual: ");
@@ -1409,6 +1415,12 @@ public class ManualTestingRunner implements CommandLineRunner {
                 MensajeGenericoResponse res = authService.cambiarContrasenaPropia(CORREO_ALMACENISTA, actual, nueva,
                         ipLocal);
                 System.out.println("RESULTADO (Cambio Clave): " + res.getMensaje());
+            } else if ("3".equals(sub) || "10.3".equals(sub)) {
+                System.out.print("Nuevo Telefono (exactamente 9 digitos, ej: 987654322): ");
+                String tel = scanner.nextLine().trim();
+                ActualizarPerfilRequest req = ActualizarPerfilRequest.builder().telefono(tel).build();
+                MensajeGenericoResponse res = authService.actualizarPerfil(CORREO_ALMACENISTA, req);
+                System.out.println("RESULTADO (RF07): " + res.getMensaje());
             }
         } catch (Exception e) {
             System.out.println("Aviso: " + e.getMessage());

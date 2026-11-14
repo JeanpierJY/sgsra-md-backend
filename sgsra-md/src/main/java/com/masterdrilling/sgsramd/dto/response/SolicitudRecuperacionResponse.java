@@ -28,5 +28,6 @@ public class SolicitudRecuperacionResponse {
     private String dniAdministrador;
     private String observacionAdmin;
     private String fotoSelfieUrl;
+    private String fotoPerfilUrl; // foto registrada del solicitante para comparar con la selfie
 }
 

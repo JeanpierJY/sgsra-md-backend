@@ -61,6 +61,7 @@ class PrestamoModel extends PrestamoEntity {
     required String fechaPrestamo,
     required String horaSalida,
     required List<String> herramientas,
+    Map<String, dynamic> raw = const {},
   }) : super(
           prestamoNum: prestamoNum,
           dniMecanico: dniMecanico,
@@ -69,6 +70,7 @@ class PrestamoModel extends PrestamoEntity {
           fechaPrestamo: fechaPrestamo,
           horaSalida: horaSalida,
           herramientas: herramientas,
+          raw: raw,
         );
 
   factory PrestamoModel.fromJson(Map<String, dynamic> json) {
@@ -92,6 +94,7 @@ class PrestamoModel extends PrestamoEntity {
       fechaPrestamo: json['fechaPrestamo']?.toString() ?? '',
       horaSalida: json['horaSalida']?.toString() ?? '',
       herramientas: items,
+      raw: json,
     );
   }
 }

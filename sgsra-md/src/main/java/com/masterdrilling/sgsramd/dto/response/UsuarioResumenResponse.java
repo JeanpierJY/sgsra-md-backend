@@ -23,5 +23,7 @@ public class UsuarioResumenResponse {
     private RolUsuario rol;
     private EstadoCuenta estadoCuenta;
     private Integer intentosFallidos;
+    private String telefono;
+    private String fotoPerfilUrl;
     private LocalDateTime creadoEn;
 }

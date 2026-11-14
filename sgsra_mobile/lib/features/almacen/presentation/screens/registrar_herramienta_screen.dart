@@ -4,6 +4,7 @@ import '../../../../core/network/dio_client.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
 import 'reportar_extravio_modal.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 
 class RegistrarHerramientaScreen extends StatefulWidget {
   const RegistrarHerramientaScreen({Key? key}) : super(key: key);
@@ -109,6 +110,7 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
         title: const Text('Catálogo de Herramientas [RF45]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          const NotificacionBell(),
           IconButton(
             icon: const Icon(Icons.warning_amber_rounded),
             tooltip: 'Reportar Extravío [RF41]',
