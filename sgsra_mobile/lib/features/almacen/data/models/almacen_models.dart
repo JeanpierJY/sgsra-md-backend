@@ -33,12 +33,14 @@ class HerramientaModel extends HerramientaEntity {
     required String marca,
     required String categoria,
     required String estadoActual,
+    String? imagenUrl,
   }) : super(
           codHerramienta: codHerramienta,
           nombre: nombre,
           marca: marca,
           categoria: categoria,
           estadoActual: estadoActual,
+          imagenUrl: imagenUrl,
         );
 
   factory HerramientaModel.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class HerramientaModel extends HerramientaEntity {
       marca: json['marcaHerramienta']?.toString() ?? json['marca']?.toString() ?? 'Generica',
       categoria: json['categoria']?.toString() ?? 'MANUALES',
       estadoActual: json['estadoActual']?.toString() ?? 'DISPONIBLE',
+      imagenUrl: json['imagenUrl']?.toString(),
     );
   }
 }

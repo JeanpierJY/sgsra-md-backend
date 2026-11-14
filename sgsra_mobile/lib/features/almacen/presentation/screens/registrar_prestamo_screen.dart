@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/widgets/selector_buscable.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
+import '../widgets/herramienta_ui.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
+/// [RF36, RF37, ALM-02] Salida formal de herramientas de pañol.
+/// El mecánico y las herramientas se eligen con buscadores (con foto de cada herramienta).
 class RegistrarPrestamoScreen extends StatefulWidget {
   /// [ALM-01] true cuando se muestra como pestaña dentro de DespachoScreen (sin AppBar propio)
   final bool embebido;
@@ -16,15 +22,15 @@ class RegistrarPrestamoScreen extends StatefulWidget {
 
 class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
   final AlmacenRemoteDataSource _dataSource = AlmacenRemoteDataSource(DioClient());
-  final _formKey = GlobalKey<FormState>();
 
   bool _cargando = true;
   bool _enviando = false;
+  String? _error;
   List<Map<String, dynamic>> _mecanicos = [];
-  List<HerramientaEntity> _herramientasDisponibles = [];
+  List<HerramientaEntity> _herramientas = [];
 
-  String? _dniSeleccionado;
-  String? _herramientaSeleccionada;
+  Map<String, dynamic>? _mecanico;
+  final List<HerramientaEntity> _seleccionadas = [];
 
   @override
   void initState() {
@@ -33,196 +39,265 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
   }
 
   Future<void> _cargarDatos() async {
-    setState(() => _cargando = true);
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
     try {
-      final mecs = await _dataSource.listarMecanicos();
-      final herrs = await _dataSource.listarHerramientas();
-
-      // Garantizar que este el mecanico oficial del test runner
-      final existeOficial = mecs.any((m) => m['dni'] == '70000001');
-      if (!existeOficial) {
-        mecs.insert(0, {'dni': '70000001', 'nombre': 'Carlos Baro Cordillera'});
-      }
-
-      final soloDisponibles = herrs.where((h) => h.estadoActual.toUpperCase() == 'DISPONIBLE').toList();
-      final mecanicos = mecs
-          .map<Map<String, dynamic>>((m) => Map<String, dynamic>.from(m as Map))
-          .toList();
-
+      final r = await Future.wait([_dataSource.listarMecanicos(), _dataSource.listarHerramientas()]);
+      final mecs = r[0].map((m) => Map<String, dynamic>.from(m as Map)).toList()
+        ..sort((a, b) => '${a['nombre']}'.compareTo('${b['nombre']}'));
+      final herrs = (r[1] as List<HerramientaEntity>)
+        ..sort((a, b) {
+          // Disponibles primero
+          final d = (a.disponible ? 0 : 1).compareTo(b.disponible ? 0 : 1);
+          return d != 0 ? d : a.codHerramienta.compareTo(b.codHerramienta);
+        });
+      if (!mounted) return;
       setState(() {
-        _mecanicos = mecanicos;
-        _herramientasDisponibles = soloDisponibles;
-        _dniSeleccionado = _mecanicos.first['dni'];
-        if (_herramientasDisponibles.isNotEmpty) {
-          _herramientaSeleccionada = _herramientasDisponibles.first.codHerramienta;
-        } else {
-          _herramientaSeleccionada = null;
-        }
+        _mecanicos = mecs;
+        _herramientas = herrs;
+        _seleccionadas.removeWhere((s) => !herrs.any((h) => h.codHerramienta == s.codHerramienta && h.disponible));
         _cargando = false;
       });
-    } catch (_) {
-      setState(() => _cargando = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _cargando = false;
+        _error = mensajeDeError(e);
+      });
     }
   }
 
-  Future<void> _crearHerramientaRapida() async {
-    final cod = 'HER-LLAV-${DateTime.now().millisecondsSinceEpoch % 1000}';
-    await _dataSource.registrarNuevaHerramienta({
-      'codHerramienta': cod,
-      'nombreHerramienta': 'Juego de Llaves de Fuerza',
-      'marcaHerramienta': 'Proto Industrial',
-      'categoria': 'MANUALES',
-      'estadoActual': 'DISPONIBLE',
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Herramienta $cod dada de alta y disponible para despacho')),
+  Future<void> _elegirMecanico() async {
+    final m = await mostrarSelectorBuscable<Map<String, dynamic>>(
+      context: context,
+      titulo: 'Mecánico que recibe',
+      hint: 'Buscar por nombre o DNI',
+      items: _mecanicos,
+      textoBusqueda: (m) => '${m['nombre']} ${m['dni']}',
+      construir: (_, m) => Row(children: [
+        CircleAvatar(
+          backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.12),
+          child: Text('${m['nombre']}'.isNotEmpty ? '${m['nombre']}'[0] : '?',
+              style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${m['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('DNI ${m['dni']}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          ]),
+        ),
+      ]),
     );
-    _cargarDatos();
+    if (m != null) setState(() => _mecanico = m);
+  }
+
+  Future<void> _agregarHerramienta() async {
+    final ya = _seleccionadas.map((e) => e.codHerramienta).toSet();
+    final h = await mostrarSelectorBuscable<HerramientaEntity>(
+      context: context,
+      titulo: 'Herramienta a entregar',
+      hint: 'Buscar por código, nombre o marca',
+      items: _herramientas.where((h) => !ya.contains(h.codHerramienta)).toList(),
+      textoBusqueda: (h) => '${h.codHerramienta} ${h.nombre} ${h.marca}',
+      habilitado: (h) => h.disponible,
+      vacio: 'No hay herramientas con ese texto',
+      construir: (_, h) => FilaHerramienta(h,
+          trailing: h.disponible ? const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryBlue) : null),
+    );
+    if (h != null) setState(() => _seleccionadas.add(h));
   }
 
   Future<void> _despachar() async {
-    if (_formKey.currentState!.validate()) {
-      if (_dniSeleccionado == null || _herramientaSeleccionada == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Seleccione un mecanico y una herramienta disponible'), backgroundColor: AppColors.errorRed),
-        );
-        return;
-      }
-
-      setState(() => _enviando = true);
-      try {
-        final codPrestamo = await _dataSource.registrarPrestamo(
-          _dniSeleccionado!,
-          [_herramientaSeleccionada!],
-          'FIRMA_DIGITAL_RECEPCION_OK',
-        );
-
-        setState(() => _enviando = false);
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Despacho Exitoso [RF37]', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
-            content: Text('Herramienta despachada formalmente.\n\nNumero de Prestamo: $codPrestamo\nCustodio: DNI $_dniSeleccionado\nEstado de Activo: PRESTADA'),
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _cargarDatos();
-                },
-                child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+    if (_mecanico == null || _seleccionadas.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar entrega'),
+        content: Text('Entregará ${_seleccionadas.length} herramienta(s) a ${_mecanico!['nombre']}.\n\n'
+            '${_seleccionadas.map((h) => '• ${h.nombre} (${h.codHerramienta})').join('\n')}'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Revisar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Entregar'),
           ),
-        );
-      } catch (e) {
-        setState(() => _enviando = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Aviso al despachar: $e'), backgroundColor: AppColors.errorRed),
-        );
-      }
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _enviando = true);
+    try {
+      final codPrestamo = await _dataSource.registrarPrestamo(
+        '${_mecanico!['dni']}',
+        _seleccionadas.map((h) => h.codHerramienta).toList(),
+        'FIRMA_DIGITAL_RECEPCION_OK',
+      );
+      if (!mounted) return;
+      setState(() => _enviando = false);
+      final nombre = _mecanico!['nombre'];
+      final n = _seleccionadas.length;
+      setState(() {
+        _seleccionadas.clear();
+        _mecanico = null;
+      });
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: Icon(Icons.check_circle_rounded, color: Colors.green[700], size: 52),
+          title: const Text('Préstamo registrado [RF37]'),
+          content: Text('$codPrestamo\n$n herramienta(s) entregadas a $nombre.\nSu estado ahora es "Prestada".',
+              textAlign: TextAlign.center),
+          actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      _cargarDatos();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _enviando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensajeDeError(e)), backgroundColor: AppColors.errorRed),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final disponibles = _herramientas.where((h) => h.disponible).length;
     final cuerpo = _cargando
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-          : SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Center(
-                child: Container(
+        ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+        : ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              Center(
+                child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 550),
                   child: Card(
                     color: AppColors.pureWhite,
                     elevation: 3,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text('Salida Formal de Herramientas de Panol',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
-                            const SizedBox(height: 6),
-                            const Text('Asignacion de responsabilidad a mecanico operativo homologado.',
-                                style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            const Divider(height: 24),
-                            DropdownButtonFormField<String>(
-                              value: _dniSeleccionado,
-                              decoration: const InputDecoration(labelText: 'Mecanico Receptor (DNI)', border: OutlineInputBorder()),
-                              items: _mecanicos.map((m) {
-                                return DropdownMenuItem<String>(
-                                  value: m['dni'],
-                                  child: Text('${m['nombre']} (DNI: ${m['dni']})', overflow: TextOverflow.ellipsis),
-                                );
-                              }).toList(),
-                              onChanged: (val) => setState(() => _dniSeleccionado = val),
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text('Salida Formal de Herramientas de Pañol',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
+                          const SizedBox(height: 4),
+                          Text('$disponibles herramienta(s) disponibles para entregar.',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          if (_error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(_error!, style: const TextStyle(color: AppColors.errorRed)),
                             ),
-                            const SizedBox(height: 16),
-                            if (_herramientasDisponibles.isEmpty)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(8)),
-                                child: Column(
-                                  children: [
-                                    const Text('No hay herramientas en estante con estado DISPONIBLE para entrega.',
-                                        style: TextStyle(color: Colors.brown, fontSize: 13), textAlign: TextAlign.center),
-                                    const SizedBox(height: 8),
-                                    OutlinedButton.icon(
-                                      onPressed: _crearHerramientaRapida,
-                                      icon: const Icon(Icons.add, size: 16),
-                                      label: const Text('Dar de Alta Herramienta Disponible'),
-                                    ),
-                                  ],
+                          const Divider(height: 24),
+                          CampoSelector(
+                            etiqueta: 'Mecánico que recibe',
+                            icono: Icons.engineering_rounded,
+                            placeholder: 'Toque para buscar al mecánico',
+                            onTap: _mecanicos.isEmpty ? null : _elegirMecanico,
+                            valor: _mecanico == null
+                                ? null
+                                : Text('${_mecanico!['nombre']}  ·  DNI ${_mecanico!['dni']}',
+                                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(children: [
+                            Text('Herramientas (${_seleccionadas.length})',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: disponibles == 0 ? null : _agregarHerramienta,
+                              icon: const Icon(Icons.search_rounded),
+                              label: const Text('Buscar y agregar'),
+                            ),
+                          ]),
+                          if (_seleccionadas.isEmpty)
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: disponibles == 0 ? null : _agregarHerramienta,
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  color: AppColors.backgroundGray,
                                 ),
-                              )
-                            else
-                              DropdownButtonFormField<String>(
-                                value: _herramientaSeleccionada,
-                                decoration: const InputDecoration(labelText: 'Herramienta a Despachar (Disponible)', border: OutlineInputBorder()),
-                                items: _herramientasDisponibles.map((h) {
-                                  return DropdownMenuItem<String>(
-                                    value: h.codHerramienta,
-                                    child: Text('[${h.codHerramienta}] ${h.nombre}', overflow: TextOverflow.ellipsis),
-                                  );
-                                }).toList(),
-                                onChanged: (val) => setState(() => _herramientaSeleccionada = val),
+                                child: Column(children: [
+                                  Icon(Icons.add_photo_alternate_outlined, color: Colors.grey[500], size: 34),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    disponibles == 0
+                                        ? 'No hay herramientas disponibles en el pañol'
+                                        : 'Toque para elegir las herramientas a entregar',
+                                    style: const TextStyle(color: Colors.black54),
+                                  ),
+                                ]),
                               ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryBlue,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              onPressed: (_enviando || _herramientasDisponibles.isEmpty) ? null : _despachar,
-                              icon: _enviando ? const SizedBox.shrink() : const Icon(Icons.assignment_turned_in, color: Colors.white),
-                              label: _enviando
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : const Text('Registrar Despacho Formal [RF36]', style: TextStyle(color: Colors.white, fontSize: 15)),
+                            )
+                          else
+                            ..._seleccionadas.map((h) => Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.backgroundGray,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: FilaHerramienta(h,
+                                      tamanoImagen: 46,
+                                      trailing: IconButton(
+                                        tooltip: 'Quitar',
+                                        icon: const Icon(Icons.close_rounded, color: AppColors.errorRed),
+                                        onPressed: () => setState(() => _seleccionadas.remove(h)),
+                                      )),
+                                )),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryBlue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                          ],
-                        ),
+                            onPressed: (_enviando || _mecanico == null || _seleccionadas.isEmpty) ? null : _despachar,
+                            icon: _enviando
+                                ? const SizedBox(
+                                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.assignment_turned_in),
+                            label: Text(_enviando ? 'Registrando…' : 'Registrar entrega [RF36]',
+                                style: const TextStyle(fontSize: 15)),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
-            );
+            ],
+          );
     if (widget.embebido) {
       return RefreshIndicator(onRefresh: _cargarDatos, child: cuerpo);
     }
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Despacho / Prestamo [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Despacho / Préstamo [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDatos),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
       body: cuerpo,

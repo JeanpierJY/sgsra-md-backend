@@ -38,5 +38,6 @@ public class PrestamoResumenResponse {
         private String estadoFisicoActual;
         private String estadoAlEntregar;
         private String estadoAlDevolver;
+        private String imagenUrl; // GEN-01
     }
 }

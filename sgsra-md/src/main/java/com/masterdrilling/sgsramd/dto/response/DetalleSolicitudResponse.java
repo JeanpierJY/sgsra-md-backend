@@ -55,6 +55,7 @@ public class DetalleSolicitudResponse {
         // Stock fisico actual del repuesto (lo usa el almacenista al despachar)
         private Integer stockActual;
         private Integer stockMinimo;
+        private String imagenUrl; // GEN-01
     }
 
     @Data

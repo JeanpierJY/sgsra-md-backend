@@ -129,3 +129,109 @@ Todas las observaciones fueron atendidas (pendiente de prueba manual en disposit
 1. **🔴 Bloqueantes:** AUT-01, AUT-02, ADM-01, MEC-02, ALM-01
 2. **🟡 Información incorrecta o incompleta:** MEC-01, MEC-03, ADM-02, PRE-01
 3. **🟢 Usabilidad:** ADM-03, ADM-04, AUT-03
+
+---
+
+# Segunda ronda de observaciones
+
+Hallazgos de la segunda prueba manual, más lo que se encontró al comparar la app con la consola de pruebas (`ManualTestingRunner`), que tiene todas las funciones del sistema.
+
+## Resumen
+
+| ID | Módulo | Tipo | Prioridad | Descripción corta |
+|----|--------|------|-----------|-------------------|
+| GEN-01 | Todos | 🐞 | 🟡 | Los repuestos y herramientas no muestran imagen en ninguna parte |
+| GEN-02 | Todos | ✨ | 🟢 | Mover *Mi Perfil* de la barra inferior a la esquina superior derecha |
+| GEN-03 | Todos | 🐞 | 🟢 | Los íconos de la barra superior casi no se ven (deben ser blancos) |
+| ADM-05 | Admin – Bandeja | 🐞 | 🔴 | No se puede aprobar una solicitud parcialmente (repuesto por repuesto) |
+| ADM-06 | Admin – Bandeja | ✨ | 🟡 | Ver todas las solicitudes (todos los estados, ordenadas y con filtros) |
+| ADM-07 | Admin – Reportes | 🐞 | 🟡 | *Métricas y reportes* está incompleto frente a la consola |
+| ADM-08 | Admin – Catálogo | 🐞 | 🟡 | No se puede cambiar la imagen de un repuesto |
+| MEC-04 | Mecánico – Navegación | ✨ | 🟢 | Renombrar *Carrito* → *Solicitudes* y *Pedidos* → *Historial* (con sus íconos) |
+| MEC-05 | Mecánico – Solicitudes | ✨ | 🟡 | Buscar y seleccionar la máquina al escribir unas letras |
+| ALM-02 | Almacén – Despacho | ✨ | 🟡 | Herramientas a despachar con imagen y buscador con lista seleccionable |
+| ALM-03 | Almacén – Retorno | ✨ | 🟡 | Unir *Retorno* y *Escanear QR*: QR arriba, retorno abajo, autocompletado al escanear |
+| ALM-04 | Almacén – Herramientas | ✨ | 🟡 | Buscador predictivo, renombrar *Activos* → *Herramientas* y ver el detalle de cada herramienta |
+| ALM-05 | Almacén – Herramientas | ✨ | 🟢 | *Reportar extravío* y *Nueva herramienta* como 2 botones flotantes abajo a la derecha |
+| ALM-06 | Almacén – Dashboard | ✨ | 🟢 | Cuadros del dashboard más pequeños |
+
+## Generales
+
+### GEN-01 🐞 🟡 Repuestos y herramientas sin imagen
+- **Causa:** el backend envía la imagen como `imagenUrl`, pero la app la buscaba como `urlFoto`, así que nunca la recibía. Además, ninguna pantalla mostraba ni permitía subir imágenes.
+- **Esperado:** miniatura en catálogos, carrito, detalle de solicitud, despacho, retorno y herramientas, con un ícono cuando no hay foto y la opción de ampliarla al tocarla.
+
+### GEN-02 ✨ 🟢 *Mi Perfil* arriba a la derecha
+- Quitar *Mi Perfil* de la barra inferior de los 3 roles y abrirlo desde un avatar en la esquina superior derecha. Deja más espacio para las pestañas de trabajo.
+
+### GEN-03 🐞 🟢 Íconos de la barra superior poco visibles
+- Las barras azules usaban íconos oscuros. Deben ser blancos en toda la app.
+
+## Administrador
+
+### ADM-05 🐞 🔴 Aprobación parcial
+- En el detalle de una solicitud pendiente, cada repuesto debe tener **Aprobar / Rechazar**. La consola ya lo permite (opción 1.1 → 3, RF26), pero la app no.
+- Si se rechaza algún repuesto, pedir el motivo. El botón final se adapta: *Aprobar todo*, *Aprobar parcialmente* o *Rechazar solicitud*.
+
+### ADM-06 ✨ 🟡 Todas las solicitudes
+- La bandeja debe mostrar todos los estados (pendiente, aprobada, aprobada parcial, orden a proveedor, entregada y rechazada), las más recientes primero, con contador por estado, buscador y filtro por fecha (consola 1.2, RF31).
+- Las notificaciones de toda solicitud nueva ya llegan al administrador.
+
+### ADM-07 🐞 🟡 Métricas y reportes incompletos
+- **Falta frente a la consola:** filtro de periodo de 30, 60, 90 y 180 días (REQ-04), y que la exportación respete ese periodo.
+- **Mejoras:** resumen de solicitudes del periodo (total, pendientes, aprobadas, rechazadas, entregadas y tasa de aprobación), distribución por prioridad y lista de repuestos en stock mínimo.
+
+### ADM-08 🐞 🟡 Imagen de repuestos
+- El endpoint `POST /catalogo/{cod}/imagen` existe, pero la app no lo usaba. Permitir subir o cambiar la foto con la cámara o la galería.
+
+## Mecánico
+
+### MEC-04 ✨ 🟢 Nombres de la barra inferior
+- *Carrito* → **Solicitudes** (ícono de solicitud nueva) y *Pedidos* → **Historial** (ícono de historial).
+
+### MEC-05 ✨ 🟡 Búsqueda de máquinas
+- Hoy se escribe el código a mano y está prellenado con `MD-RB-01`. Al escribir unas letras debe aparecer la lista de máquinas (código, modelo y estado) para elegir.
+- **Backend:** falta el endpoint de búsqueda de máquinas.
+
+## Almacenista
+
+### ALM-02 ✨ 🟡 Despacho de herramientas
+- La herramienta y el mecánico se elegían en listas desplegables sin imagen. Cambiarlas por buscadores con lista seleccionable y foto.
+
+### ALM-03 ✨ 🟡 Retorno + QR en una sola pantalla
+- El escáner va arriba y el formulario de retorno abajo. Al escanear el QR de una herramienta prestada se rellenan solos el préstamo, el mecánico y la herramienta.
+- Si la herramienta no está prestada, se muestra su ficha.
+- El préstamo se elige con un buscador.
+
+### ALM-04 ✨ 🟡 Herramientas
+- La pestaña *Activos* pasa a llamarse **Herramientas**.
+- Buscador predictivo por código, nombre o marca.
+- Al tocar una herramienta se abre su detalle: foto (se puede cambiar), datos, estado e historial de préstamos.
+
+### ALM-05 ✨ 🟢 Botones flotantes
+- *Reportar extravío* y *Nueva herramienta* salen de la barra superior y pasan a ser 2 botones flotantes en la esquina inferior derecha.
+
+### ALM-06 ✨ 🟢 Dashboard
+- Cuadros de indicadores más pequeños (3 por fila).
+- Quitar los datos de ejemplo que aparecían cuando fallaba la conexión.
+
+## Estado de la segunda ronda
+
+| ID | Solución aplicada |
+|----|-------------------|
+| GEN-01 | Se corrigió la lectura de `imagenUrl`. Componente `ImagenProducto` (miniatura, ícono si no hay foto, ampliar al tocar) en el catálogo del mecánico y del admin, la nueva solicitud, el detalle de solicitud, el despacho de repuestos y herramientas, el retorno, *Herramientas*, el detalle de préstamo y el stock crítico. El backend ahora envía `imagenUrl` en el detalle de solicitud y en los préstamos |
+| GEN-02 | *Mi Perfil* salió de la barra inferior en los 3 roles. Se abre desde un avatar (foto o iniciales) en la esquina superior derecha de cada pantalla |
+| GEN-03 | Tema global: barra superior azul con títulos e íconos blancos |
+| ADM-05 | En el detalle de una solicitud pendiente, cada repuesto tiene **Aprobar / Rechazar** y muestra su stock. El botón final cambia solo: *Aprobar todo*, *Aprobar parcialmente (N de M)* o *Rechazar solicitud*, y pide el motivo si hay rechazos |
+| ADM-06 | La bandeja muestra todos los estados (más recientes primero; backend ordenado), con contador por estado, buscador, filtro de periodo y aviso de pendientes y urgentes. *Evaluar* abre el detalle con decisión por repuesto |
+| ADM-07 | *Métricas* con periodo de 30/60/90/180 días, resumen (total, pendientes, aprobadas, entregadas, rechazadas, % de aprobación), top 10 de repuestos, prioridades, repuestos en stock mínimo y exportación Excel/CSV del periodo. El backend ahora filtra la exportación por fechas |
+| ADM-08 | En el catálogo del admin se toca la foto (ícono de cámara) para tomarla o elegirla de la galería. También se agregó un buscador |
+| MEC-04 | Barra inferior: Catálogo · **Solicitudes** · **Historial** · Herramientas |
+| MEC-05 | Endpoint nuevo `GET /api/v1/maquinarias?termino=`. En *Nueva solicitud* se escribe y aparecen las máquinas (código, modelo, estado) para elegir. El formulario va en 4 pasos, con cantidades editables y la urgencia en botones de color |
+| ALM-02 | En el despacho de herramientas, el mecánico y las herramientas se eligen con buscadores con foto. Se pueden entregar varias herramientas en un mismo préstamo y se confirma antes de registrar |
+| ALM-03 | Nueva pestaña **Retorno**: escáner QR arriba (linterna, cambio de cámara, ocultar cámara, ingreso manual) y formulario abajo. Al escanear se rellenan solos el préstamo y la herramienta. Si no está prestada se muestra su ficha. El estado de devolución se elige con botones de color |
+| ALM-04 | *Activos* → **Herramientas**: buscador predictivo, filtros por categoría y estado (con contador) y pantalla de detalle con foto editable, datos, botón de extravío e historial de préstamos |
+| ALM-05 | *Nueva herramienta* (al crearla ofrece agregar foto) y *Reportar extravío* como botones flotantes abajo a la derecha |
+| ALM-06 | Indicadores en 3 columnas, más compactos. Sin datos de ejemplo; si falla la conexión se muestra un aviso |
+
+**Pendiente detectado:** al aprobar parcialmente, el backend valida el motivo de cada repuesto rechazado pero no lo guarda, así que el mecánico no lo ve. Hay que agregar una columna `motivo_rechazo_item` en `solicitud_detalle` si se quiere mostrar.

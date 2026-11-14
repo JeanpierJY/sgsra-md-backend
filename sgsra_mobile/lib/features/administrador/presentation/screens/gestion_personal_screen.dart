@@ -5,6 +5,7 @@ import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 import 'solicitudes_recuperacion_screen.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
 /// [RF07, RF08, ADM-01, AUT-02] Gestión de personal.
 /// - La edición guarda en el servidor y vuelve a leer la lista para confirmar el cambio.
@@ -246,7 +247,6 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
         title: const Text('Gestión de Personal [RF07, RF08]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          const NotificacionBell(),
           IconButton(
             tooltip: 'Recuperación de contraseñas',
             onPressed: _abrirRecuperaciones,
@@ -258,6 +258,8 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
           ),
           IconButton(icon: const Icon(Icons.person_add_alt_1_rounded), tooltip: 'Nuevo Usuario', onPressed: _abrirModalRegistrar),
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarUsuarios),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
       body: Column(

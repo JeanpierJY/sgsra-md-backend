@@ -4,6 +4,7 @@ import '../../../../core/widgets/detalle_prestamo_sheet.dart';
 import '../../data/datasources/repuesto_remote_datasource.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
 /// [RF36, PRE-01] Herramientas del mecánico: préstamos en curso e historial.
 /// Al tocar un préstamo se ve el antes (entrega) y el después (devolución).
@@ -57,8 +58,9 @@ class _HerramientasPrestadasScreenState extends State<HerramientasPrestadasScree
         title: const Text('Herramientas en Custodia [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarHerramientas),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
       body: _isLoading

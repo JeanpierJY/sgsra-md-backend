@@ -3,6 +3,7 @@ import '../constants/app_colors.dart';
 import '../errors/exceptions.dart';
 import '../network/dio_client.dart';
 import '../session/session_manager.dart';
+import 'imagen_producto.dart';
 
 /// [MEC-02, MEC-03, ADM-04] Detalle de una solicitud de repuestos (GET /solicitudes/{num}).
 /// Muestra repuestos, estado y, si fue rechazada, el motivo del rechazo.
@@ -76,6 +77,15 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
   Map<String, dynamic>? _d;
   String? _error;
   bool _procesando = false;
+  /// [ADM-05] Dictamen por repuesto (número de ítem -> aprobado)
+  final Map<dynamic, bool> _dictamen = {};
+  final _motivoCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _motivoCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -155,6 +165,63 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
     }, 'Solicitud rechazada');
   }
 
+  /// [ADM-05, RF26] Aprueba unos repuestos y rechaza otros
+  Future<void> _aprobarParcial(List<Map> repuestos) async {
+    final rechazados = repuestos.where((r) => _dictamen[r['item']] == false).toList();
+    final motivo = _motivoCtrl.text.trim();
+    if (motivo.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Escriba el motivo de los repuestos rechazados (mínimo 10 caracteres)'),
+          backgroundColor: AppColors.errorRed));
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Aprobar parcialmente'),
+        content: Text('Se aprobarán ${repuestos.length - rechazados.length} de ${repuestos.length} repuestos.\n'
+            'Rechazados: ${rechazados.map((r) => r['nombreRepuesto']).join(', ')}.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Revisar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.lightGreen[800], foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _ejecutar(() async {
+      final correo = await SessionManager.correo();
+      await _dio.dio.put('/solicitudes/${widget.num}/aprobar-parcial', queryParameters: {'correoAdmin': correo}, data: {
+        'items': repuestos
+            .map((r) => {
+                  'item': r['item'],
+                  'aprobado': _dictamen[r['item']] != false,
+                  if (_dictamen[r['item']] == false) 'motivoRechazoItem': motivo,
+                })
+            .toList(),
+      });
+    }, 'Solicitud aprobada parcialmente');
+  }
+
+  /// Todos los repuestos rechazados: rechazo total con el motivo escrito
+  Future<void> _rechazarConMotivo() async {
+    final motivo = _motivoCtrl.text.trim();
+    if (motivo.length < 15) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Para rechazar toda la solicitud el motivo debe tener al menos 15 caracteres'),
+          backgroundColor: AppColors.errorRed));
+      return;
+    }
+    await _ejecutar(() async {
+      final correo = await SessionManager.correo();
+      await _dio.dio.put('/solicitudes/${widget.num}/rechazar',
+          queryParameters: {'correoAdmin': correo}, data: {'justificacionRechazo': motivo});
+    }, 'Solicitud rechazada');
+  }
+
   Future<void> _ejecutar(Future<void> Function() accion, String exito) async {
     setState(() => _procesando = true);
     try {
@@ -202,6 +269,8 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
     final repuestos = (d['repuestos'] as List?)?.cast<Map>() ?? const [];
     final rechazo = d['rechazo'] as Map?;
     final color = colorEstadoSolicitud(estado);
+    final evaluando = widget.accionesAdmin && estado == 'PENDIENTE';
+    final nRechazados = repuestos.where((r) => _dictamen[r['item']] == false).length;
 
     return ListView(
       controller: widget.scroll,
@@ -276,57 +345,153 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
         const SizedBox(height: 14),
         Text('Repuestos solicitados (${repuestos.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         const SizedBox(height: 8),
+        if (evaluando)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(children: [
+              Icon(Icons.touch_app_outlined, size: 18, color: AppColors.primaryBlue),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Decida repuesto por repuesto. Puede aprobar solo los que correspondan.',
+                    style: TextStyle(fontSize: 12.5, color: AppColors.primaryBlue)),
+              ),
+            ]),
+          ),
         ...repuestos.map((r) {
           final ei = r['estadoItem']?.toString() ?? 'PENDIENTE';
           final c = ei == 'APROBADO' ? Colors.green[700]! : ei == 'RECHAZADO' ? AppColors.errorRed : Colors.amber[800]!;
+          final item = r['item'];
+          final aprobado = _dictamen[item] != false;
+          final stock = (r['stockActual'] as num?)?.toInt();
+          final cant = (r['cantidadSolicitada'] as num?)?.toInt() ?? 0;
           return Card(
-            color: AppColors.pureWhite,
+            color: evaluando && !aprobado ? AppColors.errorRed.withValues(alpha: 0.05) : AppColors.pureWhite,
             margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.1),
-                child: Text('x${r['cantidadSolicitada'] ?? 0}',
-                    style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-              title: Text('${r['nombreRepuesto'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('${r['codParte'] ?? ''}'),
-              trailing: Text(ei[0] + ei.substring(1).toLowerCase(),
-                  style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: evaluando
+                  ? BorderSide(color: aprobado ? Colors.green.shade300 : AppColors.errorRed.withValues(alpha: 0.5))
+                  : BorderSide.none,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(children: [
+                Row(children: [
+                  ImagenProducto(url: r['imagenUrl']?.toString(), size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${r['nombreRepuesto'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text('${r['codParte'] ?? ''}  ·  Cantidad: $cant',
+                          style: const TextStyle(fontSize: 12.5, color: Colors.black54)),
+                      if (evaluando && stock != null)
+                        Text('Stock actual: $stock',
+                            style: TextStyle(fontSize: 12, color: stock < cant ? AppColors.errorRed : Colors.green[700])),
+                    ]),
+                  ),
+                  if (!evaluando)
+                    Text(ei[0] + ei.substring(1).toLowerCase(),
+                        style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 12)),
+                ]),
+                if (evaluando) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(value: true, icon: Icon(Icons.check_rounded), label: Text('Aprobar')),
+                        ButtonSegment(value: false, icon: Icon(Icons.close_rounded), label: Text('Rechazar')),
+                      ],
+                      selected: {aprobado},
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        selectedBackgroundColor: aprobado ? Colors.green[700] : AppColors.errorRed,
+                        selectedForegroundColor: Colors.white,
+                      ),
+                      onSelectionChanged: (v) => setState(() => _dictamen[item] = v.first),
+                    ),
+                  ),
+                ],
+              ]),
             ),
           );
         }),
-        if (widget.accionesAdmin && estado == 'PENDIENTE') ...[
+        if (evaluando) ...[
+          if (nRechazados > 0) ...[
+            const SizedBox(height: 6),
+            TextField(
+              controller: _motivoCtrl,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: nRechazados == repuestos.length
+                    ? 'Motivo del rechazo (mín. 15 caracteres)'
+                    : 'Motivo de los repuestos rechazados',
+                helperText: 'El mecánico verá este motivo',
+                filled: true,
+                fillColor: AppColors.pureWhite,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.errorRed,
-                    side: const BorderSide(color: AppColors.errorRed),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+          if (nRechazados == 0)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.errorRed,
+                      side: const BorderSide(color: AppColors.errorRed),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: _procesando ? null : _rechazar,
+                    icon: const Icon(Icons.close_rounded),
+                    label: const Text('Rechazar todo'),
                   ),
-                  onPressed: _procesando ? null : _rechazar,
-                  icon: const Icon(Icons.close_rounded),
-                  label: const Text('Rechazar'),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[700],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: _procesando ? null : _aprobar,
+                    icon: const Icon(Icons.check_rounded),
+                    label: const Text('Aprobar todo'),
                   ),
-                  onPressed: _procesando ? null : _aprobar,
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Aprobar'),
                 ),
+              ],
+            )
+          else if (nRechazados < repuestos.length)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightGreen[800],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-            ],
-          ),
+              onPressed: _procesando ? null : () => _aprobarParcial(repuestos),
+              icon: const Icon(Icons.rule_rounded),
+              label: Text('Aprobar parcialmente (${repuestos.length - nRechazados} de ${repuestos.length})'),
+            )
+          else
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _procesando ? null : _rechazarConMotivo,
+              icon: const Icon(Icons.close_rounded),
+              label: const Text('Rechazar solicitud'),
+            ),
         ],
       ],
     );

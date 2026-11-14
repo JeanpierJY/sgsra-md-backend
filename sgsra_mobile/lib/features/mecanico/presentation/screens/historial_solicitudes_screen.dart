@@ -5,6 +5,7 @@ import '../../../../core/widgets/detalle_solicitud_sheet.dart';
 import '../../data/datasources/repuesto_remote_datasource.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
 /// [RF19, MEC-02, MEC-03] Pedidos del mecánico. Se recarga cada vez que se abre la pestaña
 /// y al tocar una solicitud muestra su detalle (incluido el motivo si fue rechazada).
@@ -76,11 +77,12 @@ class _HistorialSolicitudesScreenState extends State<HistorialSolicitudesScreen>
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Mis Solicitudes [RF19]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Historial de Solicitudes [RF19]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarHistorial),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
       body: Column(

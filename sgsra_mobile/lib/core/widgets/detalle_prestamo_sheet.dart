@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'imagen_producto.dart';
 
 /// [PRE-01] Detalle "antes y después" de un préstamo de herramientas.
 /// Lo usan el Almacenista (Panel) y el Mecánico (Herramientas). Recibe el JSON de /prestamos.
@@ -155,7 +156,7 @@ class _DetallePrestamo extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.handyman_rounded, color: AppColors.primaryBlue, size: 20),
+                      ImagenProducto(url: h['imagenUrl']?.toString(), size: 36, iconoVacio: Icons.handyman_rounded, radio: 8),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text('${h['nombreHerramienta'] ?? ''}',

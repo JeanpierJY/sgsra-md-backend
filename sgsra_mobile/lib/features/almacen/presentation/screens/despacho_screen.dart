@@ -3,6 +3,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 import 'despacho_repuestos_tab.dart';
 import 'registrar_prestamo_screen.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
 /// [ALM-01, RF36] Pestaña Despacho del almacenista con sus dos salidas formales:
 /// repuestos por solicitud aprobada y préstamo de herramientas de pañol.
@@ -28,12 +29,13 @@ class _DespachoScreenState extends State<DespachoScreen> {
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white,
           actions: [
-            const NotificacionBell(),
             IconButton(
               icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Actualizar',
               onPressed: () => setState(() => _recargas++),
             ),
+            const NotificacionBell(),
+            const PerfilBoton(),
           ],
           bottom: TabBar(
             labelColor: Colors.white,

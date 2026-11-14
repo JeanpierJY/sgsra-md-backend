@@ -5,7 +5,6 @@ import 'auditoria_screen.dart';
 import 'mantenimiento_catalogo_screen.dart';
 import 'reportes_analiticos_screen.dart';
 import 'gestion_personal_screen.dart';
-import 'perfil_admin_screen.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({Key? key}) : super(key: key);
@@ -19,11 +18,11 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   // [ADM-02] Cada visita a Bandeja, Auditoría o Personal recarga sus datos
   // (antes la bitácora se cargaba una sola vez y no mostraba las acciones nuevas)
-  final List<int> _visitas = List.filled(6, 0);
+  final List<int> _visitas = List.filled(5, 0);
 
   void _irA(int index) {
     setState(() {
-      if (index != _currentIndex && (index == 0 || index == 1 || index == 4)) _visitas[index]++;
+      if (index != _currentIndex) _visitas[index]++;
       _currentIndex = index;
     });
   }
@@ -33,10 +32,9 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     final screens = <Widget>[
       BandejaSolicitudesScreen(key: ValueKey('bandeja-${_visitas[0]}')),
       AuditoriaScreen(key: ValueKey('audit-${_visitas[1]}')),
-      const MantenimientoCatalogoScreen(),
-      const ReportesAnaliticosScreen(),
+      MantenimientoCatalogoScreen(key: ValueKey('cat-${_visitas[2]}')),
+      ReportesAnaliticosScreen(key: ValueKey('rep-${_visitas[3]}')),
       GestionPersonalScreen(key: ValueKey('personal-${_visitas[4]}')),
-      const PerfilAdminScreen(),
     ];
     return Scaffold(
       body: IndexedStack(
@@ -59,11 +57,11 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.security_rounded),
-            label: 'Auditoria',
+            label: 'Auditoría',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2_rounded),
-            label: 'Catalogo',
+            label: 'Catálogo',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart_rounded),
@@ -72,10 +70,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.people_rounded),
             label: 'Personal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_rounded),
-            label: 'Mi Perfil',
           ),
         ],
       ),

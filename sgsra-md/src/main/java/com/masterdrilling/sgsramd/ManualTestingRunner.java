@@ -754,10 +754,6 @@ public class ManualTestingRunner implements CommandLineRunner {
                         .correoCorporativo(cor)
                         .contrasena(pass)
                         .rol(rol)
-                        .especialidad(rol == RolUsuario.MECANICO ? "Mecanico"
-                                : (rol == RolUsuario.ALMACENISTA ? "Almacenista" : "Administracion"))
-                        .cargo(rol == RolUsuario.MECANICO ? "Mecanico de Planta"
-                                : (rol == RolUsuario.ALMACENISTA ? "Almacenista" : "Jefe de Mantenimiento"))
                         .sedeAsignada("Sede Lurin")
                         .build();
 

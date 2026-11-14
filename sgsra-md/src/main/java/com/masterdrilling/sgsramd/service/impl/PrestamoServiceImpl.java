@@ -309,6 +309,7 @@ public class PrestamoServiceImpl implements IPrestamoService {
                     .orElse(d.getEstadoHerramienta());
             return PrestamoResumenResponse.ItemHerramientaPrestamo.builder()
                     .codHerramienta(d.getHerramienta().getCodHerramienta())
+                    .imagenUrl(d.getHerramienta().getImagenUrl())
                     .nombreHerramienta(d.getNombreHerramienta())
                     .estadoHerramienta(d.getEstadoHerramienta())
                     .estadoFisicoActual(estadoFisico)

@@ -136,7 +136,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
             return solicitudRepository.findByEstadoSolicitudOrderByFechaEmisionDescHoraEmisionDesc(estado)
                     .stream().map(this::mapearAResumen).toList();
         }
-        return solicitudRepository.findAll()
+        return solicitudRepository.findAllByOrderByFechaEmisionDescHoraEmisionDesc()
                 .stream().map(this::mapearAResumen).toList();
     }
 
@@ -155,6 +155,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
                         .estadoItem(d.getEstadoItem())
                         .stockActual(d.getRepuesto().getStockActual())
                         .stockMinimo(d.getRepuesto().getStockMinimo())
+                        .imagenUrl(d.getRepuesto().getImagenUrl())
                         .build())
                 .toList();
 

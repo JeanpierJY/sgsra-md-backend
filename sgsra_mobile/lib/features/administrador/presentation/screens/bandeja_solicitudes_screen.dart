@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/session/session_manager.dart';
+import '../../../../core/widgets/detalle_solicitud_sheet.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
+/// [RF21, RF22, RF31, ADM-05, ADM-06] Bandeja con todas las solicitudes del taller.
+/// Filtros por estado (con contador), periodo y texto. Al tocar una solicitud se abre su
+/// detalle, donde el administrador decide repuesto por repuesto.
 class BandejaSolicitudesScreen extends StatefulWidget {
   const BandejaSolicitudesScreen({Key? key}) : super(key: key);
 
@@ -13,11 +19,22 @@ class BandejaSolicitudesScreen extends StatefulWidget {
 
 class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
   final DioClient _dioClient = DioClient();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  
+
   bool _isLoading = true;
-  List<dynamic> _solicitudes = [];
+  String? _error;
+  List<Map<String, dynamic>> _solicitudes = [];
   String _filtroEstado = 'TODAS';
+  int _periodoDias = 0; // 0 = todo
+  String _busqueda = '';
+
+  static const _estados = {
+    'TODAS': 'Todas',
+    'PENDIENTE': 'Pendientes',
+    'APROBADA': 'Aprobadas',
+    'ORDEN_CONTACTADA': 'Con proveedor',
+    'ENTREGADA': 'Entregadas',
+    'RECHAZADA': 'Rechazadas',
+  };
 
   @override
   void initState() {
@@ -25,99 +42,58 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
     _cargarBandeja();
   }
 
-  Future<String> _obtenerCorreoAdmin() async {
-    return await _storage.read(key: 'correo_usuario') ?? 'leao.chura@masterdrilling.com';
-  }
-
   Future<void> _cargarBandeja() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
-      final queryParams = <String, dynamic>{};
-      if (_filtroEstado != 'TODAS') {
-        queryParams['estado'] = _filtroEstado;
-      }
-      final res = await _dioClient.dio.get('/solicitudes/bandeja', queryParameters: queryParams);
+      final res = await _dioClient.dio.get('/solicitudes/bandeja');
+      final lista = (res.data is List ? res.data as List : const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList()
+        ..sort((a, b) => '${b['fechaEmision']} ${b['horaEmision']}'.compareTo('${a['fechaEmision']} ${a['horaEmision']}'));
+      if (!mounted) return;
       setState(() {
-        _solicitudes = res.data is List ? res.data : [];
+        _solicitudes = lista;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
-      _mostrarMensaje('Error al sincronizar bandeja: $e', esError: true);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = mensajeDeError(e);
+      });
     }
   }
 
-  void _mostrarMensaje(String texto, {bool esError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(texto),
-        backgroundColor: esError ? AppColors.errorRed : AppColors.primaryBlue,
-      ),
-    );
+  bool _coincideEstado(Map s, String filtro) {
+    final e = '${s['estado']}';
+    if (filtro == 'TODAS') return true;
+    if (filtro == 'APROBADA') return e == 'APROBADA' || e == 'APROBADA_PARCIAL';
+    return e == filtro;
   }
 
-  Future<void> _aprobarTotal(String solicitudNum) async {
-    try {
-      final correo = await _obtenerCorreoAdmin();
-      await _dioClient.dio.put(
-        '/solicitudes/$solicitudNum/aprobar',
-        queryParameters: {'correoAdmin': correo},
-      );
-      _mostrarMensaje('Solicitud $solicitudNum aprobada íntegramente');
-      _cargarBandeja();
-    } catch (e) {
-      _mostrarMensaje('Error al aprobar: $e', esError: true);
-    }
+  bool _enPeriodo(Map s) {
+    if (_periodoDias == 0) return true;
+    final f = DateTime.tryParse('${s['fechaEmision']}');
+    if (f == null) return true;
+    final hoy = DateTime.now();
+    final desde = DateTime(hoy.year, hoy.month, hoy.day).subtract(Duration(days: _periodoDias - 1));
+    return !f.isBefore(desde);
   }
 
-  void _mostrarDialogoRechazo(String solicitudNum) {
-    final formKey = GlobalKey<FormState>();
-    final motivoCtrl = TextEditingController();
+  bool _coincideTexto(Map s) {
+    final q = _busqueda.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    return '${s['solicitudNum']} ${s['nombreMecanico']} ${s['codMaquinaria']} ${s['modeloMaquinaria']}'
+        .toLowerCase()
+        .contains(q);
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Rechazar Requerimiento $solicitudNum'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: motivoCtrl,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Justificación técnica de rechazo (Mín. 15 caracteres)',
-              border: OutlineInputBorder(),
-            ),
-            validator: (v) => (v == null || v.trim().length < 15)
-                ? 'Debe fundamentar con al menos 15 caracteres'
-                : null,
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorRed),
-            onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                Navigator.pop(ctx);
-                try {
-                  final correo = await _obtenerCorreoAdmin();
-                  await _dioClient.dio.put(
-                    '/solicitudes/$solicitudNum/rechazar',
-                    queryParameters: {'correoAdmin': correo},
-                    data: {'justificacionRechazo': motivoCtrl.text.trim()},
-                  );
-                  _mostrarMensaje('Solicitud rechazada formalmente');
-                  _cargarBandeja();
-                } catch (e) {
-                  _mostrarMensaje('Error al rechazar: $e', esError: true);
-                }
-              }
-            },
-            child: const Text('Confirmar Rechazo', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _abrir(Map s) async {
+    final cambio = await mostrarDetalleSolicitud(context, '${s['solicitudNum']}', accionesAdmin: true);
+    if (cambio == true) _cargarBandeja();
   }
 
   void _mostrarModalContactarProveedor(String solicitudNum) {
@@ -127,13 +103,13 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Marcar Orden Contactada: $solicitudNum'),
+        title: Text('Orden a proveedor: $solicitudNum'),
         content: Form(
           key: formKey,
           child: TextFormField(
             controller: cotizacionCtrl,
             decoration: const InputDecoration(
-              labelText: 'Código de Cotización Formal (Ej. COT-2026-99)',
+              labelText: 'Código de cotización (ej. COT-2026-99)',
               border: OutlineInputBorder(),
             ),
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingrese el número de cotización' : null,
@@ -142,251 +118,278 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
             onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                Navigator.pop(ctx);
-                try {
-                  final correo = await _obtenerCorreoAdmin();
-                  await _dioClient.dio.put(
-                    '/solicitudes/$solicitudNum/contactar',
-                    queryParameters: {'correoAdmin': correo},
-                    data: {'codigoCotizacion': cotizacionCtrl.text.trim()},
-                  );
-                  _mostrarMensaje('Orden marcada como contactada con proveedor');
-                  _cargarBandeja();
-                } catch (e) {
-                  _mostrarMensaje('Error al marcar contactada: $e', esError: true);
-                }
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                final correo = await SessionManager.correo();
+                await _dioClient.dio.put(
+                  '/solicitudes/$solicitudNum/contactar',
+                  queryParameters: {'correoAdmin': correo},
+                  data: {'codigoCotizacion': cotizacionCtrl.text.trim()},
+                );
+                messenger.showSnackBar(const SnackBar(content: Text('Orden marcada como contactada con el proveedor')));
+                _cargarBandeja();
+              } catch (e) {
+                messenger.showSnackBar(
+                    SnackBar(content: Text(mensajeDeError(e)), backgroundColor: AppColors.errorRed));
               }
             },
-            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+            child: const Text('Guardar'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _verExpedienteDetallado(String solicitudNum) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final res = await _dioClient.dio.get('/solicitudes/$solicitudNum');
-      Navigator.pop(context);
-      final data = res.data;
-
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: AppColors.pureWhite,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (ctx) => DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.75,
-          maxChildSize: 0.95,
-          builder: (_, controller) => ListView(
-            controller: controller,
-            padding: const EdgeInsets.all(24),
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Expediente: ${data['solicitudNum']}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
-                  Chip(label: Text(data['estado'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 12)), backgroundColor: AppColors.primaryBlue),
-                ],
-              ),
-              const Divider(height: 24),
-              const Text('Datos del Mecánico Solicitante:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Nombre: ${data['nombreMecanico']} | DNI: ${data['dniMecanico']}'),
-              Text('Teléfono: ${data['telefonoMecanico'] ?? 'No registrado'}'),
-              const SizedBox(height: 12),
-              const Text('Datos de la Maquinaria Pesada:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Código: ${data['codMaquinaria']} | Modelo: ${data['modeloMaquinaria']}'),
-              Text('Serie: ${data['serieMaquinaria'] ?? 'N/A'}'),
-              const SizedBox(height: 12),
-              const Text('Causa Técnica:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('${data['justificacionTecnica']}', style: const TextStyle(fontStyle: FontStyle.italic)),
-              const Divider(height: 24),
-              const Text('Repuestos Requeridos:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              const SizedBox(height: 8),
-              ...((data['repuestos'] as List? ?? []).map((r) => Card(
-                    color: AppColors.backgroundGray,
-                    child: ListTile(
-                      dense: true,
-                      leading: Text('#${r['item']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      title: Text('${r['nombreRepuesto']} (${r['codParte']})'),
-                      subtitle: Text('Cantidad Solicitada: ${r['cantidadSolicitada']}'),
-                      trailing: Chip(
-                        label: Text(r['estadoItem'] ?? 'PENDIENTE', style: const TextStyle(fontSize: 10, color: Colors.white)),
-                        backgroundColor: r['estadoItem'] == 'APROBADO' ? Colors.green : Colors.grey,
-                      ),
-                    ),
-                  ))),
-              if (data['rechazo'] != null) ...[
-                const Divider(height: 24),
-                const Text('Resolución de Rechazo:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.errorRed)),
-                Text('Evaluador: ${data['rechazo']['evaluador']} | Fecha: ${data['rechazo']['fechaEvaluacion']}'),
-                Text('Motivo: "${data['rechazo']['justificacionRechazo']}"', style: const TextStyle(fontStyle: FontStyle.italic)),
-              ],
-            ],
-          ),
-        ),
-      );
-    } catch (e) {
-      Navigator.pop(context);
-      _mostrarMensaje('No se pudo cargar el expediente: $e', esError: true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final base = _solicitudes.where((s) => _enPeriodo(s) && _coincideTexto(s)).toList();
+    final lista = base.where((s) => _coincideEstado(s, _filtroEstado)).toList();
+    final pendientes = _solicitudes.where((s) => s['estado'] == 'PENDIENTE').toList();
+    final urgentes = pendientes.where((s) => s['prioridad'] == 'ALTA').length;
+
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Bandeja de Requerimientos [RF21]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Bandeja de Solicitudes [RF21]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
+          IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarBandeja),
           const NotificacionBell(),
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarBandeja),
+          const PerfilBoton(),
         ],
       ),
       body: Column(
         children: [
           Container(
             color: AppColors.pureWhite,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['TODAS', 'PENDIENTE', 'APROBADA', 'RECHAZADA', 'ORDEN_CONTACTADA'].map((st) {
-                  final seleccionado = _filtroEstado == st;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: FilterChip(
-                      selected: seleccionado,
-                      label: Text(st),
-                      selectedColor: AppColors.primaryBlue.withOpacity(0.2),
-                      checkmarkColor: AppColors.primaryBlue,
-                      labelStyle: TextStyle(
-                        color: seleccionado ? AppColors.primaryBlue : Colors.black87,
-                        fontWeight: seleccionado ? FontWeight.bold : FontWeight.normal,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Column(
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Buscar por código, mecánico o máquina',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        isDense: true,
+                        filled: true,
+                        fillColor: AppColors.backgroundGray,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
-                      onSelected: (_) {
-                        setState(() => _filtroEstado = st);
-                        _cargarBandeja();
-                      },
+                      onChanged: (v) => setState(() => _busqueda = v),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<int>(
+                    tooltip: 'Periodo [RF31]',
+                    initialValue: _periodoDias,
+                    onSelected: (v) => setState(() => _periodoDias = v),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 0, child: Text('Todo')),
+                      PopupMenuItem(value: 1, child: Text('Hoy')),
+                      PopupMenuItem(value: 7, child: Text('Últimos 7 días')),
+                      PopupMenuItem(value: 30, child: Text('Últimos 30 días')),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _periodoDias == 0 ? AppColors.backgroundGray : AppColors.primaryBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.date_range_rounded,
+                            size: 18, color: _periodoDias == 0 ? Colors.black54 : Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          switch (_periodoDias) { 0 => 'Todo', 1 => 'Hoy', _ => '$_periodoDias d' },
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, color: _periodoDias == 0 ? Colors.black54 : Colors.white),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 40,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: _estados.entries.map((f) {
+                      final sel = _filtroEstado == f.key;
+                      final n = base.where((s) => _coincideEstado(s, f.key)).length;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('${f.value} ($n)'),
+                          selected: sel,
+                          showCheckmark: false,
+                          selectedColor: f.key == 'TODAS' ? AppColors.primaryBlue : colorEstadoSolicitud(f.key),
+                          labelStyle: TextStyle(color: sel ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
+                          onSelected: (_) => setState(() => _filtroEstado = f.key),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
           ),
+          if (!_isLoading && pendientes.isNotEmpty && _filtroEstado != 'PENDIENTE')
+            Material(
+              color: Colors.amber[50],
+              child: InkWell(
+                onTap: () => setState(() => _filtroEstado = 'PENDIENTE'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(children: [
+                    Icon(Icons.pending_actions_rounded, color: Colors.amber[900]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${pendientes.length} pendiente(s) por evaluar${urgentes > 0 ? ' · $urgentes urgente(s)' : ''}',
+                        style: TextStyle(color: Colors.amber[900], fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text('Ver', style: TextStyle(color: Colors.amber[900], fontWeight: FontWeight.bold)),
+                  ]),
+                ),
+              ),
+            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                : _solicitudes.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-                            const SizedBox(height: 12),
-                            Text('No hay órdenes registradas con filtro "$_filtroEstado"', style: const TextStyle(color: Colors.grey)),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _solicitudes.length,
-                        itemBuilder: (context, index) {
-                          final sol = _solicitudes[index];
-                          final estado = sol['estado'] ?? 'PENDIENTE';
-                          final esPendiente = estado == 'PENDIENTE';
-                          final esAprobada = estado == 'APROBADA';
-
-                          return Card(
-                            color: AppColors.pureWhite,
-                            elevation: 2,
-                            margin: const EdgeInsets.only(bottom: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () => _verExpedienteDetallado(sol['solicitudNum']),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(sol['solicitudNum'] ?? '',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: esPendiente
-                                                ? Colors.amber[800]
-                                                : (estado == 'RECHAZADA' ? AppColors.errorRed : Colors.green[700]),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(estado, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(height: 18),
-                                    Text('Mecánico: ${sol['nombreMecanico'] ?? 'No asignado'}', style: const TextStyle(fontWeight: FontWeight.w500)),
-                                    Text('Máquina: ${sol['codMaquinaria']} (${sol['modeloMaquinaria'] ?? 'MD'}) | Prioridad: ${sol['prioridad']}'),
-                                    Text('Total Componentes: ${sol['totalComponentes'] ?? 1} | Fecha: ${sol['fechaEmision']}'),
-                                    const SizedBox(height: 14),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        TextButton.icon(
-                                          onPressed: () => _verExpedienteDetallado(sol['solicitudNum']),
-                                          icon: const Icon(Icons.visibility_outlined, size: 16),
-                                          label: const Text('Expediente [RF22]'),
-                                        ),
-                                        if (esPendiente) ...[
-                                          const SizedBox(width: 8),
-                                          OutlinedButton(
-                                            style: OutlinedButton.styleFrom(foregroundColor: AppColors.errorRed, side: const BorderSide(color: AppColors.errorRed)),
-                                            onPressed: () => _mostrarDialogoRechazo(sol['solicitudNum']),
-                                            child: const Text('Rechazar [RF25]'),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          ElevatedButton(
-                                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-                                            onPressed: () => _aprobarTotal(sol['solicitudNum']),
-                                            child: const Text('Aprobar [RF23]', style: TextStyle(color: Colors.white)),
-                                          ),
-                                        ],
-                                        if (esAprobada) ...[
-                                          const SizedBox(width: 8),
-                                          ElevatedButton.icon(
-                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                                            onPressed: () => _mostrarModalContactarProveedor(sol['solicitudNum']),
-                                            icon: const Icon(Icons.phone_in_talk_rounded, size: 16, color: Colors.white),
-                                            label: const Text('Contactar [RF28]', style: TextStyle(color: Colors.white)),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                : RefreshIndicator(
+                    onRefresh: _cargarBandeja,
+                    child: _error != null
+                        ? ListView(children: [
+                            const SizedBox(height: 80),
+                            const Icon(Icons.cloud_off_rounded, size: 60, color: Colors.grey),
+                            const SizedBox(height: 8),
+                            Center(child: Text(_error!, textAlign: TextAlign.center)),
+                            Center(
+                              child: TextButton.icon(
+                                  onPressed: _cargarBandeja, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
                             ),
-                          );
-                        },
-                      ),
+                          ])
+                        : lista.isEmpty
+                            ? ListView(children: [
+                                const SizedBox(height: 80),
+                                Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+                                const SizedBox(height: 12),
+                                Center(
+                                  child: Text(
+                                    _filtroEstado == 'PENDIENTE' ? '¡Todo al día! No hay solicitudes por evaluar.' : 'No hay solicitudes con estos filtros.',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ),
+                              ])
+                            : ListView.builder(
+                                padding: const EdgeInsets.all(14),
+                                itemCount: lista.length,
+                                itemBuilder: (context, index) => _tarjeta(lista[index]),
+                              ),
+                  ),
           ),
         ],
       ),
     );
   }
+
+  Widget _tarjeta(Map<String, dynamic> sol) {
+    final estado = '${sol['estado'] ?? 'PENDIENTE'}';
+    final esPendiente = estado == 'PENDIENTE';
+    final esAprobada = estado == 'APROBADA' || estado == 'APROBADA_PARCIAL';
+    final prioridad = '${sol['prioridad'] ?? 'MEDIA'}';
+    final cPrioridad = switch (prioridad) { 'ALTA' => AppColors.errorRed, 'MEDIA' => Colors.amber[800]!, _ => Colors.blueGrey };
+    final cEstado = colorEstadoSolicitud(estado);
+    final hora = '${sol['horaEmision'] ?? ''}';
+
+    return Card(
+      color: AppColors.pureWhite,
+      elevation: esPendiente ? 3 : 1.5,
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _abrir(sol),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 6, color: esPendiente ? cPrioridad : cEstado),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(
+                          child: Text('${sol['solicitudNum'] ?? ''}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: cEstado, borderRadius: BorderRadius.circular(20)),
+                          child: Text(etiquetaEstadoSolicitud(estado),
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      ]),
+                      const SizedBox(height: 6),
+                      _linea(Icons.engineering_rounded, '${sol['nombreMecanico'] ?? 'Mecánico'}'),
+                      _linea(Icons.precision_manufacturing_rounded,
+                          '${sol['codMaquinaria'] ?? '-'} ${sol['modeloMaquinaria'] ?? ''}'.trim()),
+                      Row(children: [
+                        Expanded(
+                          child: _linea(Icons.event_rounded,
+                              '${sol['fechaEmision'] ?? ''} ${hora.length >= 5 ? hora.substring(0, 5) : hora}  ·  ${sol['totalComponentes'] ?? 0} repuesto(s)'),
+                        ),
+                        Text('Prioridad ${prioridad[0]}${prioridad.substring(1).toLowerCase()}',
+                            style: TextStyle(color: cPrioridad, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ]),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (esAprobada)
+                            TextButton.icon(
+                              onPressed: () => _mostrarModalContactarProveedor('${sol['solicitudNum']}'),
+                              icon: const Icon(Icons.phone_in_talk_rounded, size: 16),
+                              label: const Text('Orden a proveedor [RF28]'),
+                            ),
+                          if (esPendiente)
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+                              onPressed: () => _abrir(sol),
+                              icon: const Icon(Icons.fact_check_outlined, size: 18),
+                              label: const Text('Evaluar'),
+                            )
+                          else
+                            const Text('Ver detalle ›',
+                                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _linea(IconData i, String t) => Padding(
+        padding: const EdgeInsets.only(bottom: 3),
+        child: Row(children: [
+          Icon(i, size: 16, color: Colors.black45),
+          const SizedBox(width: 6),
+          Expanded(child: Text(t, style: const TextStyle(fontSize: 13.5))),
+        ]),
+      );
 }

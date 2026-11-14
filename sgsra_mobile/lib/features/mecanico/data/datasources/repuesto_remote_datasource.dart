@@ -40,6 +40,13 @@ class RepuestoRemoteDataSource {
     return RepuestoModel.fromJson(res.data);
   }
 
+  /// [MEC-05] Búsqueda predictiva de maquinaria por código, modelo o serie
+  Future<List<Map<String, dynamic>>> buscarMaquinarias(String termino) async {
+    final res = await _dioClient.dio.get('/maquinarias', queryParameters: {'termino': termino});
+    if (res.data is! List) return [];
+    return (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   Future<String> registrarSolicitud(SolicitudCreacionDto dto) async {
     final correo = await obtenerCorreoMecanico();
     final res = await _dioClient.dio.post(

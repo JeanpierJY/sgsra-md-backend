@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/widgets/imagen_producto.dart';
 import 'proveedores_modal.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
 class MantenimientoCatalogoScreen extends StatefulWidget {
   const MantenimientoCatalogoScreen({Key? key}) : super(key: key);
@@ -15,6 +17,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
   final DioClient _dioClient = DioClient();
   bool _isLoading = true;
   List<dynamic> _repuestos = [];
+  String _busqueda = '';
 
   @override
   void initState() {
@@ -25,7 +28,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
   Future<void> _cargarCatalogo() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _dioClient.dio.get('/catalogo', queryParameters: {'size': 50});
+      final res = await _dioClient.dio.get('/catalogo', queryParameters: {'size': 300});
       setState(() {
         if (res.data is Map && res.data['content'] != null) {
           _repuestos = res.data['content'];
@@ -56,6 +59,12 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
     } catch (e) {
       _mostrarMensaje('Error al cambiar estado: $e', esError: true);
     }
+  }
+
+  /// [ADM-08] Sube o reemplaza la foto del repuesto
+  Future<void> _cambiarImagen(dynamic item) async {
+    final r = await seleccionarYSubirImagen(context, '/catalogo/${item['codParte']}/imagen');
+    if (r != null) _cargarCatalogo();
   }
 
   void _abrirModalCrearRepuesto() {
@@ -209,7 +218,6 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
         title: const Text('Catalogo Maestro de Repuestos [RF32]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          const NotificacionBell(),
           IconButton(
             icon: const Icon(Icons.business_center_rounded),
             tooltip: 'Proveedores Homologados [RF27]',
@@ -221,17 +229,40 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
             onPressed: _abrirModalCrearRepuesto,
           ),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarCatalogo),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
-      body: _isLoading
+      body: Column(children: [
+        Container(
+          color: AppColors.pureWhite,
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Buscar repuesto por nombre o código',
+              prefixIcon: const Icon(Icons.search_rounded),
+              isDense: true,
+              filled: true,
+              fillColor: AppColors.backgroundGray,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            ),
+            onChanged: (v) => setState(() => _busqueda = v.trim().toLowerCase()),
+          ),
+        ),
+        Expanded(child: Builder(builder: (context) {
+          final lista = _repuestos
+              .where((r) => _busqueda.isEmpty ||
+                  '${r['nombreRepuesto']} ${r['codParte']}'.toLowerCase().contains(_busqueda))
+              .toList();
+          return _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-          : _repuestos.isEmpty
-              ? const Center(child: Text('No hay piezas registradas en el catalogo.'))
+          : lista.isEmpty
+              ? const Center(child: Text('No hay repuestos que coincidan.'))
               : ListView.builder(
                   padding: const EdgeInsets.all(14),
-                  itemCount: _repuestos.length,
+                  itemCount: lista.length,
                   itemBuilder: (context, index) {
-                    final item = _repuestos[index];
+                    final item = lista[index];
                     final activo = item['activo'] ?? true;
 
                     return Card(
@@ -240,9 +271,29 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: activo ? AppColors.primaryBlue : Colors.grey,
-                          child: const Icon(Icons.settings, color: Colors.white),
+                        leading: GestureDetector(
+                          onTap: () => _cambiarImagen(item),
+                          child: Stack(clipBehavior: Clip.none, children: [
+                            ImagenProducto(
+                              url: item['imagenUrl']?.toString(),
+                              size: 54,
+                              ampliable: false,
+                              color: activo ? AppColors.primaryBlue : Colors.grey,
+                            ),
+                            Positioned(
+                              right: -4,
+                              bottom: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryBlue,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                ),
+                                child: const Icon(Icons.photo_camera_rounded, size: 12, color: Colors.white),
+                              ),
+                            ),
+                          ]),
                         ),
                         title: Text('${item['nombreRepuesto']} (${item['codParte']})', style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(
@@ -266,7 +317,9 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                       ),
                     );
                   },
-                ),
+                );
+        })),
+      ]),
     );
   }
 }

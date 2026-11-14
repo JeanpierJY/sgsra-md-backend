@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
 /// [RF49, ADM-02, ADM-03] Bitácora de auditoría.
 /// Muestra solo datos reales del servidor, en lenguaje claro, agrupados por día,
@@ -188,8 +189,9 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
         title: const Text('Bitacora de Auditoria [RF49]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          const NotificacionBell(),
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarAuditoria),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
       body: Column(

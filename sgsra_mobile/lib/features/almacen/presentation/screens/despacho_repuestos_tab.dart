@@ -3,6 +3,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/widgets/detalle_solicitud_sheet.dart';
+import '../../../../core/widgets/imagen_producto.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 
 /// [ALM-01] Salida formal de repuestos por solicitud.
@@ -654,17 +655,23 @@ class _ItemDespacho extends StatelessWidget {
                 activeColor: Colors.green[700],
                 onChanged: insuficiente ? null : (v) => onChanged(v ?? false),
               ),
-            Container(
-              width: 46,
-              height: 46,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+            Stack(clipBehavior: Clip.none, children: [
+              ImagenProducto(url: r['imagenUrl']?.toString(), size: 50),
+              Positioned(
+                right: -6,
+                bottom: -6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Text('x$cant',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                ),
               ),
-              child: Text('x$cant',
-                  style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
+            ]),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

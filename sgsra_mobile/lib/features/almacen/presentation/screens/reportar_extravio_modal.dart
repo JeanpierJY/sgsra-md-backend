@@ -3,9 +3,9 @@ import '../../../../core/constants/app_colors.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../../../core/network/dio_client.dart';
 
-void mostrarModalReportarExtravio(BuildContext context, VoidCallback onReportado) {
+void mostrarModalReportarExtravio(BuildContext context, VoidCallback onReportado, {String? codigo}) {
   final formKey = GlobalKey<FormState>();
-  final codCtrl = TextEditingController();
+  final codCtrl = TextEditingController(text: codigo ?? '');
   final motivoCtrl = TextEditingController(text: 'Herramienta extraviada en labor subterránea de mina');
   final dataSource = AlmacenRemoteDataSource(DioClient());
 

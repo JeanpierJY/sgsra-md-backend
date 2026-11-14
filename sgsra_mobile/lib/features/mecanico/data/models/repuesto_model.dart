@@ -37,7 +37,8 @@ class RepuestoModel extends RepuestoEntity {
       stockMinimo: json['stockMinimo'] is num ? (json['stockMinimo'] as num).toInt() : 0,
       stockReservado: json['stockReservado'] is num ? (json['stockReservado'] as num).toInt() : 0,
       activo: json['activo'] ?? true,
-      urlFoto: json['urlFoto']?.toString(),
+      // GEN-01: el backend envía la foto como "imagenUrl"
+      urlFoto: (json['imagenUrl'] ?? json['urlFoto'])?.toString(),
     );
   }
 

@@ -20,6 +20,8 @@ class HerramientaEntity {
   final String marca;
   final String categoria;
   final String estadoActual; // DISPONIBLE, PRESTADA, EN_MANTENIMIENTO, EXTRAVIADA
+  /// GEN-01: ruta de la foto en el backend (/uploads/...)
+  final String? imagenUrl;
 
   const HerramientaEntity({
     required this.codHerramienta,
@@ -27,7 +29,10 @@ class HerramientaEntity {
     required this.marca,
     required this.categoria,
     required this.estadoActual,
+    this.imagenUrl,
   });
+
+  bool get disponible => estadoActual.toUpperCase() == 'DISPONIBLE';
 }
 
 class PrestamoEntity {
