@@ -139,40 +139,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
         title: const Text('Catálogo de Repuestos [RF09]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.post_add_rounded),
-                tooltip: 'Ver mi solicitud',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CarritoPedidoScreen(
-                        carrito: widget.carritoGlobal,
-                        onCarritoActualizado: () {
-                          setState(() {});
-                          widget.onCarritoActualizado();
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-              if (totalItemsCarrito > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: AppColors.errorRed, shape: BoxShape.circle),
-                    child: Text('$totalItemsCarrito', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-            ],
-          ),
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarCatalogo),
+          IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarCatalogo),
           const NotificacionBell(),
           const PerfilBoton(),
         ],

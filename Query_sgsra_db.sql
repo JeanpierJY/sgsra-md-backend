@@ -332,17 +332,6 @@ INSERT INTO usuario (dni, nombre, correo_corporativo, contrasena_hash, rol, esta
 ('75859812', 'Carlos Mendoza', 'carlos.mendoza@masterdrilling.com', '$2a$10$iD7BzGlbX42.b2eXAm2Jj.yF28BJ5sxd2V2VZkqei8kRLiMo9gGpC', 'MECANICO', 'ACTIVO'),
 ('45829104', 'Marcos Aurelio Ramos Quispe', 'marcos.ramos@masterdrilling.com', '$2a$10$Mhsh51WoSbSQ0Qm6f.o38.0qH3NZZZTksyMEGZCVdr3okakrwU292', 'ALMACENISTA', 'ACTIVO');
 
-INSERT INTO administrador (dni_administrador, nombre_administrador, correo_corporativo) VALUES
-('10293847', 'Leao Chura', 'leao.chura@masterdrilling.com');
-
-INSERT INTO mecanico (dni_mecanico, nombre_mecanico, especialidad_mecanico, cargo_mecanico, telefono) VALUES
-('70000001', 'Carlos Mendoza Baro', 'Hidraulica', 'Mecanico de Planta', '987654321'),
-('75859812', 'Carlos Mendoza', 'Electrohidraulica', 'Mecanico de Campo', '995348431');
-
-INSERT INTO almacenista (dni_almacenista, nombre_almacenista, sede_asignada) VALUES
-('70000002', 'Marcos Ramos Baro', 'Taller Lurin'),
-('45829104', 'Marcos Aurelio Ramos Quispe', 'Mina Cerro Lindo');
-
 
 -- Tabla requerida para el flujo de recuperación de contraseña con validación DNI/Teléfono y selfie (RF06 / Fase 3)
 CREATE TABLE IF NOT EXISTS solicitud_recuperacion_clave (

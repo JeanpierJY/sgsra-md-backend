@@ -80,10 +80,13 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
   /// [ADM-05] Dictamen por repuesto (número de ítem -> aprobado)
   final Map<dynamic, bool> _dictamen = {};
   final _motivoCtrl = TextEditingController();
+  final FocusNode _motivoFocus = FocusNode();
+  String? _motivoError;
 
   @override
   void dispose() {
     _motivoCtrl.dispose();
+    _motivoFocus.dispose();
     super.dispose();
   }
 
@@ -170,11 +173,11 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
     final rechazados = repuestos.where((r) => _dictamen[r['item']] == false).toList();
     final motivo = _motivoCtrl.text.trim();
     if (motivo.length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Escriba el motivo de los repuestos rechazados (mínimo 10 caracteres)'),
-          backgroundColor: AppColors.errorRed));
+      setState(() => _motivoError = 'Escriba el motivo de los repuestos rechazados (mínimo 10 caracteres).');
+      _motivoFocus.requestFocus();
       return;
     }
+    setState(() => _motivoError = null);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -210,11 +213,11 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
   Future<void> _rechazarConMotivo() async {
     final motivo = _motivoCtrl.text.trim();
     if (motivo.length < 15) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Para rechazar toda la solicitud el motivo debe tener al menos 15 caracteres'),
-          backgroundColor: AppColors.errorRed));
+      setState(() => _motivoError = 'Para rechazar toda la solicitud, el motivo debe tener al menos 15 caracteres.');
+      _motivoFocus.requestFocus();
       return;
     }
+    setState(() => _motivoError = null);
     await _ejecutar(() async {
       final correo = await SessionManager.correo();
       await _dio.dio.put('/solicitudes/${widget.num}/rechazar',
@@ -427,12 +430,17 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
             const SizedBox(height: 6),
             TextField(
               controller: _motivoCtrl,
+              focusNode: _motivoFocus,
               maxLines: 2,
+              onChanged: (v) {
+                if (_motivoError != null) setState(() => _motivoError = null);
+              },
               decoration: InputDecoration(
                 labelText: nRechazados == repuestos.length
                     ? 'Motivo del rechazo (mín. 15 caracteres)'
-                    : 'Motivo de los repuestos rechazados',
-                helperText: 'El mecánico verá este motivo',
+                    : 'Motivo de los repuestos rechazados (mín. 10 caracteres)',
+                helperText: 'El mecánico verá este motivo en su historial',
+                errorText: _motivoError,
                 filled: true,
                 fillColor: AppColors.pureWhite,
                 border: const OutlineInputBorder(),

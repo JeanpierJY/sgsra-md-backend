@@ -14,8 +14,21 @@ class ApiService {
   static const String localIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.18.57');
   static const String port = String.fromEnvironment('API_PORT', defaultValue: '8080');
 
-  /// En Web (Chrome) el backend corre en la misma máquina
-  static String get host => kIsWeb ? 'localhost' : localIp;
+  /// IP de loopback estándar para el emulador de Android Studio
+  static const String emulatorIp = '10.0.2.2';
+
+  /// Permite configurar dinámicamente el host si se ejecuta en emulador de Android Studio
+  static String? _customHost;
+  static set customHost(String? host) => _customHost = host;
+  static String? get customHost => _customHost;
+
+  /// En Web (Chrome) el backend corre en la misma máquina (localhost);
+  /// En móvil físico o emulador utiliza el host asignado o la IP LAN local
+  static String get host {
+    if (_customHost != null && _customHost!.trim().isNotEmpty) return _customHost!.trim();
+    if (kIsWeb) return 'localhost';
+    return localIp;
+  }
 
   /// URL raíz del servidor (útil para cargar imágenes `/uploads/...`)
   static String get serverUrl => 'http://$host:$port';

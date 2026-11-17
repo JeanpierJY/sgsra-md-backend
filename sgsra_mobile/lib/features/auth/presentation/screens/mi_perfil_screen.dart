@@ -297,10 +297,13 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
                               controller: _telefonoCtrl,
                               keyboardType: TextInputType.phone,
                               maxLength: 9,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(9),
+                              ],
                               decoration: const InputDecoration(
-                                labelText: 'Teléfono móvil',
-                                helperText: 'Se usa para validar la recuperación de su contraseña',
+                                labelText: 'Teléfono móvil (9 dígitos)',
+                                helperText: 'Debe iniciar con 9 y tener 9 dígitos',
                                 prefixIcon: Icon(Icons.phone_iphone_rounded),
                                 border: OutlineInputBorder(),
                                 counterText: '',

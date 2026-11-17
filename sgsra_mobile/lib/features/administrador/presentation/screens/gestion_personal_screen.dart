@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/utils/validators.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 import 'solicitudes_recuperacion_screen.dart';
 import '../../../../core/widgets/perfil_boton.dart';
@@ -10,6 +12,7 @@ import '../../../../core/widgets/perfil_boton.dart';
 /// [RF07, RF08, ADM-01, AUT-02] Gestión de personal.
 /// - La edición guarda en el servidor y vuelve a leer la lista para confirmar el cambio.
 /// - Muestra un aviso con las solicitudes de recuperación de contraseña pendientes.
+/// - Validación estricta de nombres (solo letras) y teléfonos (9 dígitos iniciando en 9).
 class GestionPersonalScreen extends StatefulWidget {
   const GestionPersonalScreen({super.key});
 
@@ -25,56 +28,47 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
   int _recuperacionesPendientes = 0;
   String _rolFiltro = 'TODOS';
 
-  static const _roles = {'TODOS': 'Todos', 'MECANICO': 'Mecánicos', 'ALMACENISTA': 'Almacenistas', 'ADMINISTRADOR': 'Administradores'};
-
   @override
   void initState() {
     super.initState();
     _cargarUsuarios();
   }
 
+  @override
+  void dispose() {
+    _buscarCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarUsuarios() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _dioClient.dio.get('/auth/usuarios', queryParameters: {'size': 200, 'sort': 'nombre,asc'});
-      List<dynamic> lista;
-      if (res.data is Map && res.data['content'] != null) {
-        lista = res.data['content'];
-      } else if (res.data is List) {
-        lista = res.data;
-      } else {
-        lista = [];
-      }
-      int pendientes = 0;
-      try {
-        final r = await _dioClient.dio.get('/auth/recuperaciones', queryParameters: {'estado': 'PENDIENTE'});
-        if (r.data is List) pendientes = (r.data as List).length;
-      } catch (_) {}
-      if (!mounted) return;
+      final res = await _dioClient.dio.get('/auth/usuarios');
+      final recRes = await _dioClient.dio.get('/auth/recuperaciones', queryParameters: {'estado': 'PENDIENTE'});
+      final recList = recRes.data is List ? (recRes.data as List) : [];
       setState(() {
-        _usuarios = lista;
-        _recuperacionesPendientes = pendientes;
+        _usuarios = res.data;
+        _recuperacionesPendientes = recList.length;
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
       setState(() => _isLoading = false);
-      _mostrarMensaje('Error al sincronizar personal: ${mensajeDeError(e)}', esError: true);
+      _mostrarMensaje('Error al cargar personal: ${mensajeDeError(e)}', esError: true);
     }
   }
 
   void _mostrarMensaje(String texto, {bool esError = false}) {
-    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(texto), backgroundColor: esError ? AppColors.errorRed : Colors.green[700]),
+      SnackBar(content: Text(texto), backgroundColor: esError ? AppColors.errorRed : AppColors.primaryBlue),
     );
   }
 
-  Future<void> _cambiarEstado(String dni, bool habilitar) async {
+  Future<void> _cambiarEstado(String dni, bool activo) async {
     try {
-      final nuevoEstado = habilitar ? 'ACTIVO' : 'INACTIVO';
-      await _dioClient.dio.put('/auth/usuarios/dni/$dni/estado', queryParameters: {'nuevoEstado': nuevoEstado});
-      _mostrarMensaje(habilitar ? 'Cuenta $dni habilitada' : 'Cuenta $dni deshabilitada');
+      await _dioClient.dio.put('/auth/usuarios/dni/$dni/estado', queryParameters: {
+        'nuevoEstado': activo ? 'ACTIVO' : 'INACTIVO',
+      });
+      _mostrarMensaje('Estado actualizado');
       _cargarUsuarios();
     } catch (e) {
       _mostrarMensaje('Error al cambiar estado: ${mensajeDeError(e)}', esError: true);
@@ -97,7 +91,7 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('Editar trabajador'),
+          title: const Text('Editar trabajador', style: TextStyle(fontWeight: FontWeight.bold)),
           content: Form(
             key: formKey,
             child: Column(
@@ -109,21 +103,27 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                 TextFormField(
                   controller: nomCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(labelText: 'Nombre completo', prefixIcon: Icon(Icons.badge_outlined)),
-                  validator: (v) => (v == null || v.trim().length < 3) ? 'Ingrese el nombre' : null,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'))],
+                  decoration: const InputDecoration(labelText: 'Nombre completo (solo letras)', prefixIcon: Icon(Icons.badge_outlined)),
+                  validator: AppValidators.validarNombre,
                 ),
                 if (tieneTelefono)
                   TextFormField(
                     controller: telCtrl,
                     keyboardType: TextInputType.phone,
                     maxLength: 9,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(9),
+                    ],
                     decoration: const InputDecoration(
-                      labelText: 'Teléfono móvil (9 dígitos)',
+                      labelText: 'Teléfono móvil (9 dígitos, inicia en 9)',
                       prefixIcon: Icon(Icons.phone_android_rounded),
-                      helperText: 'Se usa para validar la recuperación de contraseña',
+                      helperText: 'Debe iniciar con 9 y tener 9 dígitos',
+                      counterText: '',
                     ),
                     validator: (v) =>
-                        (v == null || v.isEmpty || RegExp(r'^\d{9}$').hasMatch(v)) ? null : 'Debe tener 9 dígitos',
+                        (v == null || v.trim().isEmpty) ? null : AppValidators.validarTelefono(v),
                   ),
               ],
             ),
@@ -171,17 +171,43 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Registrar Nuevo Personal [RF08]'),
+        title: const Text('Añadir Usuario [RF08]', style: TextStyle(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(controller: dniCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'DNI (8 dígitos)'), validator: (v) => (v == null || v.length != 8) ? 'Requerido' : null),
-                TextFormField(controller: nomCtrl, decoration: const InputDecoration(labelText: 'Nombre Completo'), validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-                TextFormField(controller: corCtrl, decoration: const InputDecoration(labelText: 'Correo (@masterdrilling.com)'), validator: (v) => (v == null || !v.endsWith('@masterdrilling.com')) ? 'Inválido' : null),
-                TextFormField(controller: passCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Contraseña'), validator: (v) => (v == null || v.length < 6) ? 'Mín. 6 caracteres' : null),
+                TextFormField(
+                  controller: dniCtrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(8),
+                  ],
+                  decoration: const InputDecoration(labelText: 'DNI (8 dígitos)', counterText: ''),
+                  validator: AppValidators.validarDni,
+                ),
+                TextFormField(
+                  controller: nomCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'))],
+                  decoration: const InputDecoration(labelText: 'Nombre Completo (solo letras)'),
+                  validator: AppValidators.validarNombre,
+                ),
+                TextFormField(
+                  controller: corCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Correo (@masterdrilling.com)'),
+                  validator: AppValidators.validarCorreo,
+                ),
+                TextFormField(
+                  controller: passCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Contraseña'),
+                  validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   initialValue: rolSel,
@@ -218,7 +244,7 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                   _mostrarMensaje('Usuario registrado exitosamente');
                   _cargarUsuarios();
                 } catch (e) {
-                  _mostrarMensaje('Error al registrar usuario: ${mensajeDeError(e)}', esError: true);
+                  _mostrarMensaje('No se pudo registrar el usuario: ${mensajeDeError(e)}', esError: true);
                 }
               }
             },
@@ -247,19 +273,39 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
         title: const Text('Gestión de Personal [RF07, RF08]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          IconButton(
-            tooltip: 'Recuperación de contraseñas',
-            onPressed: _abrirRecuperaciones,
-            icon: Badge(
-              isLabelVisible: _recuperacionesPendientes > 0,
-              label: Text('$_recuperacionesPendientes'),
-              child: const Icon(Icons.lock_reset_rounded),
-            ),
-          ),
-          IconButton(icon: const Icon(Icons.person_add_alt_1_rounded), tooltip: 'Nuevo Usuario', onPressed: _abrirModalRegistrar),
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarUsuarios),
           const NotificacionBell(),
           const PerfilBoton(),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Badge(
+            isLabelVisible: _recuperacionesPendientes > 0,
+            label: Text('$_recuperacionesPendientes'),
+            child: FloatingActionButton.extended(
+              heroTag: 'fab-recuperacion',
+              backgroundColor: AppColors.pureWhite,
+              foregroundColor: Colors.amber[900],
+              elevation: 3,
+              onPressed: _abrirRecuperaciones,
+              icon: Icon(Icons.lock_reset_rounded, color: Colors.amber[900], size: 20),
+              label: Text('Recuperar contraseña',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber[900])),
+            ),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton.extended(
+            heroTag: 'fab-anadir-usuario',
+            backgroundColor: AppColors.primaryBlue,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            onPressed: _abrirModalRegistrar,
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            label: const Text('Añadir usuario', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
       body: Column(
@@ -309,20 +355,12 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                 height: 46,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  children: _roles.entries.map((r) {
-                    final sel = _rolFiltro == r.key;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(r.value),
-                        selected: sel,
-                        selectedColor: AppColors.primaryBlue,
-                        labelStyle: TextStyle(color: sel ? Colors.white : Colors.black87),
-                        onSelected: (_) => setState(() => _rolFiltro = r.key),
-                      ),
-                    );
-                  }).toList(),
+                  children: [
+                    _filtroChip('TODOS', 'Todos (${_usuarios.length})'),
+                    _filtroChip('MECANICO', 'Mecánicos'),
+                    _filtroChip('ALMACENISTA', 'Almacén'),
+                    _filtroChip('ADMINISTRADOR', 'Administradores'),
+                  ],
                 ),
               ),
             ]),
@@ -330,21 +368,36 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                : RefreshIndicator(
-                    onRefresh: _cargarUsuarios,
-                    child: lista.isEmpty
-                        ? ListView(children: const [
-                            SizedBox(height: 80),
-                            Center(child: Text('No se encontraron trabajadores.')),
-                          ])
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(14),
-                            itemCount: lista.length,
-                            itemBuilder: (context, index) => _tarjeta(lista[index]),
-                          ),
-                  ),
+                : lista.isEmpty
+                    ? const Center(child: Text('No se encontraron trabajadores.'))
+                    : RefreshIndicator(
+                        onRefresh: _cargarUsuarios,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
+                          itemCount: lista.length,
+                          itemBuilder: (context, index) => _tarjeta(lista[index]),
+                        ),
+                      ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _filtroChip(String rol, String label) {
+    final sel = _rolFiltro == rol;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6, top: 6, bottom: 6),
+      child: FilterChip(
+        selected: sel,
+        label: Text(label),
+        selectedColor: AppColors.primaryBlue.withValues(alpha: 0.15),
+        labelStyle: TextStyle(
+          color: sel ? AppColors.primaryBlue : Colors.black87,
+          fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+        ),
+        onSelected: (_) => setState(() => _rolFiltro = rol),
       ),
     );
   }

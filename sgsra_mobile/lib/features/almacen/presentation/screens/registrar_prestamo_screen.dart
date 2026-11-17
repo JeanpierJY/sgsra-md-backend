@@ -246,8 +246,8 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
                                   ),
                                 ]),
                               ),
-                            )
-                          else
+                            ]),
+                            const SizedBox(height: 6),
                             ..._seleccionadas.map((h) => Container(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(8),
@@ -263,6 +263,7 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
                                         onPressed: () => setState(() => _seleccionadas.remove(h)),
                                       )),
                                 )),
+                          ],
                           const SizedBox(height: 20),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(

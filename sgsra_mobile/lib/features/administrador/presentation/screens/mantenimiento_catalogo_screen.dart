@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/imagen_producto.dart';
 import 'proveedores_modal.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
@@ -41,7 +44,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      _mostrarMensaje('Error al cargar catalogo: $e', esError: true);
+      _mostrarMensaje('Error al cargar catálogo: ${mensajeDeError(e)}', esError: true);
     }
   }
 
@@ -57,7 +60,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
       _mostrarMensaje('Estado de $codParte actualizado');
       _cargarCatalogo();
     } catch (e) {
-      _mostrarMensaje('Error al cambiar estado: $e', esError: true);
+      _mostrarMensaje('Error al cambiar estado: ${mensajeDeError(e)}', esError: true);
     }
   }
 
@@ -78,7 +81,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Registrar Nuevo Repuesto Homologado [RF32]'),
+        title: const Text('Añadir Repuesto [RF32]', style: TextStyle(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -87,13 +90,14 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
               children: [
                 TextFormField(
                   controller: codCtrl,
-                  decoration: const InputDecoration(labelText: 'Codigo de Parte (Ej. P-REX-024)'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Obligatorio' : null,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(labelText: 'Código de Parte (Ej. P-REX-024)'),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'El código es obligatorio' : null,
                 ),
                 TextFormField(
                   controller: nomCtrl,
-                  decoration: const InputDecoration(labelText: 'Nombre Tecnico'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Obligatorio' : null,
+                  decoration: const InputDecoration(labelText: 'Nombre Técnico'),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'El nombre es obligatorio' : null,
                 ),
                 Row(
                   children: [
@@ -101,8 +105,9 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                       child: TextFormField(
                         controller: stockCtrl,
                         keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: const InputDecoration(labelText: 'Stock Inicial'),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Obligatorio' : null,
+                        validator: (v) => AppValidators.validarStock(v, campo: 'Stock Inicial'),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -110,8 +115,9 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                       child: TextFormField(
                         controller: minCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Stock Minimo'),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Obligatorio' : null,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: const InputDecoration(labelText: 'Stock Mínimo'),
+                        validator: (v) => AppValidators.validarStock(v, campo: 'Stock Mínimo'),
                       ),
                     ),
                   ],
@@ -119,7 +125,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                 TextFormField(
                   controller: descCtrl,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Proveedor / Especificacion Tecnica [RF27]'),
+                  decoration: const InputDecoration(labelText: 'Proveedor / Especificación Técnica [RF27]'),
                 ),
               ],
             ),
@@ -140,10 +146,10 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                     'stockMinimo': int.parse(minCtrl.text.trim()),
                     'descripcion': descCtrl.text.trim(),
                   });
-                  _mostrarMensaje('Repuesto guardado en catalogo maestro');
+                  _mostrarMensaje('Repuesto guardado en catálogo maestro');
                   _cargarCatalogo();
                 } catch (e) {
-                  _mostrarMensaje('Error al registrar repuesto: $e', esError: true);
+                  _mostrarMensaje('No se pudo registrar el repuesto: ${mensajeDeError(e)}', esError: true);
                 }
               }
             },
@@ -164,22 +170,46 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Editar Repuesto ${repuesto['codParte']}'),
+        title: Text('Editar Repuesto ${repuesto['codParte']}', style: const TextStyle(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(controller: nomCtrl, decoration: const InputDecoration(labelText: 'Nombre Tecnico')),
+                TextFormField(
+                  controller: nomCtrl,
+                  decoration: const InputDecoration(labelText: 'Nombre Técnico'),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'El nombre es obligatorio' : null,
+                ),
                 Row(
                   children: [
-                    Expanded(child: TextFormField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock Actual'))),
+                    Expanded(
+                      child: TextFormField(
+                        controller: stockCtrl,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: const InputDecoration(labelText: 'Stock Actual'),
+                        validator: (v) => AppValidators.validarStock(v, campo: 'Stock Actual'),
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: TextFormField(controller: minCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock Minimo'))),
+                    Expanded(
+                      child: TextFormField(
+                        controller: minCtrl,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: const InputDecoration(labelText: 'Stock Mínimo'),
+                        validator: (v) => AppValidators.validarStock(v, campo: 'Stock Mínimo'),
+                      ),
+                    ),
                   ],
                 ),
-                TextFormField(controller: descCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Descripcion')),
+                TextFormField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'Descripción'),
+                ),
               ],
             ),
           ),
@@ -189,6 +219,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
             onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
               Navigator.pop(ctx);
               try {
                 await _dioClient.dio.put('/catalogo/${repuesto['codParte']}', data: {
@@ -200,7 +231,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                 _mostrarMensaje('Repuesto actualizado');
                 _cargarCatalogo();
               } catch (e) {
-                _mostrarMensaje('Error al actualizar: $e', esError: true);
+                _mostrarMensaje('No se pudo actualizar: ${mensajeDeError(e)}', esError: true);
               }
             },
             child: const Text('Guardar', style: TextStyle(color: Colors.white)),
@@ -215,22 +246,37 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Catalogo Maestro de Repuestos [RF32]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Catálogo Maestro [RF32]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.business_center_rounded),
-            tooltip: 'Proveedores Homologados [RF27]',
-            onPressed: () => mostrarModalProveedores(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_box_rounded),
-            tooltip: 'Alta de Repuesto',
-            onPressed: _abrirModalCrearRepuesto,
-          ),
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarCatalogo),
+          IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarCatalogo),
           const NotificacionBell(),
           const PerfilBoton(),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'fab-proveedores',
+            backgroundColor: AppColors.pureWhite,
+            foregroundColor: AppColors.primaryBlue,
+            elevation: 3,
+            onPressed: () => mostrarModalProveedores(context),
+            icon: const Icon(Icons.business_center_rounded, size: 20),
+            label: const Text('Proveedores', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton.extended(
+            heroTag: 'fab-anadir-repuesto',
+            backgroundColor: AppColors.primaryBlue,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            onPressed: _abrirModalCrearRepuesto,
+            icon: const Icon(Icons.add_box_rounded),
+            label: const Text('Añadir repuesto', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
       body: Column(children: [
@@ -259,7 +305,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
           : lista.isEmpty
               ? const Center(child: Text('No hay repuestos que coincidan.'))
               : ListView.builder(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
                   itemCount: lista.length,
                   itemBuilder: (context, index) {
                     final item = lista[index];
@@ -297,7 +343,7 @@ class _MantenimientoCatalogoScreenState extends State<MantenimientoCatalogoScree
                         ),
                         title: Text('${item['nombreRepuesto']} (${item['codParte']})', style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(
-                          'Stock Actual: ${item['stockActual']} | Minimo: ${item['stockMinimo']}\nDescripcion: ${item['descripcion'] ?? 'Sin descripcion'}',
+                          'Stock Actual: ${item['stockActual']} | Mínimo: ${item['stockMinimo']}\nDescripción: ${item['descripcion'] ?? 'Sin descripción'}',
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,

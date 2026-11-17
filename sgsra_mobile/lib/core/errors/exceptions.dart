@@ -24,11 +24,11 @@ class ServerException implements Exception {
   String toString() => message;
 }
 
-/// Convierte cualquier error de red o del backend en un mensaje legible para el usuario.
-/// El backend responde con `ErrorDetalle { mensaje, erroresValidacion }`.
+/// Convierte cualquier error de red, backend o base de datos en un mensaje claro y amigable
+/// para el usuario, eliminando códigos técnicos, trazas SQL y excepciones crudas.
 String mensajeDeError(Object error) {
   if (error is CuentaBloqueadaException) return error.message;
-  if (error is ServerException) return error.message;
+  if (error is ServerException) return _sanitizarMensajeTecnico(error.message);
   if (error is DioException) {
     if (error.error is CuentaBloqueadaException) {
       return (error.error as CuentaBloqueadaException).message;
@@ -37,10 +37,12 @@ String mensajeDeError(Object error) {
     if (data is Map) {
       final validaciones = data['erroresValidacion'];
       if (validaciones is List && validaciones.isNotEmpty) {
-        return validaciones.join('\n');
+        return validaciones.map((e) => _sanitizarMensajeTecnico('$e')).join('\n');
       }
       final mensaje = data['mensaje'] ?? data['message'];
-      if (mensaje is String && mensaje.isNotEmpty) return mensaje;
+      if (mensaje is String && mensaje.isNotEmpty) {
+        return _sanitizarMensajeTecnico(mensaje);
+      }
     }
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
@@ -52,7 +54,54 @@ String mensajeDeError(Object error) {
       default:
         break;
     }
-    return 'Error de comunicación con el servidor (${error.response?.statusCode ?? 'sin respuesta'}).';
+    final code = error.response?.statusCode;
+    if (code == 401) return 'Credenciales incorrectas o sesión expirada.';
+    if (code == 403) return 'No tiene permisos para realizar esta operación.';
+    if (code == 404) return 'El recurso solicitado no fue encontrado.';
+    return 'Error de comunicación con el servidor (${code ?? 'sin respuesta'}).';
   }
-  return error.toString().replaceFirst('Exception: ', '');
+  return _sanitizarMensajeTecnico(error.toString());
+}
+
+/// Traduce y limpia cualquier mensaje técnico de BD o Spring Boot a lenguaje comprensible
+String _sanitizarMensajeTecnico(String raw) {
+  var texto = raw.replaceFirst('Exception: ', '').trim();
+
+  // 1. Restricciones de base de datos PostgreSQL
+  if (texto.contains('repuesto_stock_actual_check') || texto.contains('stock_actual')) {
+    return 'El stock ingresado no puede ser un valor negativo.';
+  }
+  if (texto.contains('repuesto_stock_minimo_check') || texto.contains('stock_minimo')) {
+    return 'El stock mínimo debe ser un número igual o mayor a 0.';
+  }
+  if (texto.contains('duplicate key') || texto.contains('violates unique constraint')) {
+    if (texto.contains('dni')) return 'El DNI ingresado ya se encuentra registrado.';
+    if (texto.contains('correo')) return 'El correo corporativo ya pertenece a otra cuenta.';
+    if (texto.contains('cod_parte')) return 'El código de repuesto ya existe en el catálogo.';
+    if (texto.contains('cod_herramienta')) return 'El código de herramienta ya existe en el pañol.';
+    return 'El registro ingresado ya existe en el sistema.';
+  }
+  if (texto.contains('violates foreign key constraint') || texto.contains('fk_')) {
+    return 'No se puede completar la acción porque el registro está vinculado a otros datos.';
+  }
+  if (texto.contains('DataIntegrityViolationException')) {
+    return 'Conflicto de integridad en los datos enviados. Verifique los valores.';
+  }
+  if (texto.contains('HttpMessageNotReadableException') || texto.contains('JSON parse error')) {
+    return 'Formato de datos no válido. Verifique los campos ingresados.';
+  }
+  if (texto.contains('Bad credentials') || texto.contains('Credenciales no validas')) {
+    return 'Correo o contraseña incorrectos.';
+  }
+
+  // 2. Limpieza de prefijos técnicos comunes de errores
+  if (texto.startsWith('ERROR:')) {
+    final partes = texto.split('\n');
+    texto = partes.first.replaceFirst('ERROR:', '').trim();
+  }
+  if (texto.contains('[SQLState:')) {
+    texto = texto.replaceAll(RegExp(r'\[SQLState:\s*\w+\]'), '').trim();
+  }
+
+  return texto;
 }
