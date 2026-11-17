@@ -18,7 +18,7 @@ android {
         // ID de aplicacion oficial SGSRA-MD
         applicationId = "com.example.sgsra_mobile"
         // minSdk 21 garantiza compatibilidad universal desde Android 5.0 (Lollipop) hasta Android 15
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

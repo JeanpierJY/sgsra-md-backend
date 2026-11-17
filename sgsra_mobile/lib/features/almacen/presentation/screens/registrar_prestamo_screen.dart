@@ -214,37 +214,27 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
                                     style: const TextStyle(fontWeight: FontWeight.w600)),
                           ),
                           const SizedBox(height: 16),
-                          Row(children: [
-                            Text('Herramientas (${_seleccionadas.length})',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                            const Spacer(),
-                            TextButton.icon(
-                              onPressed: disponibles == 0 ? null : _agregarHerramienta,
-                              icon: const Icon(Icons.search_rounded),
-                              label: const Text('Buscar y agregar'),
-                            ),
-                          ]),
-                          if (_seleccionadas.isEmpty)
-                            InkWell(
-                              borderRadius: BorderRadius.circular(10),
-                              onTap: disponibles == 0 ? null : _agregarHerramienta,
-                              child: Container(
-                                padding: const EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  color: AppColors.backgroundGray,
-                                ),
-                                child: Column(children: [
-                                  Icon(Icons.add_photo_alternate_outlined, color: Colors.grey[500], size: 34),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    disponibles == 0
-                                        ? 'No hay herramientas disponibles en el pañol'
-                                        : 'Toque para elegir las herramientas a entregar',
-                                    style: const TextStyle(color: Colors.black54),
-                                  ),
-                                ]),
+                          CampoSelector(
+                            etiqueta: 'Herramienta a entregar',
+                            icono: Icons.handyman_outlined,
+                            placeholder: disponibles == 0
+                                ? 'No hay herramientas disponibles en el pañol'
+                                : (_seleccionadas.isEmpty
+                                    ? 'Toque para buscar y agregar herramienta'
+                                    : 'Toque para buscar y agregar otra herramienta'),
+                            onTap: disponibles == 0 ? null : _agregarHerramienta,
+                            valor: null,
+                          ),
+                          if (_seleccionadas.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Row(children: [
+                              Text('Herramientas seleccionadas (${_seleccionadas.length})',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryBlue)),
+                              const Spacer(),
+                              TextButton.icon(
+                                onPressed: disponibles == 0 ? null : _agregarHerramienta,
+                                icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                                label: const Text('Agregar más'),
                               ),
                             ]),
                             const SizedBox(height: 6),
