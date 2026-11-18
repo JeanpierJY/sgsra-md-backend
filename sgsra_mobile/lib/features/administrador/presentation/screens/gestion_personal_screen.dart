@@ -46,8 +46,14 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
       final res = await _dioClient.dio.get('/auth/usuarios');
       final recRes = await _dioClient.dio.get('/auth/recuperaciones', queryParameters: {'estado': 'PENDIENTE'});
       final recList = recRes.data is List ? (recRes.data as List) : [];
+      List<dynamic> usuariosList = [];
+      if (res.data is List) {
+        usuariosList = res.data as List;
+      } else if (res.data is Map && res.data['content'] is List) {
+        usuariosList = res.data['content'] as List;
+      }
       setState(() {
-        _usuarios = res.data;
+        _usuarios = usuariosList;
         _recuperacionesPendientes = recList.length;
         _isLoading = false;
       });

@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/session/session_manager.dart';
 import '../models/repuesto_model.dart';
 import '../models/solicitud_request.dart';
 
@@ -10,10 +11,14 @@ class RepuestoRemoteDataSource {
   RepuestoRemoteDataSource(this._dioClient);
 
   Future<String> obtenerCorreoMecanico() async {
+    final c = await SessionManager.correo();
+    if (c != null && c.isNotEmpty) return c;
     return await _storage.read(key: 'correo_usuario') ?? 'carlos.baro@masterdrilling.com';
   }
 
   Future<String> obtenerDniMecanico() async {
+    final d = await SessionManager.dni();
+    if (d != null && d.isNotEmpty) return d;
     return await _storage.read(key: 'dni_usuario') ?? '70000001';
   }
 

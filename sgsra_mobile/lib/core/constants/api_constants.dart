@@ -1,15 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// [RF01] Constantes de conexión y URLs base hacia el Backend Spring Boot.
-///
-/// La IP del servidor se centraliza aquí. Para no editar código al cambiar de red Wi-Fi,
-/// se puede indicar al compilar:
-///   flutter run --dart-define=API_HOST=192.168.1.45
-///   flutter build apk --release --dart-define=API_HOST=192.168.1.45
-///
-/// Requisitos en Android: `android:usesCleartextTraffic="true"` en AndroidManifest.xml
-/// (llamadas HTTP sin SSL) y el puerto 8080 habilitado en el Firewall de Windows.
 class ApiService {
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const String _keyCustomHost = 'custom_api_host';
+
   /// IP IPv4 de la laptop en la red Wi-Fi local donde corre Spring Boot
   static const String localIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.18.57');
   static const String port = String.fromEnvironment('API_PORT', defaultValue: '8080');
@@ -21,6 +17,28 @@ class ApiService {
   static String? _customHost;
   static set customHost(String? host) => _customHost = host;
   static String? get customHost => _customHost;
+
+  /// Carga el host persistido si el usuario configuró una IP personalizada
+  static Future<void> inicializar() async {
+    try {
+      final h = await _storage.read(key: _keyCustomHost);
+      if (h != null && h.trim().isNotEmpty) {
+        _customHost = h.trim();
+      }
+    } catch (_) {}
+  }
+
+  /// Guarda una nueva IP de servidor configurada desde la UI
+  static Future<void> guardarHost(String host) async {
+    _customHost = host.trim();
+    await _storage.write(key: _keyCustomHost, value: _customHost);
+  }
+
+  /// Restablece la IP predeterminada
+  static Future<void> restaurarHostDefault() async {
+    _customHost = null;
+    await _storage.delete(key: _keyCustomHost);
+  }
 
   /// En Web (Chrome) el backend corre en la misma máquina (localhost);
   /// En móvil físico o emulador utiliza el host asignado o la IP LAN local

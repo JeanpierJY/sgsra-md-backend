@@ -373,3 +373,38 @@ Ajustes finales de ergonomía, control de errores y validaciones de campo identi
 | ADM-11 | En [gestion_personal_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/administrador/presentation/screens/gestion_personal_screen.dart) se añadieron FABs para "Añadir usuario" y "Recuperar contraseña" (con badge). Se agregó `AppValidators.validarNombre` (solo letras/espacios) y `AppValidators.validarTelefono` (solo números iniciando con 9). |
 | GEN-04 | Se rediseñó `mensajeDeError()` y `_sanitizarMensajeTecnico()` en [exceptions.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/core/errors/exceptions.dart), interceptando errores de constraint (stock negativo, duplicidad de DNI o código, claves foráneas, errores 409/422) y reemplazando cualquier `$e` crudo en la UI por mensajes claros y amigables.       |
 
+---
+
+# Quinta ronda de observaciones (Conectividad, Biometría y Calibración por Rol)
+
+Ajustes derivados de las pruebas directas sobre dispositivo móvil físico en red Wi-Fi:
+
+## Resumen
+
+| ID     | Módulo                             | Tipo | Prioridad | Descripción corta                                                                                                     |
+| ------ | ---------------------------------- | ---- | --------- | --------------------------------------------------------------------------------------------------------------------- |
+| GEN-05 | Autenticación / Red                | ✨   | 🔴        | Selector y probador de IP del backend en pantalla de Login para fácil diagnóstico en red Wi-Fi                       |
+| GEN-06 | Autenticación / Huella             | 🐞   | 🔴        | Acceso biométrico funcional: precarga de último correo y guardado seguro de credenciales tras primer login con clave  |
+| ADM-12 | Admin – Personal                   | 🐞   | 🔴        | TypeError _JsonMap no subtype of List: extracción correcta del arreglo `content` de Page Spring Boot                 |
+| ADM-13 | Admin – Bandeja Solicitudes        | ✨   | 🟢        | Eliminación del botón "Orden a proveedor [RF28]" en solicitudes aprobadas parcialmente                                |
+| ADM-14 | Admin – Catálogo Repuestos         | ✨   | 🟢        | Renombrar a "Especificación Técnica" y retirar botón/filtro flotante de proveedores                                   |
+| MEC-07 | Mecánico – Notificaciones          | 🐞   | 🔴        | Corrección de consulta JPQL LIMIT 1 en DAO para asociar y notificar correctamente al mecánico custodio de extravío    |
+| MEC-08 | Mecánico – Historial               | ✨   | 🟡        | Inclusión del filtro "Aprobadas parcial" en el carrusel de estados de pedidos                                         |
+| MEC-09 | Mecánico – Herramientas en Poder   | 🐞   | 🔴        | Obtención dinámica del DNI del mecánico autenticado desde SessionManager para listar sus herramientas en custodia     |
+| ALM-12 | Almacén – Dashboard                | ✨   | 🟢        | Reordenamiento: Repuestos Aprobados para Retiro Físico antes de Control y Listado de Préstamos                         |
+
+## Estado de la quinta ronda
+
+| ID     | Solución aplicada                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GEN-05 | Se agregó `ApiService.guardarHost` e `inicializar` persistidos en [api_constants.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/core/constants/api_constants.dart) y botón de ajustes con diálogo de prueba de conexión en [login_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/auth/presentation/screens/login_screen.dart). |
+| GEN-06 | En [login_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/auth/presentation/screens/login_screen.dart) se precarga el último correo y al iniciar sesión con contraseña se asocian de forma cifrada en `FlutterSecureStorage`. Al presionar el botón de huella se valida la biometría y se inicia sesión automáticamente.                             |
+| ADM-12 | En [gestion_personal_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/administrador/presentation/screens/gestion_personal_screen.dart) se desempaqueta la lista desde `res.data['content']` cuando el backend devuelve un objeto paginado `Page<UsuarioResumenResponse>`.                                                                         |
+| ADM-13 | Se eliminó el botón de "Orden a proveedor" en [bandeja_solicitudes_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/administrador/presentation/screens/bandeja_solicitudes_screen.dart).                                                                                                                                                              |
+| ADM-14 | En [mantenimiento_catalogo_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/administrador/presentation/screens/mantenimiento_catalogo_screen.dart) se renombró el campo a "Especificación Técnica" y se retiró el botón flotante de proveedores.                                                                                                   |
+| MEC-07 | En [Prestamo_DAO.java](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra-md/src/main/java/com/masterdrilling/sgsramd/DAO/Prestamo_DAO.java) se migró `findUltimoMecanicoCustodio` a consulta SQL nativa para compatibilidad con PostgreSQL `LIMIT 1` y se añadió método directo `listarPorMecanico(dni)`.                                                                            |
+| MEC-08 | En [historial_solicitudes_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/mecanico/presentation/screens/historial_solicitudes_screen.dart) se agregó el chip y filtrado por `APROBADA_PARCIAL`.                                                                                                                                                       |
+| MEC-09 | En [repuesto_remote_datasource.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/mecanico/data/datasources/repuesto_remote_datasource.dart) se lee `SessionManager.dni()` de la sesión activa para consultar las herramientas prestadas.                                                                                                                   |
+| ALM-12 | En [dashboard_almacen_screen.dart](file:///c:/Users/Usuario/Documents/GitHub/sgsra-md-backend/sgsra_mobile/lib/features/almacen/presentation/screens/dashboard_almacen_screen.dart) se movió la sección "Repuestos Aprobados para Retiro Físico" antes del listado de préstamos.                                                                                                                         |
+
+

@@ -29,6 +29,7 @@ class _HistorialSolicitudesScreenState extends State<HistorialSolicitudesScreen>
     'TODAS': 'Todas',
     'PENDIENTE': 'Pendientes',
     'APROBADA': 'Aprobadas',
+    'APROBADA_PARCIAL': 'Aprobadas parcial',
     'RECHAZADA': 'Rechazadas',
     'ENTREGADA': 'Entregadas',
   };
@@ -67,7 +68,9 @@ class _HistorialSolicitudesScreenState extends State<HistorialSolicitudesScreen>
     if (_filtro == 'TODAS') return _historial;
     return _historial.where((s) {
       final e = s['estado']?.toString() ?? '';
-      return _filtro == 'APROBADA' ? e.startsWith('APROBADA') : e == _filtro;
+      if (_filtro == 'APROBADA') return e == 'APROBADA';
+      if (_filtro == 'APROBADA_PARCIAL') return e == 'APROBADA_PARCIAL';
+      return e == _filtro;
     }).toList();
   }
 

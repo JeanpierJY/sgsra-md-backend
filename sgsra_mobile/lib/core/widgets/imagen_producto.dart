@@ -36,7 +36,37 @@ class ImagenProducto extends StatelessWidget {
       decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(radio)),
       child: Icon(iconoVacio, color: c, size: size * 0.5),
     );
-    if (u.isEmpty) return vacio;
+
+    String? localAsset;
+    final cleanUrl = (url ?? '').trim();
+    if (cleanUrl.isNotEmpty) {
+      final fileName = cleanUrl.split('/').last;
+      final code = fileName.split('.').first.split('_').first.trim().toUpperCase();
+      if (code.startsWith('P-')) {
+        localAsset = 'assets/images/repuestos/$code.png';
+      } else if (code.startsWith('HER-')) {
+        localAsset = 'assets/images/herramientas/$code.png';
+      }
+    }
+
+    Widget fallbackWidget = localAsset != null
+        ? Image.asset(
+            localAsset,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => vacio,
+          )
+        : vacio;
+
+    if (u.isEmpty) {
+      if (localAsset != null) {
+        final imgLocal = ClipRRect(borderRadius: BorderRadius.circular(radio), child: fallbackWidget);
+        return ampliable ? GestureDetector(onTap: () => ampliarImagen(context, localAsset!), child: imgLocal) : imgLocal;
+      }
+      return vacio;
+    }
+
     final img = ClipRRect(
       borderRadius: BorderRadius.circular(radio),
       child: Image.network(
@@ -44,7 +74,7 @@ class ImagenProducto extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => vacio,
+        errorBuilder: (_, __, ___) => fallbackWidget,
         loadingBuilder: (_, child, p) => p == null
             ? child
             : SizedBox(

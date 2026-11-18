@@ -285,8 +285,8 @@ public class PrestamoServiceImpl implements IPrestamoService {
     @Override
     @Transactional(readOnly = true)
     public List<PrestamoResumenResponse> listarPrestamosPorMecanico(String dniMecanico) {
-        return prestamoRepository.findAll().stream()
-                .filter(p -> p.getMecanico() != null && dniMecanico.trim().equals(p.getMecanico().getDniMecanico()))
+        String cleanDni = (dniMecanico != null) ? dniMecanico.trim() : "";
+        return prestamoRepository.listarPorMecanico(cleanDni).stream()
                 .map(this::mapearAPrestamoResumen)
                 .toList();
     }

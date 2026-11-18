@@ -129,6 +129,29 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
+                const Text('Repuestos Aprobados para Retiro Físico:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
+                const SizedBox(height: 8),
+                if (_solicitudesAprobadas.isEmpty)
+                  Card(
+                    color: AppColors.pureWhite,
+                    child: const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('No hay solicitudes de repuestos pendientes de despacho.'),
+                    ),
+                  )
+                else
+                  ..._solicitudesAprobadas.map((s) => Card(
+                        color: AppColors.pureWhite,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(Icons.inventory_2, color: Colors.teal),
+                          title: Text('Orden: ${s['solicitudNum']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Mecánico: ${s['nombreMecanico']} | Máquina: ${s['codMaquinaria']}'),
+                          trailing: const Chip(label: Text('AUTORIZADO', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.teal),
+                        ),
+                      )),
+                const SizedBox(height: 24),
                 const Text('Control y Listado de Préstamos [RF36, RF43]:',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
                 const SizedBox(height: 8),
@@ -158,29 +181,6 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                             backgroundColor: colorEstadoPrestamo(p.estadoPrestamo),
                           ),
                           isThreeLine: true,
-                        ),
-                      )),
-                const SizedBox(height: 24),
-                const Text('Repuestos Aprobados para Retiro Físico:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
-                const SizedBox(height: 8),
-                if (_solicitudesAprobadas.isEmpty)
-                  Card(
-                    color: AppColors.pureWhite,
-                    child: const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text('No hay solicitudes de repuestos pendientes de despacho.'),
-                    ),
-                  )
-                else
-                  ..._solicitudesAprobadas.map((s) => Card(
-                        color: AppColors.pureWhite,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: const Icon(Icons.inventory_2, color: Colors.teal),
-                          title: Text('Orden: ${s['solicitudNum']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Mecánico: ${s['nombreMecanico']} | Máquina: ${s['codMaquinaria']}'),
-                          trailing: const Chip(label: Text('AUTORIZADO', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.teal),
                         ),
                       )),
               ],

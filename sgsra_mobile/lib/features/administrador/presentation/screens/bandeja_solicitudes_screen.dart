@@ -14,7 +14,8 @@ class BandejaSolicitudesScreen extends StatefulWidget {
   const BandejaSolicitudesScreen({Key? key}) : super(key: key);
 
   @override
-  State<BandejaSolicitudesScreen> createState() => _BandejaSolicitudesScreenState();
+  State<BandejaSolicitudesScreen> createState() =>
+      _BandejaSolicitudesScreenState();
 }
 
 class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
@@ -31,7 +32,6 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
     'TODAS': 'Todas',
     'PENDIENTE': 'Pendientes',
     'APROBADA': 'Aprobadas',
-    'ORDEN_CONTACTADA': 'Con proveedor',
     'ENTREGADA': 'Entregadas',
     'RECHAZADA': 'Rechazadas',
   };
@@ -52,7 +52,8 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
       final lista = (res.data is List ? res.data as List : const [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList()
-        ..sort((a, b) => '${b['fechaEmision']} ${b['horaEmision']}'.compareTo('${a['fechaEmision']} ${a['horaEmision']}'));
+        ..sort((a, b) => '${b['fechaEmision']} ${b['horaEmision']}'
+            .compareTo('${a['fechaEmision']} ${a['horaEmision']}'));
       if (!mounted) return;
       setState(() {
         _solicitudes = lista;
@@ -79,7 +80,8 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
     final f = DateTime.tryParse('${s['fechaEmision']}');
     if (f == null) return true;
     final hoy = DateTime.now();
-    final desde = DateTime(hoy.year, hoy.month, hoy.day).subtract(Duration(days: _periodoDias - 1));
+    final desde = DateTime(hoy.year, hoy.month, hoy.day)
+        .subtract(Duration(days: _periodoDias - 1));
     return !f.isBefore(desde);
   }
 
@@ -92,7 +94,9 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
   }
 
   Future<void> _abrir(Map s) async {
-    final cambio = await mostrarDetalleSolicitud(context, '${s['solicitudNum']}', accionesAdmin: true);
+    final cambio = await mostrarDetalleSolicitud(
+        context, '${s['solicitudNum']}',
+        accionesAdmin: true);
     if (cambio == true) _cargarBandeja();
   }
 
@@ -112,13 +116,19 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
               labelText: 'Código de cotización (ej. COT-2026-99)',
               border: OutlineInputBorder(),
             ),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingrese el número de cotización' : null,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Ingrese el número de cotización'
+                : null,
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white),
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
               Navigator.pop(ctx);
@@ -130,11 +140,14 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                   queryParameters: {'correoAdmin': correo},
                   data: {'codigoCotizacion': cotizacionCtrl.text.trim()},
                 );
-                messenger.showSnackBar(const SnackBar(content: Text('Orden marcada como contactada con el proveedor')));
+                messenger.showSnackBar(const SnackBar(
+                    content: Text(
+                        'Orden marcada como contactada con el proveedor')));
                 _cargarBandeja();
               } catch (e) {
-                messenger.showSnackBar(
-                    SnackBar(content: Text(mensajeDeError(e)), backgroundColor: AppColors.errorRed));
+                messenger.showSnackBar(SnackBar(
+                    content: Text(mensajeDeError(e)),
+                    backgroundColor: AppColors.errorRed));
               }
             },
             child: const Text('Guardar'),
@@ -146,18 +159,24 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final base = _solicitudes.where((s) => _enPeriodo(s) && _coincideTexto(s)).toList();
+    final base =
+        _solicitudes.where((s) => _enPeriodo(s) && _coincideTexto(s)).toList();
     final lista = base.where((s) => _coincideEstado(s, _filtroEstado)).toList();
-    final pendientes = _solicitudes.where((s) => s['estado'] == 'PENDIENTE').toList();
+    final pendientes =
+        _solicitudes.where((s) => s['estado'] == 'PENDIENTE').toList();
     final urgentes = pendientes.where((s) => s['prioridad'] == 'ALTA').length;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Bandeja de Solicitudes [RF21]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Bandeja de Solicitudes [RF21]',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarBandeja),
+          IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Actualizar',
+              onPressed: _cargarBandeja),
           const NotificacionBell(),
           const PerfilBoton(),
         ],
@@ -178,7 +197,9 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                         isDense: true,
                         filled: true,
                         fillColor: AppColors.backgroundGray,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
                       ),
                       onChanged: (v) => setState(() => _busqueda = v),
                     ),
@@ -195,19 +216,32 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                       PopupMenuItem(value: 30, child: Text('Últimos 30 días')),
                     ],
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
                       decoration: BoxDecoration(
-                        color: _periodoDias == 0 ? AppColors.backgroundGray : AppColors.primaryBlue,
+                        color: _periodoDias == 0
+                            ? AppColors.backgroundGray
+                            : AppColors.primaryBlue,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(Icons.date_range_rounded,
-                            size: 18, color: _periodoDias == 0 ? Colors.black54 : Colors.white),
+                            size: 18,
+                            color: _periodoDias == 0
+                                ? Colors.black54
+                                : Colors.white),
                         const SizedBox(width: 4),
                         Text(
-                          switch (_periodoDias) { 0 => 'Todo', 1 => 'Hoy', _ => '$_periodoDias d' },
+                          switch (_periodoDias) {
+                            0 => 'Todo',
+                            1 => 'Hoy',
+                            _ => '$_periodoDias d'
+                          },
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, color: _periodoDias == 0 ? Colors.black54 : Colors.white),
+                              fontWeight: FontWeight.w600,
+                              color: _periodoDias == 0
+                                  ? Colors.black54
+                                  : Colors.white),
                         ),
                       ]),
                     ),
@@ -220,16 +254,22 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                     scrollDirection: Axis.horizontal,
                     children: _estados.entries.map((f) {
                       final sel = _filtroEstado == f.key;
-                      final n = base.where((s) => _coincideEstado(s, f.key)).length;
+                      final n =
+                          base.where((s) => _coincideEstado(s, f.key)).length;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
                           label: Text('${f.value} ($n)'),
                           selected: sel,
                           showCheckmark: false,
-                          selectedColor: f.key == 'TODAS' ? AppColors.primaryBlue : colorEstadoSolicitud(f.key),
-                          labelStyle: TextStyle(color: sel ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
-                          onSelected: (_) => setState(() => _filtroEstado = f.key),
+                          selectedColor: f.key == 'TODAS'
+                              ? AppColors.primaryBlue
+                              : colorEstadoSolicitud(f.key),
+                          labelStyle: TextStyle(
+                              color: sel ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.w600),
+                          onSelected: (_) =>
+                              setState(() => _filtroEstado = f.key),
                         ),
                       );
                     }).toList(),
@@ -238,51 +278,70 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
               ],
             ),
           ),
-          if (!_isLoading && pendientes.isNotEmpty && _filtroEstado != 'PENDIENTE')
+          if (!_isLoading &&
+              pendientes.isNotEmpty &&
+              _filtroEstado != 'PENDIENTE')
             Material(
               color: Colors.amber[50],
               child: InkWell(
                 onTap: () => setState(() => _filtroEstado = 'PENDIENTE'),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   child: Row(children: [
-                    Icon(Icons.pending_actions_rounded, color: Colors.amber[900]),
+                    Icon(Icons.pending_actions_rounded,
+                        color: Colors.amber[900]),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '${pendientes.length} pendiente(s) por evaluar${urgentes > 0 ? ' · $urgentes urgente(s)' : ''}',
-                        style: TextStyle(color: Colors.amber[900], fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: Colors.amber[900],
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
-                    Text('Ver', style: TextStyle(color: Colors.amber[900], fontWeight: FontWeight.bold)),
+                    Text('Ver',
+                        style: TextStyle(
+                            color: Colors.amber[900],
+                            fontWeight: FontWeight.bold)),
                   ]),
                 ),
               ),
             ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: AppColors.primaryBlue))
                 : RefreshIndicator(
                     onRefresh: _cargarBandeja,
                     child: _error != null
                         ? ListView(children: [
                             const SizedBox(height: 80),
-                            const Icon(Icons.cloud_off_rounded, size: 60, color: Colors.grey),
+                            const Icon(Icons.cloud_off_rounded,
+                                size: 60, color: Colors.grey),
                             const SizedBox(height: 8),
-                            Center(child: Text(_error!, textAlign: TextAlign.center)),
+                            Center(
+                                child:
+                                    Text(_error!, textAlign: TextAlign.center)),
                             Center(
                               child: TextButton.icon(
-                                  onPressed: _cargarBandeja, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
+                                  onPressed: _cargarBandeja,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Reintentar')),
                             ),
                           ])
                         : lista.isEmpty
                             ? ListView(children: [
                                 const SizedBox(height: 80),
-                                Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+                                Icon(Icons.inbox_outlined,
+                                    size: 64, color: Colors.grey[400]),
                                 const SizedBox(height: 12),
                                 Center(
                                   child: Text(
-                                    _filtroEstado == 'PENDIENTE' ? '¡Todo al día! No hay solicitudes por evaluar.' : 'No hay solicitudes con estos filtros.',
+                                    _filtroEstado == 'PENDIENTE'
+                                        ? '¡Todo al día! No hay solicitudes por evaluar.'
+                                        : 'No hay solicitudes con estos filtros.',
                                     style: const TextStyle(color: Colors.grey),
                                   ),
                                 ),
@@ -290,7 +349,8 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                             : ListView.builder(
                                 padding: const EdgeInsets.all(14),
                                 itemCount: lista.length,
-                                itemBuilder: (context, index) => _tarjeta(lista[index]),
+                                itemBuilder: (context, index) =>
+                                    _tarjeta(lista[index]),
                               ),
                   ),
           ),
@@ -304,7 +364,11 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
     final esPendiente = estado == 'PENDIENTE';
     final esAprobada = estado == 'APROBADA' || estado == 'APROBADA_PARCIAL';
     final prioridad = '${sol['prioridad'] ?? 'MEDIA'}';
-    final cPrioridad = switch (prioridad) { 'ALTA' => AppColors.errorRed, 'MEDIA' => Colors.amber[800]!, _ => Colors.blueGrey };
+    final cPrioridad = switch (prioridad) {
+      'ALTA' => AppColors.errorRed,
+      'MEDIA' => Colors.amber[800]!,
+      _ => Colors.blueGrey
+    };
     final cEstado = colorEstadoSolicitud(estado);
     final hora = '${sol['horaEmision'] ?? ''}';
 
@@ -330,47 +394,61 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                       Row(children: [
                         Expanded(
                           child: Text('${sol['solicitudNum'] ?? ''}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.primaryBlue)),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: cEstado, borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: cEstado,
+                              borderRadius: BorderRadius.circular(20)),
                           child: Text(etiquetaEstadoSolicitud(estado),
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ]),
                       const SizedBox(height: 6),
-                      _linea(Icons.engineering_rounded, '${sol['nombreMecanico'] ?? 'Mecánico'}'),
-                      _linea(Icons.precision_manufacturing_rounded,
-                          '${sol['codMaquinaria'] ?? '-'} ${sol['modeloMaquinaria'] ?? ''}'.trim()),
+                      _linea(Icons.engineering_rounded,
+                          '${sol['nombreMecanico'] ?? 'Mecánico'}'),
+                      _linea(
+                          Icons.precision_manufacturing_rounded,
+                          '${sol['codMaquinaria'] ?? '-'} ${sol['modeloMaquinaria'] ?? ''}'
+                              .trim()),
                       Row(children: [
                         Expanded(
                           child: _linea(Icons.event_rounded,
                               '${sol['fechaEmision'] ?? ''} ${hora.length >= 5 ? hora.substring(0, 5) : hora}  ·  ${sol['totalComponentes'] ?? 0} repuesto(s)'),
                         ),
-                        Text('Prioridad ${prioridad[0]}${prioridad.substring(1).toLowerCase()}',
-                            style: TextStyle(color: cPrioridad, fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(
+                            'Prioridad ${prioridad[0]}${prioridad.substring(1).toLowerCase()}',
+                            style: TextStyle(
+                                color: cPrioridad,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
                       ]),
                       const SizedBox(height: 6),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          if (esAprobada)
-                            TextButton.icon(
-                              onPressed: () => _mostrarModalContactarProveedor('${sol['solicitudNum']}'),
-                              icon: const Icon(Icons.phone_in_talk_rounded, size: 16),
-                              label: const Text('Orden a proveedor [RF28]'),
-                            ),
                           if (esPendiente)
                             FilledButton.icon(
-                              style: FilledButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.primaryBlue),
                               onPressed: () => _abrir(sol),
-                              icon: const Icon(Icons.fact_check_outlined, size: 18),
+                              icon: const Icon(Icons.fact_check_outlined,
+                                  size: 18),
                               label: const Text('Evaluar'),
                             )
                           else
                             const Text('Ver detalle ›',
-                                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600)),
+                                style: TextStyle(
+                                    color: AppColors.primaryBlue,
+                                    fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ],

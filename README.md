@@ -20,10 +20,25 @@ Repetir proceso terminal 2
 =============================================
 Usuarios predeterminados:
 leao.chura@masterdrilling.com
-admin
+admin1234
 
 carlos.baro@masterdrilling.com
 meca
 
 marcos.baro@masterdrilling.com
 alma
+
+=============================================
+Comandos Generar APK
+
+# 1. Entrar a la carpeta móvil
+
+cd sgsra_mobile
+
+# 2. Compilar el APK release
+
+& "C:\Users\Usuario\flutter\bin\flutter.bat" build apk --release
+
+# 3. Sobrescribir el apk en la carpeta raíz del proyecto
+
+Copy-Item build\app\outputs\flutter-apk\app-release.apk ..\sgsra-md.apk -Force
