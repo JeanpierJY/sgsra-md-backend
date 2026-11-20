@@ -13,9 +13,10 @@
 | 🔴 **Crítica** | **Adaptación Android APK & Plataforma**          | `Multiplataforma`, `Clean Build`, `Permisos`   |       Bajo        |     🟢 Completo en código    |
 | 🔴 **Crítica** | **Centro de Notificaciones & Alertas UI**        | `RF46`, `RF47`, `RF48`, `RF50`                 |       Bajo        | 🟢 Completo (Backend & UI)   |
 | 🟠 **Alta**    | **Pañol: Catálogo, QR Devolución y Despacho**    | `RF33`, `RF35`, `RF38`, `RF39`, `RF40`, `RF43` |       Bajo        | 🟢 Completo (Backend & UI)   |
-| 🟠 **Alta**    | **Gestión Fotográfica Móvil (`image_picker`)**   | `RF09`, `RF12`, `RF32`, `RF35`, `RF45`         |       Medio       | 🟡 UI Lista / Carga pendiente|
+| 🟠 **Alta**    | **Gestión Fotográfica Móvil (`image_picker`)**   | `RF09`, `RF12`, `RF32`, `RF35`, `RF45`         |       Medio       | 🟢 Completo (Backend & UI)   |
 | 🟡 **Media**   | **Administrador: Aprobación Parcial y Bandeja**  | `RF21`, `RF26`, `RF31`, `RF49`                 |       Bajo        | 🟢 Completo (Backend & UI)   |
 | 🟡 **Media**   | **Mecánico: Seguridad, Perfil y Carrito**        | `RF04`, `RF06`, `RF07`, `RF13`, `RF14`         |       Bajo        | 🟢 Completo (Backend & UI)   |
+| 🟣 **Estratégica** | **Despliegue Cloud Oracle 24/7 & APK Final** | `Fase 6`: OCI VM, IP Estática, Systemd y APK Release | Medio | 🟡 Siguiente Paso (En cola)  |
 | 🟢 **Baja**    | **Trazabilidad Documental y GitHub (Semana 13)** | Plantillas A, B y C / Issues                   |       Bajo        |    ⚪ Gestión documental     |
 
 ---
@@ -177,12 +178,18 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
     - [x] 4.3.6 Indicadores del Dashboard compactos (3 por fila) alimentados en vivo desde PostgreSQL sin datos mock (`ALM-06`).
     - [x] 4.3.7 Botones flotantes para Nueva Herramienta y Reportar Extravío en catálogo de herramientas (`ALM-04`, `ALM-05`).
 
-- [ ] Fase 5: Pruebas Integradas E2E en Red WiFi, Carga de Multimedia, Compilación APK y Despliegue
-  - [ ] 5.1 Carga de recursos multimedia: colocar logotipos en `sgsra_mobile/assets/images/`, subir fotos maestras de repuestos y herramientas a `./uploads/imagenes/` y disponer de los 5 QR impresos de prueba según `recursos_multimedia_requeridos.md`.
-  - [ ] 5.2 Conectividad WiFi LAN: Validar ping y consumo HTTP entre los 3 celulares físicos y la laptop Spring Boot en el puerto 8080.
-  - [ ] 5.3 Ciclo Cruzado E2E: Mecánico solicita $\rightarrow$ Admin aprueba/parcial $\rightarrow$ Almacenista despacha repuestos; Almacén presta herramienta $\rightarrow$ Mecánico custodia $\rightarrow$ Almacén liquida por QR.
-  - [ ] 5.4 Compilación APK Release: Ejecutar `flutter build apk --release` verificando 0 advertencias críticas y 0 imports web.
-  - [ ] 5.5 Instalación y Puesta en Marcha: Instalar el APK en los 3 dispositivos Android de Master Drilling Perú S.A. y verificar operatividad 100% offline de internet externo.
+- [x] Fase 5: Pruebas Integradas, Carga de Multimedia, Ergonomía y Pre-Release
+  - [x] 5.1 Carga y distribución de multimedia: logotipos e íconos en `assets/images/`, catálogo y pañol en `assets/images/` y `uploads/**`, y mipmaps Android configurados.
+  - [x] 5.2 Ajustes operativos y ergonomía: navegación en 3 pestañas para herramientas de mecánico, eliminación de filtro proveedor en bandeja, restauración de proveedores con discado telefónico nativo (`ACTION_DIAL`) y buscador predictivo de extraviadas en pañol.
+  - [x] 5.3 Ciclo cruzado E2E: Mecánico solicita → Admin aprueba/parcial → Almacenista despacha repuestos; Almacén presta herramienta → Mecánico custodia → Almacén liquida por QR.
+  - [x] 5.4 Pre-empaquetado release: calibración de Gradle 9.3.1 y AGP 9.1.0 para compatibilidad universal con Java 25.
+
+- [ ] Fase 6: Despliegue en la Nube con Oracle Cloud Infrastructure (OCI 24/7) y Generación de APK Final
+  - [ ] 6.1 Aprovisionamiento de Computación en Oracle Cloud (OCI): Instancia VM Compute Always Free (Ubuntu Linux LTS, arquitectura Ampere/AMD, IP Pública Estática fija) y PostgreSQL 16/18 persistente.
+  - [ ] 6.2 Configuración de Seguridad en Red VCN de Oracle: Apertura de puertos en Security List / Ingress Rules (TCP 8080 para Spring Boot API REST y 5432 para base de datos protegida) y reglas iptables en el sistema operativo.
+  - [ ] 6.3 Despliegue del Backend Spring Boot en OCI: Clonación del repositorio, compilación en la nube mediante `./mvnw clean package -DskipTests` y ejecución persistente como servicio daemon/systemd 24/7 con soporte para almacenamiento estático `./uploads/`.
+  - [ ] 6.4 Apuntamiento DNS / IP Pública en Flutter: Parametrizar la IP pública estática de OCI en `api_constants.dart` (`API_HOST`), permitiendo que los 3 celulares Android conecten desde cualquier red (WiFi o datos móviles 4G/5G) de forma transparente y sin bloqueos de firewall local.
+  - [ ] 6.5 Generación de APK Release Final para Android: Compilación del binario universal `flutter build apk --release` optimizado para producción, verificando firma, iconografía corporativa y cero errores de compilación.
 ```
 
 ---

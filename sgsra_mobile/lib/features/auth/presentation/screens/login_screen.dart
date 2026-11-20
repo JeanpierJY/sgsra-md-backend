@@ -204,8 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                           final ipPrueba = ipCtrl.text.trim();
                           try {
+                            final testUrl = ApiService.urlPruebaConexion(ipPrueba);
                             final res = await DioClient().dio.get(
-                                'http://$ipPrueba:${ApiService.port}/api/v1/catalogo',
+                                testUrl,
                                 queryParameters: {'size': 1});
                             if (res.statusCode == 200) {
                               setDlgState(() {

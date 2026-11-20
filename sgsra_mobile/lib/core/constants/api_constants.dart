@@ -48,8 +48,30 @@ class ApiService {
     return localIp;
   }
 
-  /// URL raíz del servidor (útil para cargar imágenes `/uploads/...`)
-  static String get serverUrl => 'http://$host:$port';
+  /// URL raíz del servidor (soporta IP local con puerto o URL cloud HTTPS de Render/Oracle)
+  static String get serverUrl {
+    final h = host;
+    if (h.startsWith('http://') || h.startsWith('https://')) {
+      return h.endsWith('/') ? h.substring(0, h.length - 1) : h;
+    }
+    if (h.contains('.onrender.com') || h.contains('.railway.app') || h.contains('.oraclecloud.com')) {
+      return 'https://$h';
+    }
+    return 'http://$h:$port';
+  }
+
+  /// Construye la URL de prueba para verificar conectividad con cualquier host
+  static String urlPruebaConexion(String input) {
+    var s = input.trim();
+    if (s.startsWith('http://') || s.startsWith('https://')) {
+      s = s.endsWith('/') ? s.substring(0, s.length - 1) : s;
+      return '$s/api/v1/catalogo';
+    }
+    if (s.contains('.onrender.com') || s.contains('.railway.app') || s.contains('.oraclecloud.com')) {
+      return 'https://$s/api/v1/catalogo';
+    }
+    return 'http://$s:$port/api/v1/catalogo';
+  }
 
   /// URL base de los endpoints REST `/api/v1`
   static String get baseUrl => '$serverUrl/api/v1';
