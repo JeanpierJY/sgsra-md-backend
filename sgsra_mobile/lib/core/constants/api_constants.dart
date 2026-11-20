@@ -6,8 +6,8 @@ class ApiService {
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static const String _keyCustomHost = 'custom_api_host';
 
-  /// IP IPv4 de la laptop en la red Wi-Fi local donde corre Spring Boot
-  static const String localIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.18.57');
+  /// Host predeterminado: URL cloud HTTPS en Render
+  static const String localIp = String.fromEnvironment('API_HOST', defaultValue: 'https://sgsra-md-backend.onrender.com');
   static const String port = String.fromEnvironment('API_PORT', defaultValue: '8080');
 
   /// IP de loopback estándar para el emulador de Android Studio
@@ -40,11 +40,9 @@ class ApiService {
     await _storage.delete(key: _keyCustomHost);
   }
 
-  /// En Web (Chrome) el backend corre en la misma máquina (localhost);
-  /// En móvil físico o emulador utiliza el host asignado o la IP LAN local
+  /// Host activo: si hay host guardado usa ese, de lo contrario apunta a Render (localIp)
   static String get host {
     if (_customHost != null && _customHost!.trim().isNotEmpty) return _customHost!.trim();
-    if (kIsWeb) return 'localhost';
     return localIp;
   }
 

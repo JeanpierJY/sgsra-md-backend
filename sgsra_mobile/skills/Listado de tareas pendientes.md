@@ -16,7 +16,7 @@
 | 🟠 **Alta**    | **Gestión Fotográfica Móvil (`image_picker`)**   | `RF09`, `RF12`, `RF32`, `RF35`, `RF45`         |       Medio       | 🟢 Completo (Backend & UI)   |
 | 🟡 **Media**   | **Administrador: Aprobación Parcial y Bandeja**  | `RF21`, `RF26`, `RF31`, `RF49`                 |       Bajo        | 🟢 Completo (Backend & UI)   |
 | 🟡 **Media**   | **Mecánico: Seguridad, Perfil y Carrito**        | `RF04`, `RF06`, `RF07`, `RF13`, `RF14`         |       Bajo        | 🟢 Completo (Backend & UI)   |
-| 🟣 **Estratégica** | **Despliegue Cloud Oracle 24/7 & APK Final** | `Fase 6`: OCI VM, IP Estática, Systemd y APK Release | Medio | 🟡 Siguiente Paso (En cola)  |
+| 🟣 **Estratégica** | **Despliegue Cloud Render 24/7 & APK Final** | `Fase 6`: Render Docker, PostgreSQL, UptimeRobot, Storage y APK | Medio | 🟡 En Ejecución / Validación |
 | 🟢 **Baja**    | **Trazabilidad Documental y GitHub (Semana 13)** | Plantillas A, B y C / Issues                   |       Bajo        |    ⚪ Gestión documental     |
 
 ---
@@ -184,12 +184,13 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
   - [x] 5.3 Ciclo cruzado E2E: Mecánico solicita → Admin aprueba/parcial → Almacenista despacha repuestos; Almacén presta herramienta → Mecánico custodia → Almacén liquida por QR.
   - [x] 5.4 Pre-empaquetado release: calibración de Gradle 9.3.1 y AGP 9.1.0 para compatibilidad universal con Java 25.
 
-- [ ] Fase 6: Despliegue en la Nube con Oracle Cloud Infrastructure (OCI 24/7) y Generación de APK Final
-  - [ ] 6.1 Aprovisionamiento de Computación en Oracle Cloud (OCI): Instancia VM Compute Always Free (Ubuntu Linux LTS, arquitectura Ampere/AMD, IP Pública Estática fija) y PostgreSQL 16/18 persistente.
-  - [ ] 6.2 Configuración de Seguridad en Red VCN de Oracle: Apertura de puertos en Security List / Ingress Rules (TCP 8080 para Spring Boot API REST y 5432 para base de datos protegida) y reglas iptables en el sistema operativo.
-  - [ ] 6.3 Despliegue del Backend Spring Boot en OCI: Clonación del repositorio, compilación en la nube mediante `./mvnw clean package -DskipTests` y ejecución persistente como servicio daemon/systemd 24/7 con soporte para almacenamiento estático `./uploads/`.
-  - [ ] 6.4 Apuntamiento DNS / IP Pública en Flutter: Parametrizar la IP pública estática de OCI en `api_constants.dart` (`API_HOST`), permitiendo que los 3 celulares Android conecten desde cualquier red (WiFi o datos móviles 4G/5G) de forma transparente y sin bloqueos de firewall local.
-  - [ ] 6.5 Generación de APK Release Final para Android: Compilación del binario universal `flutter build apk --release` optimizado para producción, verificando firma, iconografía corporativa y cero errores de compilación.
+- [ ] Fase 6: Despliegue en la Nube con Render Cloud (24/7 con UptimeRobot) y Generación de APK Final
+  - [x] 6.1 Despliegue del Backend Spring Boot en Render Cloud: Creación de `Dockerfile` multi-etapa Java 21, conexión del repositorio GitHub y despliegue del Web Service (`https://sgsra-md-backend.onrender.com`).
+  - [x] 6.2 Aprovisionamiento de Base de Datos PostgreSQL en Render: Instancia `sgsra-db` con ejecución de `Query_sgsra_db.sql` y población de datos con `Query_Insercion.sql`.
+  - [x] 6.3 Monitor Keep-Alive 24/7 con UptimeRobot: Configuración de sondeo HTTP periódico cada 5 minutos hacia `/api/v1/catalogo` para evitar la suspensión (spin down) tras 15 minutos de inactividad.
+  - [x] 6.4 Conexión Móvil en Flutter (`api_constants.dart`): Configuración de host HTTPS Render con aumento de timeout a 60 segundos tolerante a arranques en frío.
+  - [ ] 6.5 Añadir Almacenamiento Multimedia Real Persistente (Cloudinary / AWS S3 / Firebase Storage): Migración del almacenamiento local de `./uploads/` hacia un bucket/servicio cloud persistente, ya que el sistema de archivos del contenedor Docker en Render es efímero y ante reinicios o despliegues se pierden las imágenes subidas de repuestos, herramientas y selfies.
+  - [ ] 6.6 Generación de APK Release Final para Android: Compilación del binario universal `flutter build apk --release` optimizado para producción, verificando firma, iconografía corporativa y cero errores de compilación.
 ```
 
 ---

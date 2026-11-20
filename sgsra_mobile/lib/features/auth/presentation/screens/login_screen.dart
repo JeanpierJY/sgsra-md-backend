@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -14,7 +15,7 @@ import '../bloc/auth_bloc.dart';
 
 /// [RF01, RF04, RF05, RF06] Pantalla de inicio de sesión conectada al BLoC y Backend Spring Boot
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -204,10 +205,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                           final ipPrueba = ipCtrl.text.trim();
                           try {
-                            final testUrl = ApiService.urlPruebaConexion(ipPrueba);
-                            final res = await DioClient().dio.get(
-                                testUrl,
-                                queryParameters: {'size': 1});
+                            final testUrl =
+                                ApiService.urlPruebaConexion(ipPrueba);
+                            final testDio = Dio(
+                              BaseOptions(
+                                connectTimeout: const Duration(seconds: 60),
+                                receiveTimeout: const Duration(seconds: 60),
+                                validateStatus: (status) => true,
+                              ),
+                            );
+                            final res = await testDio
+                                .get(testUrl, queryParameters: {'size': 1});
                             if (res.statusCode == 200) {
                               setDlgState(() {
                                 probando = false;
@@ -219,15 +227,30 @@ class _LoginScreenState extends State<LoginScreen> {
                               setDlgState(() {
                                 probando = false;
                                 estadoPrueba =
-                                    'Respondió código HTTP: ${res.statusCode}';
+                                    'Respondió HTTP ${res.statusCode}: ${res.statusMessage ?? "Verifique logs de Render"}';
                                 colorPrueba = Colors.orange;
                               });
                             }
+                          } on DioException catch (dioErr) {
+                            setDlgState(() {
+                              probando = false;
+                              if (dioErr.type ==
+                                      DioExceptionType.connectionTimeout ||
+                                  dioErr.type ==
+                                      DioExceptionType.receiveTimeout) {
+                                estadoPrueba =
+                                    'Tiempo de espera agotado. En Render el servidor duerme tras 15 min de inactividad (~40s para despertar). Reintente en un momento.';
+                              } else {
+                                estadoPrueba =
+                                    'Error de conexión: ${dioErr.message ?? dioErr.error?.toString() ?? "Verifique URL y estado en Render"}.';
+                              }
+                              colorPrueba = AppColors.errorRed;
+                            });
                           } catch (err) {
                             setDlgState(() {
                               probando = false;
                               estadoPrueba =
-                                  'No se pudo conectar. Verifique que Spring Boot esté encendido y el puerto 8080 permitido en el Firewall.';
+                                  'Error inesperado al conectar: $err';
                               colorPrueba = AppColors.errorRed;
                             });
                           }
@@ -260,15 +283,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 if (nuevaIp.isNotEmpty) {
                   await ApiService.guardarHost(nuevaIp);
                 }
+                if (!mounted) return;
                 if (ctx.mounted) Navigator.pop(ctx);
                 setState(() {});
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content:
-                            Text('Servidor guardado: ${ApiService.serverUrl}')),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text('Servidor guardado: ${ApiService.serverUrl}')),
+                );
               },
               child: const Text('Guardar'),
             ),
@@ -299,8 +321,9 @@ class _LoginScreenState extends State<LoginScreen> {
             // Guardar credenciales para acceso biométrico y último correo
             final correo = _correoController.text.trim();
             final pass = _passwordController.text.trim();
-            if (correo.isNotEmpty)
+            if (correo.isNotEmpty) {
               await _storage.write(key: 'ultimo_correo', value: correo);
+            }
             if (correo.isNotEmpty && pass.isNotEmpty) {
               await _storage.write(key: 'biometric_correo', value: correo);
               await _storage.write(key: 'biometric_pass', value: pass);
@@ -319,8 +342,9 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           } else if (state is AuthLockedOut) {
             _passwordController.clear();
-            if (state.desbloqueoEn != null)
+            if (state.desbloqueoEn != null) {
               _iniciarCuentaRegresiva(state.desbloqueoEn!);
+            }
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
