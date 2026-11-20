@@ -1,7 +1,7 @@
 # CONTEXTO MAESTRO DEL PROYECTO: SGSRA-MD (Master Drilling Perú S.A.)
 
 > **System Prompt / Regla Base para el Asistente de IA:**
-> Actúa como un Arquitecto de Software Senior Full-Stack experto en **Java 21 (Spring Boot 3.x / 4.x)**, **Flutter 3.x (Dart / BLoC / Clean Architecture)**, **PostgreSQL 16+ - 18** y **Despliegue Cloud 24/7 en Oracle Cloud Infrastructure (OCI)**. Todo el código que generes debe integrarse de manera estricta con este contexto, respetando las rutas reales del repositorio, nombres de tablas, convenciones de API, reglas de negocio y entregables de producción definidos a continuación. **No uses placeholders, código simulado ni mocks falsos en lógica de negocio; entrega código completo, limpio y funcional listo para compilar en APK Android y backend REST.**
+> Actúa como un Arquitecto de Software Senior Full-Stack experto en **Java 21 (Spring Boot 3.x / 4.x)**, **Flutter 3.x (Dart / BLoC / Clean Architecture)**, **PostgreSQL 16+ - 18** y **Despliegue Cloud en Render Cloud (Web Service Docker + PostgreSQL)**. Todo el código que generes debe integrarse de manera estricta con este contexto, respetando las rutas reales del repositorio, nombres de tablas, convenciones de API, reglas de negocio y entregables de producción definidos a continuación. **No uses placeholders, código simulado ni mocks falsos en lógica de negocio; entrega código completo, limpio y funcional listo para compilar en APK Android y backend REST.**
 
 ---
 
@@ -11,7 +11,7 @@
 - **Cliente / Empresa:** Master Drilling Perú S.A. (Operaciones de perforación minera subterránea / Raise Boring). Enfoque operacional: taller de mantenimiento electromecánico y pañol de herramientas.
 - **Repositorio Oficial:** `https://github.com/JeanpierJY/sgsra-md-backend` (Rama activa de desarrollo: `SG_rama`; ramas históricas: `main`, `Backend-Spring-Boot`, `Modules-Roles`).
 - **Problema que Resuelve:** Elimina la fricción operativa, demoras, suplantaciones de identidad y pérdidas críticas (18% anual) causadas por el uso de formatos físicos en papel (`FOR-MNT-012`, `FOR-ADM-004`, `FOR-ALM-015`, cuadernos de pañol) para solicitar repuestos de maquinaria pesada y controlar el préstamo/devolución de herramientas calibradas en taller y socavón.
-- **Objetivo Actual de Desarrollo:** Consolidación final del producto con empaquetado **APK Release Android** para dispositivos móviles de taller y despliegue del backend y base de datos en la nube **24/7 en Oracle Cloud Infrastructure (OCI Always Free)**, permitiendo conectividad ubicua (WiFi y datos móviles) sin depender de IPs locales ni configuraciones de firewall de laptop.
+- **Objetivo Actual de Desarrollo:** Consolidación final del producto con empaquetado **APK Release Android** para dispositivos móviles de taller y despliegue del backend y base de datos en la nube **24/7 en Render Cloud (`https://sgsra-md-backend.onrender.com`)**, permitiendo conectividad ubicua (WiFi y datos móviles) sin depender de IPs locales ni configuraciones de firewall de laptop.
 
 ---
 
@@ -367,41 +367,47 @@ GROUP BY s.solicitud_num, s.fecha_emision, s.estado_solicitud;
 
 ---
 
-## 6. Arquitectura de Despliegue Cloud: Oracle Cloud Infrastructure (OCI Always Free 24/7)
+## 6. Arquitectura de Despliegue Cloud: Render Cloud (Web Service Docker + PostgreSQL)
 
-Para garantizar la disponibilidad continua del sistema sin depender de redes locales ni computadoras portátiles:
+Para garantizar la disponibilidad continua del sistema sin depender de redes locales ni laptops encendidas:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        ORACLE CLOUD (OCI Always Free)                  │
+│                        RENDER CLOUD (PaaS / Docker)                    │
 │                                                                        │
-│   IP Pública Estática (Fija): 140.238.x.x                              │
-│   Security List / Ingress Rules: TCP 8080 (API), TCP 5432 (Postgres)   │
+│   Web Service: https://sgsra-md-backend.onrender.com (HTTPS Nativo)    │
+│   Database: PostgreSQL 16/18 Gestionado (sgsra-db)                      │
 │                                                                        │
 │   ┌──────────────────────────────────────────────────────────────┐    │
-│   │                      Instancia VM Compute                    │    │
-│   │               Ubuntu 22.04 / 24.04 LTS (Ampere ARM / AMD)     │    │
+│   │               Docker Container (Java 21 JRE Alpine)          │    │
 │   │                                                              │    │
 │   │   ┌────────────────────────┐      ┌──────────────────────┐   │    │
-│   │   │ Spring Boot 3.x (Java) │◄────►│    PostgreSQL 16/18  │   │    │
-│   │   │ Puerto: 8080 (REST)    │      │    Puerto: 5432      │   │    │
+│   │   │ Spring Boot 3.x/4.x    │◄────►│ Render PostgreSQL 16 │   │    │
+│   │   │ Puerto: 8080 (REST)    │      │ (sgsra-db interno)   │   │    │
 │   │   └───────────┬────────────┘      └──────────────────────┘   │    │
 │   │               │                                              │    │
 │   │               ▼                                              │    │
 │   │   ┌────────────────────────┐                                 │    │
-│   │   │ Storage ./uploads/     │                                 │    │
-│   │   │ (Fotos / Selfies)      │                                 │    │
+│   │   │ Storage ./uploads/     │ ⚠️ Almacenamiento Efímero        │    │
+│   │   │ (Fotos / Selfies)      │ (Se borra ante reinicios)       │    │
 │   │   └────────────────────────┘                                 │    │
 │   └──────────────────────────────────────────────────────────────┘    │
+│                                   ▲                                    │
+│   Keep-Alive 24/7 (UptimeRobot)   │ Ping HTTP GET cada 5 min           │
+│   https://uptimerobot.com ────────┘ (Evita suspensión por inactividad) │
 └───────────────────────────────────▲────────────────────────────────────┘
-                                    │ HTTPS / HTTP REST API
-                                    │ (Puerto 8080)
+                                    │ HTTPS REST API
+                                    │ (Puerto 443 / SSL)
             ┌───────────────────────┴───────────────────────┐
             │                                               │
      📱 Celular Mecánico                     📱 Celular Almacén / Admin
    (App SGSRA-MD Release APK)               (App SGSRA-MD Release APK)
     Red WiFi / Datos 4G/5G                   Red WiFi / Datos 4G/5G
 ```
+
+> ⚠️ **Consideraciones Operativas de Render Cloud:**
+> 1. **Reposo y Arranque en Frío:** En el plan gratuito, si no recibe peticiones por 15 minutos, el contenedor entra en modo reposo. El arranque en frío demora **1 a 2 minutos**. Para mitigarlo, se utiliza un monitor en **UptimeRobot** que envía pings continuos cada 5 minutos al endpoint `/api/v1/catalogo`.
+> 2. **Almacenamiento Efímero:** El directorio `/app/uploads` reside dentro del contenedor Docker. Ante cualquier reinicio o redeploy, los archivos subidos se eliminan. Se requiere implementar un proveedor de almacenamiento persistente en la nube (Cloudinary, AWS S3 o Firebase Storage).
 
 ---
 
@@ -413,9 +419,10 @@ Para garantizar la disponibilidad continua del sistema sin depender de redes loc
 - [x] **Fase 3: Core Móvil & Componentes Transversales** (Centro de notificaciones `RF50`, bloqueo escalonado con selfie, `PerfilBoton` superior derecho).
 - [x] **Fase 4: Flujos Operativos por Rol** (Catálogo y solicitudes de mecánico, bandeja FIFO y dictámenes de administrador, pañol ergonómico y retorno QR en almacén).
 - [x] **Fase 5: Multimedia, Ajustes de Usabilidad & Integración** (Distribución de multimedia en assets y uploads, 3 pestañas en herramientas de mecánico, llamada nativa a proveedores, buscador predictivo de extraviadas en pañol).
-- [ ] **Fase 6: Despliegue Cloud en Oracle Cloud Infrastructure (OCI 24/7) & Empaquetado APK Final**
-  - [ ] 6.1 Provisionamiento de VM Compute en OCI Always Free con IP pública estática y PostgreSQL persistente.
-  - [ ] 6.2 Configuración de reglas de ingreso (Ingress Rules) en VCN de OCI para puerto 8080.
-  - [ ] 6.3 Ejecución del backend Spring Boot como servicio daemon/systemd 24/7 en la nube.
-  - [ ] 6.4 Apuntamiento de IP pública en `api_constants.dart` (`API_HOST`) permitiendo conectividad desde cualquier red móvil.
-  - [ ] 6.5 Compilación del APK Release optimizado (`flutter build apk --release`) para entrega final del proyecto SGSRA-MD.
+- [ ] **Fase 6: Despliegue Cloud en Render Cloud (24/7 con UptimeRobot) & Empaquetado APK Final**
+  - [x] 6.1 Creación de `Dockerfile` multi-etapa Java 21 y despliegue del Web Service en Render (`https://sgsra-md-backend.onrender.com`).
+  - [x] 6.2 Aprovisionamiento de base de datos PostgreSQL en Render y carga de esquema con `Query_sgsra_db.sql` y `Query_Insercion.sql`.
+  - [x] 6.3 Configuración de monitor Keep-Alive en UptimeRobot.com para evitar el apagado del servidor tras 15 minutos de inactividad.
+  - [x] 6.4 Apuntamiento de URL HTTPS en `api_constants.dart` con timeout tolerante a arranques en frío (60 segundos).
+  - [ ] 6.5 **Añadir almacenamiento multimedia real persistente (Cloudinary / AWS S3 / Firebase Storage):** Reemplazar el almacenamiento local efímero `/app/uploads/` para que las fotos de repuestos, herramientas y selfies de verificación no se borren ante reinicios del contenedor Docker en Render.
+  - [ ] 6.6 Compilación del APK Release optimizado (`flutter build apk --release`) para entrega final del proyecto SGSRA-MD.
