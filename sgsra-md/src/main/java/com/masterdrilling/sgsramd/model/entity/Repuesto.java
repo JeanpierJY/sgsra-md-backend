@@ -32,4 +32,7 @@ public class Repuesto {
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private Boolean activo = true;
+
+    @Column(name = "imagen_url", length = 255)
+    private String imagenUrl;
 }

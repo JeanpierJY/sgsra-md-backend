@@ -6,7 +6,8 @@ public enum EstadoSolicitud {
     APROBADA,
     APROBADA_PARCIAL,
     RECHAZADA,
-    ORDEN_CONTACTADA;
+    ORDEN_CONTACTADA,
+    ENTREGADA;
 
     public static EstadoSolicitud fromString(String estado) {
         if (estado == null) {

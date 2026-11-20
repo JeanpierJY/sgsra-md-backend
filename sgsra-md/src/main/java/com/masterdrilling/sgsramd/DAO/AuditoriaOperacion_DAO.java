@@ -16,13 +16,20 @@ public interface AuditoriaOperacion_DAO extends JpaRepository<AuditoriaOperacion
 
     Page<AuditoriaOperacion> findAllByOrderByTimestampDesc(Pageable pageable);
 
-    @Query("SELECT a FROM AuditoriaOperacion a WHERE " +
-           "(:idOperacion IS NULL OR a.idOperacion = :idOperacion) AND " +
-           "(:fechaInicio IS NULL OR a.timestamp >= :fechaInicio) AND " +
-           "(:fechaFin IS NULL OR a.timestamp <= :fechaFin) " +
+    // ADM-02: sin CAST de parametros nulos (PostgreSQL lanzaba 42P18 y la app mostraba datos de respaldo)
+    @Query("SELECT a FROM AuditoriaOperacion a WHERE a.timestamp >= :fechaInicio AND a.timestamp <= :fechaFin " +
            "ORDER BY a.timestamp DESC")
-    Page<AuditoriaOperacion> filtrarAuditoria(
-            @Param("idOperacion") String idOperacion,
+    Page<AuditoriaOperacion> filtrarPorFechas(
+            @Param("fechaInicio") LocalDateTime fechaInicio,
+            @Param("fechaFin") LocalDateTime fechaFin,
+            Pageable pageable
+    );
+
+    @Query("SELECT a FROM AuditoriaOperacion a WHERE a.timestamp >= :fechaInicio AND a.timestamp <= :fechaFin AND " +
+           "(LOWER(a.idOperacion) LIKE LOWER(CONCAT('%', :termino, '%')) OR LOWER(a.accion) LIKE LOWER(CONCAT('%', :termino, '%'))) " +
+           "ORDER BY a.timestamp DESC")
+    Page<AuditoriaOperacion> filtrarPorTermino(
+            @Param("termino") String termino,
             @Param("fechaInicio") LocalDateTime fechaInicio,
             @Param("fechaFin") LocalDateTime fechaFin,
             Pageable pageable

@@ -1,11 +1,85 @@
 import 'package:flutter/foundation.dart';
-import 'dart:io';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// [RF01] Constantes de conexión y URLs base hacia el Backend
+/// [RF01] Constantes de conexión y URLs base hacia el Backend Spring Boot.
 class ApiService {
-  static String get baseUrl {
-    // Reemplaza '192.168.X.X' con la IP IPv4 actual de tu computadora
-    if (kIsWeb) return 'http://localhost:8080/api/v1';
-    return 'http://192.168.X.X:8080/api/v1'; 
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const String _keyCustomHost = 'custom_api_host';
+
+  /// IP IPv4 de la laptop en la red Wi-Fi local donde corre Spring Boot
+  static const String localIp = String.fromEnvironment('API_HOST', defaultValue: '192.168.18.57');
+  static const String port = String.fromEnvironment('API_PORT', defaultValue: '8080');
+
+  /// IP de loopback estándar para el emulador de Android Studio
+  static const String emulatorIp = '10.0.2.2';
+
+  /// Permite configurar dinámicamente el host si se ejecuta en emulador de Android Studio
+  static String? _customHost;
+  static set customHost(String? host) => _customHost = host;
+  static String? get customHost => _customHost;
+
+  /// Carga el host persistido si el usuario configuró una IP personalizada
+  static Future<void> inicializar() async {
+    try {
+      final h = await _storage.read(key: _keyCustomHost);
+      if (h != null && h.trim().isNotEmpty) {
+        _customHost = h.trim();
+      }
+    } catch (_) {}
+  }
+
+  /// Guarda una nueva IP de servidor configurada desde la UI
+  static Future<void> guardarHost(String host) async {
+    _customHost = host.trim();
+    await _storage.write(key: _keyCustomHost, value: _customHost);
+  }
+
+  /// Restablece la IP predeterminada
+  static Future<void> restaurarHostDefault() async {
+    _customHost = null;
+    await _storage.delete(key: _keyCustomHost);
+  }
+
+  /// En Web (Chrome) el backend corre en la misma máquina (localhost);
+  /// En móvil físico o emulador utiliza el host asignado o la IP LAN local
+  static String get host {
+    if (_customHost != null && _customHost!.trim().isNotEmpty) return _customHost!.trim();
+    if (kIsWeb) return 'localhost';
+    return localIp;
+  }
+
+  /// URL raíz del servidor (soporta IP local con puerto o URL cloud HTTPS de Render/Oracle)
+  static String get serverUrl {
+    final h = host;
+    if (h.startsWith('http://') || h.startsWith('https://')) {
+      return h.endsWith('/') ? h.substring(0, h.length - 1) : h;
+    }
+    if (h.contains('.onrender.com') || h.contains('.railway.app') || h.contains('.oraclecloud.com')) {
+      return 'https://$h';
+    }
+    return 'http://$h:$port';
+  }
+
+  /// Construye la URL de prueba para verificar conectividad con cualquier host
+  static String urlPruebaConexion(String input) {
+    var s = input.trim();
+    if (s.startsWith('http://') || s.startsWith('https://')) {
+      s = s.endsWith('/') ? s.substring(0, s.length - 1) : s;
+      return '$s/api/v1/catalogo';
+    }
+    if (s.contains('.onrender.com') || s.contains('.railway.app') || s.contains('.oraclecloud.com')) {
+      return 'https://$s/api/v1/catalogo';
+    }
+    return 'http://$s:$port/api/v1/catalogo';
+  }
+
+  /// URL base de los endpoints REST `/api/v1`
+  static String get baseUrl => '$serverUrl/api/v1';
+
+  /// Convierte una ruta relativa del backend (`/uploads/...`) en URL absoluta
+  static String urlRecurso(String? ruta) {
+    if (ruta == null || ruta.isEmpty) return '';
+    if (ruta.startsWith('http')) return ruta;
+    return '$serverUrl${ruta.startsWith('/') ? '' : '/'}$ruta';
   }
 }

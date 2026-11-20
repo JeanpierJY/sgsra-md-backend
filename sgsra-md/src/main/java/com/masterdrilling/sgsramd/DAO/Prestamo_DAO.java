@@ -32,9 +32,14 @@ public interface Prestamo_DAO extends JpaRepository<Prestamo, String> {
            "AND p.estadoPrestamo IN ('ACTIVO', 'MORA')")
     Optional<Prestamo> findPrestamoActivoByHerramienta(@Param("codHerramienta") String codHerramienta);
 
+    // Identifica todos los prestamos de un mecanico especifico ordenados por fecha
+    @Query("SELECT p FROM Prestamo p WHERE p.mecanico.dniMecanico = :dniMecanico ORDER BY p.fechaPrestamo DESC, p.horaSalida DESC")
+    List<Prestamo> listarPorMecanico(@Param("dniMecanico") String dniMecanico);
+
     // Rastreo de bitacora para imputacion de herramientas extraviadas al ultimo custodio (RF42)
-    @Query("SELECT p.mecanico.dniMecanico FROM Prestamo p JOIN p.detalles d " +
-           "WHERE d.herramienta.codHerramienta = :codHerramienta " +
-           "ORDER BY p.fechaPrestamo DESC, p.horaSalida DESC LIMIT 1")
+    @Query(value = "SELECT p.dni_mecanico FROM prestamo p " +
+           "JOIN prestamo_detalle d ON p.prestamo_num = d.prestamo_num " +
+           "WHERE d.cod_herramienta = :codHerramienta " +
+           "ORDER BY p.fecha_prestamo DESC, p.hora_salida DESC LIMIT 1", nativeQuery = true)
     Optional<String> findUltimoMecanicoCustodio(@Param("codHerramienta") String codHerramienta);
 }

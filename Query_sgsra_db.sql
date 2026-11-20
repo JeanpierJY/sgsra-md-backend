@@ -2,7 +2,7 @@
 -- PROYECTO: SGSRA-MD (Master Drilling)
 -- SCRIPT DDL: CREACION DE TABLAS, RESTRICCIONES, INDICES Y USUARIOS SEMILLA
 -- COMPATIBILIDAD: PostgreSQL 16+ / PostgreSQL 18
--- Base de datos: sgsra_db
+-- Nombre Base de datos: sgsra_db
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -27,6 +27,7 @@ DROP TABLE IF EXISTS mecanico CASCADE;
 DROP TABLE IF EXISTS almacenista CASCADE;
 DROP TABLE IF EXISTS administrador CASCADE;
 DROP TABLE IF EXISTS usuario CASCADE;
+DROP TABLE IF EXISTS solicitud_recuperacion_clave CASCADE;
 
 -- ----------------------------------------------------------------------------
 -- 1. TABLA: USUARIO (Autenticacion y Control de Acceso)
@@ -284,7 +285,25 @@ CREATE TABLE notificacion (
 );
 
 -- ----------------------------------------------------------------------------
--- 15. INDICES B-TREE (Optimizacion de Consultas Frecuentes)
+-- 15. TABLA: SOLICITUD_RECUPERACION_CLAVE (Flujo Formal de Clave y Evidencia Selfie - RF06)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS solicitud_recuperacion_clave (
+    id_recuperacion BIGSERIAL PRIMARY KEY,
+    dni_solicitante VARCHAR(8) NOT NULL,
+    nombre_solicitante VARCHAR(100) NOT NULL,
+    correo_solicitante VARCHAR(100) NOT NULL,
+    rol_solicitante VARCHAR(20) NOT NULL,
+    motivo TEXT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+    fecha_solicitud TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    fecha_resolucion TIMESTAMP WITHOUT TIME ZONE,
+    dni_administrador VARCHAR(8),
+    observacion_admin TEXT,
+    foto_selfie_url VARCHAR(255)
+);
+
+-- ----------------------------------------------------------------------------
+-- 16. INDICES B-TREE (Optimizacion de Consultas Frecuentes)
 -- ----------------------------------------------------------------------------
 CREATE INDEX idx_solicitud_mecanico ON solicitud(dni_mecanico);
 CREATE INDEX idx_solicitud_estado ON solicitud(estado_solicitud);
@@ -296,9 +315,11 @@ CREATE INDEX idx_repuesto_activo ON repuesto(activo);
 CREATE INDEX idx_auditoria_timestamp ON auditoria_operacion(timestamp);
 CREATE INDEX idx_notificacion_destinatario ON notificacion(dni_destinatario, leida);
 CREATE INDEX idx_notificacion_rol ON notificacion(rol_destinatario, leida);
+CREATE INDEX idx_solicitud_recup_dni ON solicitud_recuperacion_clave(dni_solicitante);
+CREATE INDEX idx_solicitud_recup_estado ON solicitud_recuperacion_clave(estado);
 
 -- ============================================================================
--- 16. USUARIOS SEMILLA (Contraseñas oficiales BCrypt: admin, meca, alma)
+-- 17. USUARIOS SEMILLA (Contraseñas oficiales BCrypt: admin, meca, alma)
 -- ============================================================================
 -- Admin:       leao.chura@masterdrilling.com    / pass: admin
 -- Mecanico:    carlos.baro@masterdrilling.com   / pass: meca
@@ -311,21 +332,22 @@ INSERT INTO usuario (dni, nombre, correo_corporativo, contrasena_hash, rol, esta
 ('75859812', 'Carlos Mendoza', 'carlos.mendoza@masterdrilling.com', '$2a$10$iD7BzGlbX42.b2eXAm2Jj.yF28BJ5sxd2V2VZkqei8kRLiMo9gGpC', 'MECANICO', 'ACTIVO'),
 ('45829104', 'Marcos Aurelio Ramos Quispe', 'marcos.ramos@masterdrilling.com', '$2a$10$Mhsh51WoSbSQ0Qm6f.o38.0qH3NZZZTksyMEGZCVdr3okakrwU292', 'ALMACENISTA', 'ACTIVO');
 
-INSERT INTO administrador (dni_administrador, nombre_administrador, correo_corporativo) VALUES
-('10293847', 'Leao Chura', 'leao.chura@masterdrilling.com');
 
-INSERT INTO mecanico (dni_mecanico, nombre_mecanico, especialidad_mecanico, cargo_mecanico, telefono) VALUES
-('70000001', 'Carlos Mendoza Baro', 'Hidraulica', 'Mecanico de Planta', '987654321'),
-('75859812', 'Carlos Mendoza', 'Electrohidraulica', 'Mecanico de Campo', '995348431');
+-- Tabla requerida para el flujo de recuperación de contraseña con validación DNI/Teléfono y selfie (RF06 / Fase 3)
+CREATE TABLE IF NOT EXISTS solicitud_recuperacion_clave (
+    id_recuperacion BIGSERIAL PRIMARY KEY,
+    dni_solicitante VARCHAR(8) NOT NULL,
+    nombre_solicitante VARCHAR(100) NOT NULL,
+    correo_solicitante VARCHAR(100) NOT NULL,
+    rol_solicitante VARCHAR(20) NOT NULL,
+    motivo TEXT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+    fecha_solicitud TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    fecha_resolucion TIMESTAMP WITHOUT TIME ZONE,
+    dni_administrador VARCHAR(8),
+    observacion_admin TEXT,
+    foto_selfie_url VARCHAR(255)
+);
 
-INSERT INTO almacenista (dni_almacenista, nombre_almacenista, sede_asignada) VALUES
-('70000002', 'Marcos Ramos Baro', 'Taller Lurin'),
-('45829104', 'Marcos Aurelio Ramos Quispe', 'Mina Cerro Lindo');
-
--- ===================================================================================
--- Limpieza de las tablas usuario y roles en caso de errores sin eliminar las tablas
--- ===================================================================================
-TRUNCATE TABLE usuario CASCADE;
-TRUNCATE TABLE administrador CASCADE;
-TRUNCATE TABLE mecanico CASCADE;
-TRUNCATE TABLE almacenista CASCADE;
+CREATE INDEX IF NOT EXISTS idx_solicitud_recup_dni ON solicitud_recuperacion_clave(dni_solicitante);
+CREATE INDEX IF NOT EXISTS idx_solicitud_recup_estado ON solicitud_recuperacion_clave(estado);

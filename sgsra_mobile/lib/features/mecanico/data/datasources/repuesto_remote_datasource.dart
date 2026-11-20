@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/session/session_manager.dart';
 import '../models/repuesto_model.dart';
 import '../models/solicitud_request.dart';
 
@@ -10,10 +11,14 @@ class RepuestoRemoteDataSource {
   RepuestoRemoteDataSource(this._dioClient);
 
   Future<String> obtenerCorreoMecanico() async {
+    final c = await SessionManager.correo();
+    if (c != null && c.isNotEmpty) return c;
     return await _storage.read(key: 'correo_usuario') ?? 'carlos.baro@masterdrilling.com';
   }
 
   Future<String> obtenerDniMecanico() async {
+    final d = await SessionManager.dni();
+    if (d != null && d.isNotEmpty) return d;
     return await _storage.read(key: 'dni_usuario') ?? '70000001';
   }
 
@@ -38,6 +43,13 @@ class RepuestoRemoteDataSource {
   Future<RepuestoModel> obtenerDetalle(String codParte) async {
     final res = await _dioClient.dio.get('/catalogo/$codParte');
     return RepuestoModel.fromJson(res.data);
+  }
+
+  /// [MEC-05] Búsqueda predictiva de maquinaria por código, modelo o serie
+  Future<List<Map<String, dynamic>>> buscarMaquinarias(String termino) async {
+    final res = await _dioClient.dio.get('/maquinarias', queryParameters: {'termino': termino});
+    if (res.data is! List) return [];
+    return (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   Future<String> registrarSolicitud(SolicitudCreacionDto dto) async {

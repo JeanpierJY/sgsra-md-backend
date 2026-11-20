@@ -12,9 +12,11 @@ import java.util.List;
 // Contrato para catalogo maestro de repuestos pesados (RF09, RF10, RF12, RF32)
 public interface ICatalogoService {
     Page<RepuestoResponse> listarCatalogo(Pageable pageable);
+    Page<RepuestoResponse> listarCatalogoAdmin(Pageable pageable);
     List<RepuestoResponse> buscarPredictivo(String termino);
     RepuestoResponse obtenerPorCodigo(String codParte);
     RepuestoResponse registrarRepuesto(CrearRepuestoRequest request);
     RepuestoResponse actualizarRepuesto(String codParte, ActualizarRepuestoRequest request);
     MensajeGenericoResponse cambiarEstadoRepuesto(String codParte, boolean activo);
+    RepuestoResponse subirImagenRepuesto(String codParte, org.springframework.web.multipart.MultipartFile archivo);
 }

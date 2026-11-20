@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
+/// [RF49, ADM-02, ADM-03] Bitácora de auditoría.
+/// Muestra solo datos reales del servidor, en lenguaje claro, agrupados por día,
+/// con filtros por categoría y periodo. El hash SHA-256 queda disponible al expandir.
 class AuditoriaScreen extends StatefulWidget {
-  const AuditoriaScreen({Key? key}) : super(key: key);
+  const AuditoriaScreen({super.key});
 
   @override
   State<AuditoriaScreen> createState() => _AuditoriaScreenState();
+}
+
+class _Categoria {
+  final String nombre;
+  final IconData icono;
+  final Color color;
+  const _Categoria(this.nombre, this.icono, this.color);
 }
 
 class _AuditoriaScreenState extends State<AuditoriaScreen> {
@@ -14,59 +28,46 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
   final TextEditingController _buscarCtrl = TextEditingController();
 
   bool _isLoading = true;
-  List<dynamic> _logs = [];
+  bool _cargandoMas = false;
+  bool _hayMas = false;
+  int _pagina = 0;
+  String? _error;
+  List<Map<String, dynamic>> _logs = [];
+  String _categoria = 'Todas';
+  int _dias = 7;
 
-  // Logs sellados con SHA-256 para validacion funcional
-  late final List<Map<String, dynamic>> _logsRespaldo = [
-    {
-      'idOperacion': 'SOL-2026-0004',
-      'idUsuario': 'carlos.baro@masterdrilling.com',
-      'accion': 'REGISTRO_SOLICITUD',
-      'ipOrigen': '192.168.1.45',
-      'timestamp': '2026-10-29 18:42:10',
-      'hashSha256': 'a8f5c1d2e9b4a7c3f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3',
-    },
-    {
-      'idOperacion': 'SOL-2026-0001',
-      'idUsuario': 'leao.chura@masterdrilling.com',
-      'accion': 'APROBACION_TOTAL_JEFATURA',
-      'ipOrigen': '192.168.1.10',
-      'timestamp': '2026-10-29 17:30:22',
-      'hashSha256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    },
-    {
-      'idOperacion': 'PRES-2026-0012',
-      'idUsuario': 'marcos.baro@masterdrilling.com',
-      'accion': 'DESPACHO_HERRAMIENTA_PANOL',
-      'ipOrigen': '192.168.1.80',
-      'timestamp': '2026-10-29 16:15:05',
-      'hashSha256': '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-    },
-    {
-      'idOperacion': 'SOL-2026-0002',
-      'idUsuario': 'leao.chura@masterdrilling.com',
-      'accion': 'DICTAMEN_RECHAZO_TECNICO',
-      'ipOrigen': '192.168.1.10',
-      'timestamp': '2026-10-29 15:02:40',
-      'hashSha256': '6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b',
-    },
-    {
-      'idOperacion': 'CAT-REX-024',
-      'idUsuario': 'leao.chura@masterdrilling.com',
-      'accion': 'ALTA_REPUESTO_HOMOLOGADO',
-      'ipOrigen': '192.168.1.10',
-      'timestamp': '2026-10-29 14:10:18',
-      'hashSha256': '4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a',
-    },
-    {
-      'idOperacion': 'PRES-2026-0009',
-      'idUsuario': 'marcos.baro@masterdrilling.com',
-      'accion': 'RECEPCION_INSPECCION_RETORNO',
-      'ipOrigen': '192.168.1.80',
-      'timestamp': '2026-10-29 11:45:00',
-      'hashSha256': 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d',
-    },
-  ];
+  static const _periodos = {1: 'Hoy', 7: '7 días', 30: '30 días', 180: '6 meses'};
+
+  static final Map<String, _Categoria> _categorias = {
+    'Solicitudes': _Categoria('Solicitudes', Icons.receipt_long_rounded, AppColors.primaryBlue),
+    'Préstamos': _Categoria('Préstamos', Icons.handyman_rounded, Colors.teal),
+    'Seguridad': _Categoria('Seguridad', Icons.shield_outlined, AppColors.errorRed),
+    'Sesiones': _Categoria('Sesiones', Icons.login_rounded, Colors.indigo),
+    'Personal': _Categoria('Personal', Icons.people_alt_outlined, Colors.deepPurple),
+    'Inventario': _Categoria('Inventario', Icons.inventory_2_outlined, Colors.brown),
+    'Otros': _Categoria('Otros', Icons.history_rounded, Colors.blueGrey),
+  };
+
+  /// Traducción de los códigos de acción a lenguaje natural
+  static const Map<String, String> _acciones = {
+    'SOLICITUD_CREADA': 'Creó una solicitud de repuestos',
+    'SOLICITUD_APROBADA_TOTAL': 'Aprobó una solicitud',
+    'SOLICITUD_APROBADA_PARCIAL': 'Aprobó parcialmente una solicitud',
+    'SOLICITUD_RECHAZADA_TOTAL': 'Rechazó una solicitud',
+    'ORDEN_CONTACTADA_PROVEEDOR': 'Contactó al proveedor por una solicitud',
+    'ENTREGA_DESPACHO_REPUESTOS': 'Entregó los repuestos de una solicitud',
+    'PRESTAMO_HERRAMIENTAS': 'Registró un préstamo de herramientas',
+    'DEVOLUCION_HERRAMIENTAS': 'Recibió la devolución de herramientas',
+    'LOGIN_EXITOSO': 'Inició sesión',
+    'SESION_INICIADA': 'Inició sesión',
+    'LOGIN_FALLIDO': 'Intento de acceso fallido',
+    'CONTRASENA_INCORRECTA': 'Ingresó una contraseña incorrecta',
+    'INTENTO_CUENTA_BLOQUEADA': 'Intentó ingresar con la cuenta bloqueada',
+    'BLOQUEO_TOTAL_POR_INTENTOS': 'Cuenta bloqueada por intentos fallidos',
+    'RECUPERACION_CLAVE_APROBADA': 'Aprobó una recuperación de contraseña',
+    'RECUPERACION_CLAVE_RECHAZADA': 'Rechazó una recuperación de contraseña',
+    'DATOS_PERSONAL_ACTUALIZADOS': 'Actualizó los datos de un trabajador',
+  };
 
   @override
   void initState() {
@@ -74,92 +75,190 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
     _cargarAuditoria();
   }
 
-  Future<void> _cargarAuditoria() async {
-    setState(() => _isLoading = true);
+  static String _textoAccion(String accion) {
+    if (_acciones.containsKey(accion)) return _acciones[accion]!;
+    if (accion.startsWith('BLOQUEO_TEMPORAL_')) {
+      return 'Cuenta bloqueada ${accion.replaceAll(RegExp(r'[^0-9]'), '')} minutos por intentos fallidos';
+    }
+    if (accion.startsWith('EXTRAVIO_IMPUTADO')) return 'Reportó el extravío de una herramienta';
+    final t = accion.replaceAll('_', ' ').toLowerCase();
+    return t.isEmpty ? accion : t[0].toUpperCase() + t.substring(1);
+  }
+
+  static _Categoria _categoriaDe(Map log) {
+    final a = (log['accion'] ?? '').toString();
+    final op = (log['idOperacion'] ?? '').toString();
+    if (a.contains('SOLICITUD') || a.contains('ORDEN') || a.contains('ENTREGA') || op.startsWith('SOL-')) {
+      return _categorias['Solicitudes']!;
+    }
+    if (a.contains('PRESTAMO') || a.contains('DEVOLUCION') || a.contains('EXTRAVIO')) return _categorias['Préstamos']!;
+    if (a.contains('BLOQUEO') || a.contains('FALLIDO') || a.contains('RECUPERACION') || a.contains('CONTRASENA') || a.contains('BLOQUEADA')) {
+      return _categorias['Seguridad']!;
+    }
+    if (a.contains('LOGIN') || a.contains('SESION')) return _categorias['Sesiones']!;
+    if (a.contains('PERSONAL') || a.contains('USUARIO') || a.contains('CUENTA')) return _categorias['Personal']!;
+    if (a.contains('REPUESTO') || a.contains('HERRAMIENTA') || a.contains('CATALOGO') || a.contains('STOCK')) {
+      return _categorias['Inventario']!;
+    }
+    return _categorias['Otros']!;
+  }
+
+  Future<void> _cargarAuditoria({bool mas = false}) async {
+    setState(() {
+      if (mas) {
+        _cargandoMas = true;
+      } else {
+        _isLoading = true;
+        _error = null;
+        _pagina = 0;
+      }
+    });
     try {
       final ahora = DateTime.now();
-      final fechaInicio = ahora.subtract(const Duration(days: 180));
+      final inicioHoy = DateTime(ahora.year, ahora.month, ahora.day);
+      final fechaInicio = inicioHoy.subtract(Duration(days: _dias - 1));
       final fechaFin = DateTime(ahora.year, ahora.month, ahora.day, 23, 59, 59);
+      final pagina = mas ? _pagina + 1 : 0;
 
       final params = <String, dynamic>{
-        'page': 0,
-        'size': 15,
+        'page': pagina,
+        'size': 50,
         'inicio': fechaInicio.toIso8601String(),
         'fin': fechaFin.toIso8601String(),
       };
-
       final busqueda = _buscarCtrl.text.trim();
-      if (busqueda.isNotEmpty) {
-        params['idOperacion'] = busqueda;
-      }
+      if (busqueda.isNotEmpty) params['idOperacion'] = busqueda;
 
       final res = await _dioClient.dio.get('/auditoria', queryParameters: params);
-      
-      if (res.data is Map && res.data['content'] != null) {
-        setState(() {
-          _logs = List<dynamic>.from(res.data['content']);
-          _isLoading = false;
-        });
-      } else {
-        _usarLogsLocales();
-      }
-    } catch (_) {
-      // Si la base de datos lanza SQLState 42P18, se cargan los registros sellados
-      _usarLogsLocales();
+      final contenido = (res.data is Map && res.data['content'] is List)
+          ? (res.data['content'] as List).map((e) => Map<String, dynamic>.from(e)).toList()
+          : <Map<String, dynamic>>[];
+      if (!mounted) return;
+      setState(() {
+        _logs = mas ? [..._logs, ...contenido] : contenido;
+        _pagina = pagina;
+        _hayMas = res.data is Map && res.data['last'] == false;
+        _isLoading = false;
+        _cargandoMas = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _cargandoMas = false;
+        _error = mensajeDeError(e);
+      });
     }
   }
 
-  void _usarLogsLocales() {
-    final busqueda = _buscarCtrl.text.trim().toUpperCase();
-    setState(() {
-      if (busqueda.isEmpty) {
-        _logs = List.from(_logsRespaldo);
-      } else {
-        _logs = _logsRespaldo
-            .where((l) =>
-                (l['idOperacion'] as String).toUpperCase().contains(busqueda) ||
-                (l['accion'] as String).toUpperCase().contains(busqueda))
-            .toList();
-      }
-      _isLoading = false;
-    });
+  List<Map<String, dynamic>> get _filtrados =>
+      _categoria == 'Todas' ? _logs : _logs.where((l) => _categoriaDe(l).nombre == _categoria).toList();
+
+  static String _etiquetaDia(DateTime d) {
+    final hoy = DateTime.now();
+    final h = DateTime(hoy.year, hoy.month, hoy.day);
+    final x = DateTime(d.year, d.month, d.day);
+    final diff = h.difference(x).inDays;
+    if (diff == 0) return 'Hoy';
+    if (diff == 1) return 'Ayer';
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return '${d.day} ${meses[d.month - 1]} ${d.year}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final lista = _filtrados;
+    final filas = <Widget>[];
+    String? diaActual;
+    for (final log in lista) {
+      final ts = DateTime.tryParse('${log['timestamp']}');
+      final dia = ts == null ? 'Sin fecha' : _etiquetaDia(ts);
+      if (dia != diaActual) {
+        diaActual = dia;
+        filas.add(Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+          child: Text(dia, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+        ));
+      }
+      filas.add(_EventoTile(log: log, categoria: _categoriaDe(log), texto: _textoAccion('${log['accion']}')));
+    }
+
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
         title: const Text('Bitacora de Auditoria [RF49]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarAuditoria),
+          IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarAuditoria),
+          const NotificacionBell(),
+          const PerfilBoton(),
         ],
       ),
       body: Column(
         children: [
           Container(
             color: AppColors.pureWhite,
-            padding: const EdgeInsets.all(12),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _buscarCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Filtrar por ID de Operacion (ej. SOL-..., PRES-...)',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                      isDense: true,
+                TextField(
+                  controller: _buscarCtrl,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar código (SOL-..., PRES-...) o acción',
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                      tooltip: 'Buscar',
+                      onPressed: _cargarAuditoria,
                     ),
-                    onSubmitted: (_) => _cargarAuditoria(),
                   ),
+                  onSubmitted: (_) => _cargarAuditoria(),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-                  onPressed: _cargarAuditoria,
-                  child: const Text('Buscar', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 8),
+                Row(children: [
+                  const Icon(Icons.date_range_rounded, size: 18, color: Colors.black54),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SegmentedButton<int>(
+                      showSelectedIcon: false,
+                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                      segments: _periodos.entries
+                          .map((e) => ButtonSegment<int>(value: e.key, label: Text(e.value, style: const TextStyle(fontSize: 12))))
+                          .toList(),
+                      selected: {_dias},
+                      onSelectionChanged: (s) {
+                        setState(() => _dias = s.first);
+                        _cargarAuditoria();
+                      },
+                    ),
+                  ),
+                ]),
+                SizedBox(
+                  height: 48,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    children: ['Todas', ..._categorias.keys].map((c) {
+                      final sel = _categoria == c;
+                      final cat = _categorias[c];
+                      final n = c == 'Todas' ? _logs.length : _logs.where((l) => _categoriaDe(l).nombre == c).length;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          avatar: cat == null ? null : Icon(cat.icono, size: 16, color: sel ? Colors.white : cat.color),
+                          label: Text('$c ($n)'),
+                          selected: sel,
+                          showCheckmark: false,
+                          selectedColor: cat?.color ?? AppColors.primaryBlue,
+                          labelStyle: TextStyle(color: sel ? Colors.white : Colors.black87, fontSize: 12.5),
+                          onSelected: (_) => setState(() => _categoria = c),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ],
             ),
@@ -167,53 +266,134 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                : _logs.isEmpty
-                    ? const Center(child: Text('No se encontraron registros criptograficos auditados.'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(14),
-                        itemCount: _logs.length,
-                        itemBuilder: (context, index) {
-                          final log = _logs[index];
-                          return Card(
-                            color: AppColors.pureWhite,
-                            elevation: 2,
-                            margin: const EdgeInsets.only(bottom: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(14.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                : RefreshIndicator(
+                    onRefresh: _cargarAuditoria,
+                    child: _error != null
+                        ? ListView(children: [
+                            const SizedBox(height: 70),
+                            const Icon(Icons.cloud_off_rounded, size: 56, color: Colors.grey),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text('No se pudo cargar la bitácora.\n$_error', textAlign: TextAlign.center),
+                            ),
+                            Center(
+                              child: OutlinedButton.icon(
+                                  onPressed: _cargarAuditoria, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
+                            ),
+                          ])
+                        : lista.isEmpty
+                            ? ListView(children: const [
+                                SizedBox(height: 70),
+                                Icon(Icons.fact_check_outlined, size: 56, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Center(child: Text('No hay registros para este filtro y periodo.')),
+                              ])
+                            : ListView(
+                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Operacion: ${log['idOperacion']}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryBlue)),
-                                      Text('${log['timestamp']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                    ],
-                                  ),
-                                  const Divider(height: 14),
-                                  Text('Accion: ${log['accion']}'),
-                                  Text('Usuario: ${log['idUsuario']} | IP: ${log['ipOrigen']}'),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(color: AppColors.backgroundGray, borderRadius: BorderRadius.circular(6)),
-                                    child: SelectableText(
-                                      'Hash SHA-256: ${log['hashSha256']}',
-                                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.black87),
+                                  ...filas,
+                                  if (_hayMas)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Center(
+                                        child: _cargandoMas
+                                            ? const CircularProgressIndicator()
+                                            : OutlinedButton.icon(
+                                                onPressed: () => _cargarAuditoria(mas: true),
+                                                icon: const Icon(Icons.expand_more_rounded),
+                                                label: const Text('Cargar más registros'),
+                                              ),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                  ),
           ),
         ],
       ),
     );
   }
+}
+
+class _EventoTile extends StatelessWidget {
+  final Map<String, dynamic> log;
+  final _Categoria categoria;
+  final String texto;
+  const _EventoTile({required this.log, required this.categoria, required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    final ts = DateTime.tryParse('${log['timestamp']}');
+    final hora = ts == null ? '' : '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}';
+    final usuario = log['nombreUsuario'] ?? 'Usuario #${log['idUsuario'] ?? '-'}';
+    final rol = log['rolUsuario'];
+    final hash = '${log['hashSha256'] ?? ''}';
+
+    return Card(
+      color: AppColors.pureWhite,
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: categoria.color.withValues(alpha: 0.25)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: CircleAvatar(
+            backgroundColor: categoria.color.withValues(alpha: 0.12),
+            child: Icon(categoria.icono, color: categoria.color, size: 20),
+          ),
+          title: Text(texto, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: Text(
+            '$usuario${rol != null ? ' · ${rol.toString()[0]}${rol.toString().substring(1).toLowerCase()}' : ''}\n'
+            '${log['idOperacion'] ?? ''}',
+            style: const TextStyle(fontSize: 12),
+          ),
+          trailing: Text(hora, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+          children: [
+            _fila('Código de operación', '${log['idOperacion'] ?? '-'}'),
+            _fila('Acción registrada', '${log['accion'] ?? '-'}'),
+            _fila('IP de origen', '${log['ipOrigen'] ?? '-'}'),
+            _fila('Fecha y hora', '${log['timestamp'] ?? '-'}'.replaceFirst('T', ' ').split('.').first),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: AppColors.backgroundGray, borderRadius: BorderRadius.circular(6)),
+              child: Row(children: [
+                const Icon(Icons.verified_rounded, size: 16, color: Colors.green),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text('SHA-256: $hash',
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 10.5)),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Copiar hash',
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: hash));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hash copiado')));
+                  },
+                ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fila(String k, String v) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(width: 140, child: Text(k, style: const TextStyle(fontSize: 12.5, color: Colors.black54))),
+          Expanded(child: Text(v, style: const TextStyle(fontSize: 12.5))),
+        ]),
+      );
 }

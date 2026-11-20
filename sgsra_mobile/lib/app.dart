@@ -14,6 +14,14 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.backgroundGray,
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primaryBlue),
         useMaterial3: true,
+        // GEN-03: barra superior azul con títulos e íconos blancos en toda la app
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.primaryBlue,
+          foregroundColor: Colors.white,
+          iconTheme: IconThemeData(color: Colors.white),
+          actionsIconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
       ),
       initialRoute: '/',
       onGenerateRoute: AppRouter.generateRoute,

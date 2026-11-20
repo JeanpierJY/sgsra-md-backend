@@ -54,4 +54,11 @@ public class CatalogoController {
             @RequestParam("activo") boolean activo) {
         return ResponseEntity.ok(catalogoService.cambiarEstadoRepuesto(codParte, activo));
     }
+
+    @PostMapping(value = "/{codParte}/imagen", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<RepuestoResponse> subirImagen(
+            @PathVariable("codParte") String codParte,
+            @RequestParam("imagen") org.springframework.web.multipart.MultipartFile imagen) {
+        return ResponseEntity.ok(catalogoService.subirImagenRepuesto(codParte, imagen));
+    }
 }

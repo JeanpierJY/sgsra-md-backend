@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/widgets/imagen_producto.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
+import '../widgets/herramienta_ui.dart';
+import 'detalle_herramienta_screen.dart';
 import 'reportar_extravio_modal.dart';
+import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
+import '../../../../core/widgets/perfil_boton.dart';
 
+/// [RF45, ALM-04, ALM-05] Pestaña "Herramientas": catálogo del pañol con buscador predictivo,
+/// filtros, detalle de cada herramienta y botones flotantes para alta y extravío.
 class RegistrarHerramientaScreen extends StatefulWidget {
   const RegistrarHerramientaScreen({Key? key}) : super(key: key);
 
@@ -14,9 +22,20 @@ class RegistrarHerramientaScreen extends StatefulWidget {
 
 class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen> {
   final AlmacenRemoteDataSource _dataSource = AlmacenRemoteDataSource(DioClient());
+  final _buscarCtrl = TextEditingController();
   bool _isLoading = true;
+  String? _error;
   List<HerramientaEntity> _herramientas = [];
-  String _filtro = 'TODAS';
+  String _categoria = 'TODAS';
+  String _estado = 'TODOS';
+
+  static const _categorias = {
+    'TODAS': 'Todas',
+    'MANUALES': 'Manuales',
+    'HIDRAULICAS': 'Hidráulicas',
+    'NEUMATICAS': 'Neumáticas',
+    'ELECTRICAS': 'Eléctricas',
+  };
 
   @override
   void initState() {
@@ -24,24 +43,45 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
     _cargarHerramientas();
   }
 
+  @override
+  void dispose() {
+    _buscarCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarHerramientas() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
-      final list = await _dataSource.listarHerramientas(categoria: _filtro);
+      final list = await _dataSource.listarHerramientas(categoria: _categoria);
+      if (!mounted) return;
       setState(() {
-        _herramientas = list;
+        _herramientas = list..sort((a, b) => a.codHerramienta.compareTo(b.codHerramienta));
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _herramientas = const [
-          HerramientaEntity(codHerramienta: 'HER-TOR-004', nombre: 'Torquímetro Industrial 3/4', marca: 'Enerpac', categoria: 'HIDRAULICAS', estadoActual: 'DISPONIBLE'),
-          HerramientaEntity(codHerramienta: 'HER-LLA-012', nombre: 'Juego Llaves Corona', marca: 'SATA', categoria: 'MANUALES', estadoActual: 'PRESTADA'),
-          HerramientaEntity(codHerramienta: 'HER-TAL-001', nombre: 'Taladro Percutor Neumático', marca: 'Atlas Copco', categoria: 'NEUMATICAS', estadoActual: 'EN_MANTENIMIENTO'),
-        ];
         _isLoading = false;
+        _error = mensajeDeError(e);
       });
     }
+  }
+
+  List<HerramientaEntity> get _filtradas {
+    final q = _buscarCtrl.text.trim().toLowerCase();
+    return _herramientas.where((h) {
+      final okTexto = q.isEmpty || '${h.codHerramienta} ${h.nombre} ${h.marca}'.toLowerCase().contains(q);
+      final okEstado = _estado == 'TODOS' || claveEstadoHerramienta(h.estadoActual) == _estado;
+      return okTexto && okEstado;
+    }).toList();
+  }
+
+  Future<void> _abrirDetalle(HerramientaEntity h) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => DetalleHerramientaScreen(herramienta: h)));
+    _cargarHerramientas();
   }
 
   void _abrirModalCrear() {
@@ -54,47 +94,85 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Alta de Herramienta en Pañol'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(controller: codCtrl, decoration: const InputDecoration(labelText: 'Código de Activo (ej. HER-TOR-099)'), validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-              TextFormField(controller: nomCtrl, decoration: const InputDecoration(labelText: 'Nombre de Herramienta'), validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null),
-              TextFormField(controller: marcaCtrl, decoration: const InputDecoration(labelText: 'Marca / Fabricante')),
-              DropdownButtonFormField<String>(
-                value: catSel,
-                decoration: const InputDecoration(labelText: 'Categoría Técnica [RF45]'),
-                items: const [
-                  DropdownMenuItem(value: 'MANUALES', child: Text('Manuales')),
-                  DropdownMenuItem(value: 'HIDRAULICAS', child: Text('Hidráulicas')),
-                  DropdownMenuItem(value: 'NEUMATICAS', child: Text('Neumáticas')),
-                  DropdownMenuItem(value: 'ELECTRICAS', child: Text('Eléctricas')),
-                ],
-                onChanged: (val) => catSel = val ?? 'MANUALES',
-              ),
-            ],
+        title: const Text('Nueva herramienta'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: codCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(labelText: 'Código (ej. HER-TOR-099)'),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                ),
+                TextFormField(
+                  controller: nomCtrl,
+                  decoration: const InputDecoration(labelText: 'Nombre'),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                ),
+                TextFormField(controller: marcaCtrl, decoration: const InputDecoration(labelText: 'Marca / Fabricante')),
+                DropdownButtonFormField<String>(
+                  initialValue: catSel,
+                  decoration: const InputDecoration(labelText: 'Categoría [RF45]'),
+                  items: _categorias.entries
+                      .where((e) => e.key != 'TODAS')
+                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (val) => catSel = val ?? 'MANUALES',
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
             onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                Navigator.pop(ctx);
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(ctx);
+              final cod = codCtrl.text.trim().toUpperCase();
+              final messenger = ScaffoldMessenger.of(context);
+              try {
                 await _dataSource.registrarNuevaHerramienta({
-                  'codHerramienta': codCtrl.text.trim().toUpperCase(),
+                  'codHerramienta': cod,
                   'nombreHerramienta': nomCtrl.text.trim(),
                   'marcaHerramienta': marcaCtrl.text.trim(),
                   'categoria': catSel,
                   'estadoActual': 'DISPONIBLE',
                 });
-                _cargarHerramientas();
+                await _cargarHerramientas();
+                if (!mounted) return;
+                // Ofrece agregar la foto de inmediato
+                final foto = await showDialog<bool>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                    icon: Icon(Icons.check_circle_rounded, color: Colors.green[700], size: 48),
+                    title: Text('$cod registrada'),
+                    content: const Text('¿Desea agregarle una foto ahora?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Después')),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+                        onPressed: () => Navigator.pop(c, true),
+                        icon: const Icon(Icons.photo_camera_outlined),
+                        label: const Text('Agregar foto'),
+                      ),
+                    ],
+                  ),
+                );
+                if (foto == true && mounted) {
+                  final r = await seleccionarYSubirImagen(context, '/inventario/herramientas/$cod/imagen');
+                  if (r != null) _cargarHerramientas();
+                }
+              } catch (e) {
+                messenger.showSnackBar(
+                    SnackBar(content: Text(mensajeDeError(e)), backgroundColor: AppColors.errorRed));
               }
             },
-            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+            child: const Text('Guardar'),
           ),
         ],
       ),
@@ -103,79 +181,166 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
 
   @override
   Widget build(BuildContext context) {
+    final lista = _filtradas;
+    final conteo = <String, int>{};
+    for (final h in _herramientas) {
+      final k = claveEstadoHerramienta(h.estadoActual);
+      conteo[k] = (conteo[k] ?? 0) + 1;
+    }
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Catálogo de Herramientas [RF45]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Herramientas [RF45]', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.warning_amber_rounded),
-            tooltip: 'Reportar Extravío [RF41]',
+          IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarHerramientas),
+          const NotificacionBell(),
+          const PerfilBoton(),
+        ],
+      ),
+      // [ALM-05] Acciones como botones flotantes en la esquina inferior derecha
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'fab-extravio',
+            tooltip: 'Reportar extravío [RF41]',
+            backgroundColor: AppColors.errorRed,
+            foregroundColor: Colors.white,
             onPressed: () => mostrarModalReportarExtravio(context, _cargarHerramientas),
+            child: const Icon(Icons.report_gmailerrorred_rounded),
           ),
-          IconButton(icon: const Icon(Icons.add_box_rounded), tooltip: 'Alta Herramienta', onPressed: _abrirModalCrear),
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarHerramientas),
+          const SizedBox(height: 10),
+          FloatingActionButton.extended(
+            heroTag: 'fab-nueva',
+            backgroundColor: AppColors.primaryBlue,
+            foregroundColor: Colors.white,
+            onPressed: _abrirModalCrear,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Nueva herramienta'),
+          ),
         ],
       ),
       body: Column(
         children: [
           Container(
             color: AppColors.pureWhite,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['TODAS', 'MANUALES', 'HIDRAULICAS', 'NEUMATICAS', 'ELECTRICAS'].map((c) {
-                  final sel = _filtro == c;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6.0),
-                    child: FilterChip(
-                      selected: sel,
-                      label: Text(c),
-                      selectedColor: AppColors.primaryBlue.withOpacity(0.2),
-                      checkmarkColor: AppColors.primaryBlue,
-                      onSelected: (_) {
-                        setState(() => _filtro = c);
-                        _cargarHerramientas();
-                      },
-                    ),
-                  );
-                }).toList(),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Column(children: [
+              TextField(
+                controller: _buscarCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por código, nombre o marca',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _buscarCtrl.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear_rounded),
+                          onPressed: () => setState(_buscarCtrl.clear),
+                        ),
+                  isDense: true,
+                  filled: true,
+                  fillColor: AppColors.backgroundGray,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                onChanged: (_) => setState(() {}),
               ),
-            ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 38,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    ..._categorias.entries.map((c) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(c.value),
+                            selected: _categoria == c.key,
+                            showCheckmark: false,
+                            selectedColor: AppColors.primaryBlue,
+                            labelStyle: TextStyle(
+                                color: _categoria == c.key ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
+                            onSelected: (_) {
+                              setState(() => _categoria = c.key);
+                              _cargarHerramientas();
+                            },
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 34,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: ['TODOS', 'DISPONIBLE', 'PRESTADA', 'EN_MORA', 'EN_MANTENIMIENTO', 'EXTRAVIADA'].map((e) {
+                    final sel = _estado == e;
+                    final c = e == 'TODOS' ? AppColors.primaryBlue : colorEstadoHerramienta(e);
+                    final n = e == 'TODOS' ? _herramientas.length : (conteo[e] ?? 0);
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        visualDensity: VisualDensity.compact,
+                        label: Text('${e == 'TODOS' ? 'Todos' : etiquetaEstadoHerramienta(e)} ($n)'),
+                        selected: sel,
+                        showCheckmark: false,
+                        selectedColor: c.withValues(alpha: 0.18),
+                        side: BorderSide(color: sel ? c : Colors.grey.shade300),
+                        labelStyle: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w600),
+                        onSelected: (_) => setState(() => _estado = e),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ]),
           ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                : _herramientas.isEmpty
-                    ? const Center(child: Text('No hay herramientas registradas.'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(14),
-                        itemCount: _herramientas.length,
-                        itemBuilder: (context, index) {
-                          final h = _herramientas[index];
-                          final estado = h.estadoActual;
-
-                          return Card(
-                            color: AppColors.pureWhite,
-                            elevation: 2,
-                            margin: const EdgeInsets.only(bottom: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: estado == 'DISPONIBLE'
-                                    ? Colors.green[700]
-                                    : (estado == 'PRESTADA' ? AppColors.primaryBlue : AppColors.errorRed),
-                                child: const Icon(Icons.handyman, color: Colors.white, size: 20),
+                : RefreshIndicator(
+                    onRefresh: _cargarHerramientas,
+                    child: _error != null
+                        ? ListView(children: [
+                            const SizedBox(height: 80),
+                            const Icon(Icons.cloud_off_rounded, size: 60, color: Colors.grey),
+                            Center(child: Padding(padding: const EdgeInsets.all(12), child: Text(_error!, textAlign: TextAlign.center))),
+                            Center(
+                                child: TextButton.icon(
+                                    onPressed: _cargarHerramientas, icon: const Icon(Icons.refresh), label: const Text('Reintentar'))),
+                          ])
+                        : lista.isEmpty
+                            ? ListView(children: const [
+                                SizedBox(height: 80),
+                                Icon(Icons.handyman_outlined, size: 60, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Center(child: Text('No hay herramientas que coincidan.')),
+                              ])
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(14, 14, 14, 140),
+                                itemCount: lista.length,
+                                itemBuilder: (context, index) {
+                                  final h = lista[index];
+                                  return Card(
+                                    color: AppColors.pureWhite,
+                                    elevation: 1.5,
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () => _abrirDetalle(h),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: FilaHerramienta(h,
+                                            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black38)),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              title: Text('${h.nombre} (${h.codHerramienta})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Marca: ${h.marca} | Categoría: ${h.categoria}\nEstado: $estado'),
-                              isThreeLine: true,
-                            ),
-                          );
-                        },
-                      ),
+                  ),
           ),
         ],
       ),

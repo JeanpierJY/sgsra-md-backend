@@ -47,7 +47,13 @@ public class ReporteServiceImpl implements IReporteService {
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException("Formato de exportacion no soportado: " + formato));
 
-        List<Solicitud> solicitudes = solicitudRepository.findAll();
+        LocalDate fInicio = (fechaInicio != null) ? fechaInicio : LocalDate.now().minusMonths(6);
+        LocalDate fFin = (fechaFin != null) ? fechaFin : LocalDate.now();
+        List<Solicitud> solicitudes = solicitudRepository.findAll().stream()
+                .filter(s -> s.getFechaEmision() != null
+                        && !s.getFechaEmision().isBefore(fInicio) && !s.getFechaEmision().isAfter(fFin))
+                .sorted(java.util.Comparator.comparing(Solicitud::getFechaEmision).reversed())
+                .toList();
         List<String> cabeceras = List.of("Nro Solicitud", "Fecha", "Mecanico", "Maquina", "Prioridad", "Estado");
         List<List<String>> filas = new ArrayList<>();
 

@@ -45,4 +45,11 @@ public class InventarioController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(inventarioService.registrarNuevaHerramienta(request, correoAlmacenista));
     }
+
+    @PostMapping(value = "/herramientas/{codHerramienta}/imagen", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FichaHerramientaResponse> subirImagen(
+            @PathVariable("codHerramienta") String codHerramienta,
+            @RequestParam("imagen") org.springframework.web.multipart.MultipartFile imagen) {
+        return ResponseEntity.ok(inventarioService.subirImagenHerramienta(codHerramienta, imagen));
+    }
 }

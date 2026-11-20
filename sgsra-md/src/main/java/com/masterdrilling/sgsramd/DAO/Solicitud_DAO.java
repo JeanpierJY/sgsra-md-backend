@@ -18,6 +18,9 @@ public interface Solicitud_DAO extends JpaRepository<Solicitud, String> {
 
     List<Solicitud> findByEstadoSolicitudOrderByFechaEmisionDescHoraEmisionDesc(EstadoSolicitud estadoSolicitud);
 
+    // ADM-06: bandeja completa, las mas recientes primero
+    List<Solicitud> findAllByOrderByFechaEmisionDescHoraEmisionDesc();
+
     @Query("SELECT s FROM Solicitud s WHERE " +
            "(:estado IS NULL OR s.estadoSolicitud = :estado) AND " +
            "(:fechaInicio IS NULL OR s.fechaEmision >= :fechaInicio) AND " +

@@ -1,35 +1,44 @@
-instrucciones
+INSTRUCCIONES INICIO EN WEB
 1.Abrir PgAdmin4, apretar en servers, debería aparecer un mensaje de servidor conectado
 
 2. Terminal 1 Compilar BackEnd:
-.\sgsra-md\mvnw.cmd -f sgsra-md/pom.xml spring-boot:run
+   .\sgsra-md\mvnw.cmd -f sgsra-md/pom.xml spring-boot:run
 
 3. Terminal 2 Compilar FrontEnd:
-cd sgsra_mobile 
+   cd sgsra_mobile
 
 cmd /c "rd /s /q build"
+
 flutter run -d chrome
 
 =============================================
 Si falla la compilacion frontend usar:
 Stop-Process -Name "dart", "chrome" -Force -ErrorAction SilentlyContinue
 
-Repetir proceso
+Repetir proceso terminal 2
 
 =============================================
-leao.chura@masterdrilling.com 
-admin
+Usuarios predeterminados:
+leao.chura@masterdrilling.com
+admin1234
 
-carlos.baro@masterdrilling.com 
+carlos.baro@masterdrilling.com
 meca
 
-marcos.baro@masterdrilling.com 
+marcos.baro@masterdrilling.com
 alma
 
-Inserción de 3 usuarios funcionales desde carpeta principal Terminal 3:
+=============================================
+Comandos Generar APK
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" -Method POST -ContentType "application/json" -Body '{"correoCorporativo":"leao.chura@masterdrilling.com","contrasena":"admin"}'
+# 1. Entrar a la carpeta móvil
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/usuarios" -Method POST -ContentType "application/json" -Body '{"dni":"70000001","nombre":"Carlos Mendoza Baro","correoCorporativo":"carlos.baro@masterdrilling.com","contrasena":"meca","rol":"MECANICO","especialidad":"Hidraulica","cargo":"Mecanico de Planta","telefono":"987654321"}'
+cd sgsra_mobile
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/usuarios" -Method POST -ContentType "application/json" -Body '{"dni":"70000002","nombre":"Marcos Ramos Baro","correoCorporativo":"marcos.baro@masterdrilling.com","contrasena":"alma","rol":"ALMACENISTA","sedeAsignada":"Taller Lurin"}'
+# 2. Compilar el APK release
+
+& "C:\Users\Usuario\flutter\bin\flutter.bat" build apk --release
+
+# 3. Sobrescribir el apk en la carpeta raíz del proyecto
+
+Copy-Item build\app\outputs\flutter-apk\app-release.apk ..\sgsra-md.apk -Force

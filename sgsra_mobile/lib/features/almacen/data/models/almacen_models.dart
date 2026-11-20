@@ -33,12 +33,14 @@ class HerramientaModel extends HerramientaEntity {
     required String marca,
     required String categoria,
     required String estadoActual,
+    String? imagenUrl,
   }) : super(
           codHerramienta: codHerramienta,
           nombre: nombre,
           marca: marca,
           categoria: categoria,
           estadoActual: estadoActual,
+          imagenUrl: imagenUrl,
         );
 
   factory HerramientaModel.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class HerramientaModel extends HerramientaEntity {
       marca: json['marcaHerramienta']?.toString() ?? json['marca']?.toString() ?? 'Generica',
       categoria: json['categoria']?.toString() ?? 'MANUALES',
       estadoActual: json['estadoActual']?.toString() ?? 'DISPONIBLE',
+      imagenUrl: json['imagenUrl']?.toString(),
     );
   }
 }
@@ -61,6 +64,7 @@ class PrestamoModel extends PrestamoEntity {
     required String fechaPrestamo,
     required String horaSalida,
     required List<String> herramientas,
+    Map<String, dynamic> raw = const {},
   }) : super(
           prestamoNum: prestamoNum,
           dniMecanico: dniMecanico,
@@ -69,6 +73,7 @@ class PrestamoModel extends PrestamoEntity {
           fechaPrestamo: fechaPrestamo,
           horaSalida: horaSalida,
           herramientas: herramientas,
+          raw: raw,
         );
 
   factory PrestamoModel.fromJson(Map<String, dynamic> json) {
@@ -92,6 +97,7 @@ class PrestamoModel extends PrestamoEntity {
       fechaPrestamo: json['fechaPrestamo']?.toString() ?? '',
       horaSalida: json['horaSalida']?.toString() ?? '',
       herramientas: items,
+      raw: json,
     );
   }
 }

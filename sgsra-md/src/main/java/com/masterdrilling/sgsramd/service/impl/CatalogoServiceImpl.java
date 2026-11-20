@@ -1,5 +1,8 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import com.masterdrilling.sgsramd.DAO.Repuesto_DAO;
 import com.masterdrilling.sgsramd.dto.request.ActualizarRepuestoRequest;
 import com.masterdrilling.sgsramd.dto.request.CrearRepuestoRequest;
@@ -9,11 +12,13 @@ import com.masterdrilling.sgsramd.exception.BadRequestException;
 import com.masterdrilling.sgsramd.exception.RecursoNoEncontradoException;
 import com.masterdrilling.sgsramd.model.entity.Repuesto;
 import com.masterdrilling.sgsramd.service.ICatalogoService;
+import com.masterdrilling.sgsramd.service.IStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,12 +27,30 @@ import java.util.List;
 public class CatalogoServiceImpl implements ICatalogoService {
 
     private final Repuesto_DAO repuestoRepository;
+    private final IStorageService storageService;
 
     @Override
     @Transactional(readOnly = true)
     public Page<RepuestoResponse> listarCatalogo(Pageable pageable) {
-        return repuestoRepository.findByActivoTrue(pageable)
+        return repuestoRepository.findByActivoTrue(ordenarPorCodigo(pageable))
                 .map(this::mapearAResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RepuestoResponse> listarCatalogoAdmin(Pageable pageable) {
+        // Vista administrativa: incluye repuestos activos e inactivos con orden estable
+        return repuestoRepository.findAll(ordenarPorCodigo(pageable))
+                .map(this::mapearAResponse);
+    }
+
+    // Sin orden explicito PostgreSQL devuelve las filas editadas o nuevas al final,
+    // lo que las sacaba de la primera pagina del listado (BUG-02)
+    private Pageable ordenarPorCodigo(Pageable pageable) {
+        if (pageable.isUnpaged() || pageable.getSort().isSorted()) {
+            return pageable;
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("codParte").ascending());
     }
 
     @Override
@@ -53,7 +76,7 @@ public class CatalogoServiceImpl implements ICatalogoService {
     @Override
     @Transactional
     public RepuestoResponse registrarRepuesto(CrearRepuestoRequest request) {
-        if (repuestoRepository.existsById(request.getCodParte().trim())) {
+        if (repuestoRepository.existsById(request.getCodParte().trim().toUpperCase())) {
             throw new BadRequestException("El codigo de parte ya se encuentra registrado en el sistema");
         }
 
@@ -75,8 +98,10 @@ public class CatalogoServiceImpl implements ICatalogoService {
                 .nombreRepuesto(r.getNombreRepuesto())
                 .stockActual(r.getStockActual())
                 .stockMinimo(r.getStockMinimo())
+                .stockReservado(repuestoRepository.sumarCantidadReservada(r.getCodParte()).intValue())
                 .descripcion(r.getDescripcion())
                 .activo(r.getActivo())
+                .imagenUrl(r.getImagenUrl())
                 .build();
     }
 
@@ -110,5 +135,20 @@ public class CatalogoServiceImpl implements ICatalogoService {
                 .mensaje("Estado de repuesto " + codParte + " actualizado a: " + (activo ? "HABILITADO" : "DESHABILITADO"))
                 .dato(rep.getActivo())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public RepuestoResponse subirImagenRepuesto(String codParte, MultipartFile archivo) {
+        Repuesto rep = repuestoRepository.findById(codParte.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Repuesto no encontrado con codigo: " + codParte));
+
+        if (rep.getImagenUrl() != null) {
+            storageService.eliminarArchivo(rep.getImagenUrl());
+        }
+
+        String nuevaUrl = storageService.guardarArchivo(archivo, "repuestos");
+        rep.setImagenUrl(nuevaUrl);
+        return mapearAResponse(repuestoRepository.save(rep));
     }
 }

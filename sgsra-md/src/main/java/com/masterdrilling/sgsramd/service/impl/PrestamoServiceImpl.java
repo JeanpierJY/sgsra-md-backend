@@ -1,5 +1,7 @@
 package com.masterdrilling.sgsramd.service.impl;
 
+import com.masterdrilling.sgsramd.service.INotificacionService;
+
 import com.masterdrilling.sgsramd.DAO.*;
 import com.masterdrilling.sgsramd.dto.request.DevolucionHerramientaRequest;
 import com.masterdrilling.sgsramd.dto.request.RegistrarPrestamoRequest;
@@ -13,16 +15,17 @@ import com.masterdrilling.sgsramd.model.enums.EstadoDevolucion;
 import com.masterdrilling.sgsramd.model.enums.EstadoHerramienta;
 import com.masterdrilling.sgsramd.model.enums.EstadoPrestamo;
 import com.masterdrilling.sgsramd.service.IAuditoriaService;
+import com.masterdrilling.sgsramd.service.INotificacionService;
 import com.masterdrilling.sgsramd.service.IPrestamoService;
 import com.masterdrilling.sgsramd.service.validator.CupoPrestamoValidator;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +40,9 @@ public class PrestamoServiceImpl implements IPrestamoService {
     private final Devolucion_DAO devolucionRepository;
     private final Usuario_DAO usuarioRepository;
     private final IAuditoriaService auditoriaService;
+    private final INotificacionService notificacionService;
     private final CupoPrestamoValidator cupoValidator;
+    private final PrestamoDetalle_DAO prestamoDetalleRepository;
 
     @Override
     @Transactional
@@ -130,7 +135,8 @@ public class PrestamoServiceImpl implements IPrestamoService {
             Herramienta herramienta = herramientaRepository.findByCodHerramienta(itemReq.getCodHerramienta())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Herramienta no encontrada: " + itemReq.getCodHerramienta()));
 
-            if (itemReq.getEstadoFisico() == EstadoDevolucion.CON_AVERIA) {
+            // RF40: Con Averia o Incompleta pasan a En Mantenimiento (nunca Disponible si faltan partes)
+            if (itemReq.getEstadoFisico() == EstadoDevolucion.CON_AVERIA || itemReq.getEstadoFisico() == EstadoDevolucion.INCOMPLETA) {
                 herramienta.setEstadoActual(EstadoHerramienta.EN_MANTENIMIENTO.getDescripcionSql());
             } else {
                 herramienta.setEstadoActual(EstadoHerramienta.DISPONIBLE.getDescripcionSql());
@@ -145,6 +151,14 @@ public class PrestamoServiceImpl implements IPrestamoService {
                     .build();
 
             devolucion.getDetalles().add(det);
+        }
+
+        // RF40: Actualizar hora de retorno efectiva en los detalles del prestamo original
+        LocalTime horaCierre = LocalTime.now();
+        List<PrestamoDetalle> detallesPrestamo = prestamoDetalleRepository.findByIdPrestamoNum(prestamo.getPrestamoNum());
+        for (PrestamoDetalle pd : detallesPrestamo) {
+            pd.setHoraRetorno(horaCierre);
+            prestamoDetalleRepository.save(pd);
         }
 
         prestamo.setEstadoPrestamo(EstadoPrestamo.CERRADO);
@@ -182,6 +196,16 @@ public class PrestamoServiceImpl implements IPrestamoService {
         // Se usa el ID del usuario real autenticado que emite el reporte
         auditoriaService.registrarAsiento(herramienta.getCodHerramienta(), usuarioAlmacen.getIdUsuario(), "EXTRAVIO_IMPUTADO_" + custodio, ipOrigen);
 
+        // Matriz 6.1 y 6.2: alerta al Administrador y al mecanico que figura como ultimo custodio
+        String detalle = "La herramienta " + herramienta.getCodHerramienta() + " (" + herramienta.getNombreHerramienta()
+                + ") fue reportada como EXTRAVIADA. Motivo: " + request.getMotivoExtravio().trim();
+        notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Herramienta Extraviada",
+                detalle + ". Custodio imputado: " + custodio, "EXTRAVIO");
+        if (!"SIN_CUSTODIO_PREVIO".equals(custodio)) {
+            notificacionService.enviarNotificacionConTipo(custodio, null, "Herramienta Extraviada a su Cargo",
+                    detalle + ". Usted figura como ultimo custodio registrado; acerquese al panol.", "EXTRAVIO");
+        }
+
         return MensajeGenericoResponse.builder()
                 .exito(true)
                 .mensaje("Herramienta marcada como extraviada. Se asocio la responsabilidad a la bitacora de custodia")
@@ -189,8 +213,66 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .build();
     }
 
-    @Autowired
-    private PrestamoDetalle_DAO prestamoDetalleRepository;
+    @Override
+    @Transactional
+    public MensajeGenericoResponse verificarAlertasPrestamos() {
+        List<Prestamo> prestamosActivos = prestamoRepository.findAll().stream()
+                .filter(p -> p.getEstadoPrestamo() == EstadoPrestamo.ACTIVO)
+                .toList();
+
+        int preventivas = 0;
+        int moras = 0;
+        LocalDate hoy = LocalDate.now();
+
+        for (Prestamo p : prestamosActivos) {
+            long dias = ChronoUnit.DAYS.between(p.getFechaPrestamo(), hoy);
+            String dniMec = p.getMecanico() != null ? p.getMecanico().getDniMecanico() : null;
+            String nomMec = p.getMecanico() != null ? p.getMecanico().getNombreMecanico() : "Mecanico";
+
+            if (dias >= 5 && dias < 7) {
+                // Alerta preventiva al mecanico (6.2.2)
+                if (dniMec != null) {
+                    notificacionService.enviarNotificacionConTipo(dniMec, "MECANICO", "Aviso Preventivo de Devolucion",
+                            "Su prestamo " + p.getPrestamoNum() + " tiene " + dias + " dias de antiguedad. Recuerde devolver las herramientas antes de cumplir 7 dias para evitar sanciones.",
+                            "ALERTA_PREVENTIVA");
+                    preventivas++;
+                }
+            } else if (dias >= 7) {
+                // Transicion a MORA y alertas (6.2.2, 6.3.1)
+                p.setEstadoPrestamo(EstadoPrestamo.MORA);
+                prestamoRepository.save(p);
+
+                // RF43: Actualizar estado de las herramientas del prestamo a 'En Mora' para el tablero de panol
+                List<PrestamoDetalle> detallesMora = prestamoDetalleRepository.findByIdPrestamoNum(p.getPrestamoNum());
+                for (PrestamoDetalle d : detallesMora) {
+                    Herramienta h = d.getHerramienta();
+                    if (h != null && EstadoHerramienta.PRESTADA.getDescripcionSql().equalsIgnoreCase(h.getEstadoActual())) {
+                        h.setEstadoActual(EstadoHerramienta.EN_MORA.getDescripcionSql());
+                        herramientaRepository.save(h);
+                    }
+                }
+
+                // Almacenista: aviso de mora (6.3.1)
+                notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Prestamo en Mora / Atrasado",
+                        "El prestamo " + p.getPrestamoNum() + " del mecanico " + nomMec + " ha superado el plazo de 7 dias y paso a estado MORA.",
+                        "MORA");
+
+                // Mecanico: aviso de mora
+                if (dniMec != null) {
+                    notificacionService.enviarNotificacionConTipo(dniMec, "MECANICO", "Prestamo Vencido en Mora",
+                            "Su prestamo " + p.getPrestamoNum() + " ha superado el plazo maximo de 7 dias sin devolverse. Su cupo para nuevos prestamos queda bloqueado.",
+                            "MORA");
+                }
+                moras++;
+            }
+        }
+
+        return MensajeGenericoResponse.builder()
+                .exito(true)
+                .mensaje("Verificacion de prestamos ejecutada: " + preventivas + " alertas preventivas emitidas, " + moras + " prestamos en MORA.")
+                .dato(preventivas + moras)
+                .build();
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -203,8 +285,8 @@ public class PrestamoServiceImpl implements IPrestamoService {
     @Override
     @Transactional(readOnly = true)
     public List<PrestamoResumenResponse> listarPrestamosPorMecanico(String dniMecanico) {
-        return prestamoRepository.findAll().stream()
-                .filter(p -> p.getMecanico() != null && dniMecanico.trim().equals(p.getMecanico().getDniMecanico()))
+        String cleanDni = (dniMecanico != null) ? dniMecanico.trim() : "";
+        return prestamoRepository.listarPorMecanico(cleanDni).stream()
                 .map(this::mapearAPrestamoResumen)
                 .toList();
     }
@@ -216,15 +298,23 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .orElse("Mecanico no registrado");
 
         List<PrestamoDetalle> detalles = prestamoDetalleRepository.findByIdPrestamoNum(p.getPrestamoNum());
+        com.masterdrilling.sgsramd.model.entity.Devolucion dev = devolucionRepository.findByPrestamoPrestamoNum(p.getPrestamoNum()).orElse(null);
+        java.util.Map<String, String> estadoRetorno = new java.util.HashMap<>();
+        if (dev != null && dev.getDetalles() != null) {
+            dev.getDetalles().forEach(dd -> estadoRetorno.put(dd.getHerramienta().getCodHerramienta(), dd.getEstadoHerramienta()));
+        }
         List<PrestamoResumenResponse.ItemHerramientaPrestamo> items = detalles.stream().map(d -> {
             String estadoFisico = herramientaRepository.findByCodHerramienta(d.getHerramienta().getCodHerramienta())
                     .map(Herramienta::getEstadoActual)
                     .orElse(d.getEstadoHerramienta());
             return PrestamoResumenResponse.ItemHerramientaPrestamo.builder()
                     .codHerramienta(d.getHerramienta().getCodHerramienta())
+                    .imagenUrl(d.getHerramienta().getImagenUrl())
                     .nombreHerramienta(d.getNombreHerramienta())
                     .estadoHerramienta(d.getEstadoHerramienta())
                     .estadoFisicoActual(estadoFisico)
+                    .estadoAlEntregar("Operativa")
+                    .estadoAlDevolver(estadoRetorno.get(d.getHerramienta().getCodHerramienta()))
                     .build();
         }).toList();
 
@@ -235,6 +325,12 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 .estadoPrestamo(p.getEstadoPrestamo())
                 .fechaPrestamo(p.getFechaPrestamo())
                 .horaSalida(p.getHoraSalida())
+                .nombreAlmacenistaEntrega(p.getAlmacenista() != null ? p.getAlmacenista().getNombreAlmacenista() : null)
+                .devolucionNum(dev != null ? dev.getDevolucionNum() : null)
+                .fechaDevolucion(dev != null ? dev.getFechaDevolucion() : null)
+                .horaRetorno(dev != null ? dev.getHoraRetorno() : null)
+                .nombreAlmacenistaRecepcion(dev != null && dev.getAlmacenista() != null ? dev.getAlmacenista().getNombreAlmacenista() : null)
+                .detalleIncidencia(dev != null ? dev.getDetalleIncidencia() : null)
                 .herramientas(items)
                 .build();
     }

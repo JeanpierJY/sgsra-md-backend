@@ -20,6 +20,8 @@ class HerramientaEntity {
   final String marca;
   final String categoria;
   final String estadoActual; // DISPONIBLE, PRESTADA, EN_MANTENIMIENTO, EXTRAVIADA
+  /// GEN-01: ruta de la foto en el backend (/uploads/...)
+  final String? imagenUrl;
 
   const HerramientaEntity({
     required this.codHerramienta,
@@ -27,7 +29,10 @@ class HerramientaEntity {
     required this.marca,
     required this.categoria,
     required this.estadoActual,
+    this.imagenUrl,
   });
+
+  bool get disponible => estadoActual.toUpperCase() == 'DISPONIBLE';
 }
 
 class PrestamoEntity {
@@ -38,6 +43,8 @@ class PrestamoEntity {
   final String fechaPrestamo;
   final String horaSalida;
   final List<String> herramientas;
+  /// [PRE-01] JSON completo del préstamo (incluye datos de entrega y devolución)
+  final Map<String, dynamic> raw;
 
   const PrestamoEntity({
     required this.prestamoNum,
@@ -47,5 +54,6 @@ class PrestamoEntity {
     required this.fechaPrestamo,
     required this.horaSalida,
     required this.herramientas,
+    this.raw = const {},
   });
 }

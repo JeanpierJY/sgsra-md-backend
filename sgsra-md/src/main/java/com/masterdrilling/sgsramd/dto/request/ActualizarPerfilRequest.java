@@ -15,11 +15,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ActualizarPerfilRequest {
 
-    @NotBlank(message = "El nombre del operario no puede quedar vacio")
-    @Size(max = 100, message = "El nombre no puede superar 100 caracteres")
     private String nombre;
 
-    @NotBlank(message = "El telefono movil es obligatorio")
-    @Pattern(regexp = "^[0-9]{9}$", message = "El telefono debe contener exactamente 9 digitos numericos")
+    @Pattern(regexp = "^$|^[0-9]{9}$", message = "El telefono debe contener exactamente 9 digitos numericos")
     private String telefono;
 }

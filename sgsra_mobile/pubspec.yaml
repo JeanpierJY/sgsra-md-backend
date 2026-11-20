@@ -1,10 +1,10 @@
 name: sgsra_mobile
 description: "Frontend corporativo SGSRA-MD para la gestión logística de Master Drilling Perú S.A."
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -26,9 +26,11 @@ dependencies:
   # Control de Sensores Nativos (Cámara para códigos de barra, QR y Conectividad Híbrida)
   mobile_scanner: ^5.1.1
   connectivity_plus: ^6.0.3
-  
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+  open_filex: ^4.5.0
+
   path: ^1.9.0
-  universal_html: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -37,3 +39,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/repuestos/
+    - assets/images/herramientas/

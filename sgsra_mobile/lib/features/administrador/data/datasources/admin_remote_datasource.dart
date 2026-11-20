@@ -10,7 +10,7 @@ class AdminRemoteDataSource {
   AdminRemoteDataSource(this._dioClient);
 
   Future<String?> _obtenerCorreoAdmin() async {
-    return await _secureStorage.read(key: 'correo_admin') ?? 'leao.chura@masterdrilling.com';
+    return await _secureStorage.read(key: 'correo_usuario') ?? 'leao.chura@masterdrilling.com';
   }
 
   Future<List<SolicitudBandejaModel>> obtenerBandeja() async {
