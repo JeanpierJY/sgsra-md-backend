@@ -8,6 +8,7 @@ import '../../../../core/widgets/imagen_producto.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
 import '../widgets/herramienta_ui.dart';
+import '../widgets/qr_herramienta.dart';
 import 'detalle_herramienta_screen.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 import '../../../../core/widgets/perfil_boton.dart';
@@ -235,6 +236,8 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
                     SnackBar(content: Text('$cod registrada'), backgroundColor: Colors.green[700]));
               }
               await _cargarHerramientas();
+              // [H-ALM-10] Se muestra el QR de la nueva herramienta para etiquetarla
+              if (mounted) await mostrarQrHerramienta(context, cod, nomCtrl.text.trim());
             },
             child: const Text('Guardar'),
           ),

@@ -46,6 +46,7 @@
 | 🟡 **Media**   | H-ALM-01    | Almacén  | Despacho            | Faltan filtros para las solicitudes                                   |  ✨  | Flutter              |   1   |   ✅   |
 | 🟡 **Media**   | H-ALM-06    | Almacén  | Herramientas        | Mostrar DNI y nombre del mecánico sin abrir el detalle                |  ✨  | Flutter              |   1   |   ✅   |
 | 🟡 **Media**   | H-ALM-09    | Almacén  | Herramientas        | Al crear una herramienta no se puede subir la imagen hasta después    |  ✨  | Flutter              |   3   |   ✅   |
+| 🟡 **Media**   | H-ALM-10    | Almacén  | Herramientas        | No hay forma de generar/imprimir el QR de cada herramienta            |  ✨  | Flutter / Herramienta |   3   |   ✅   |
 | 🟡 **Media**   | H-MEC-01    | Mecánico | Catálogo            | Ítems sin stock o desactivados al final del catálogo                  |  ✨  | Flutter              |   1   |   🚀   |
 | 🟢 **Baja**    | H-GEN-02    | Todos    | Login               | Eliminar botón "Probar conexión"                                      |  🧹  | Flutter              |   1   |   ✅   |
 | 🟢 **Baja**    | H-GEN-04    | Todos    | Todas               | Eliminar etiquetas `[RFxx]` visibles en la interfaz                   |  🧹  | Flutter              |   1   |   ✅   |
@@ -53,7 +54,7 @@
 | 🟢 **Baja**    | H-ADM-06    | Todos    | Repuestos           | Quitar "Stock Mínimo" / "Mínimo" de los repuestos (no se entiende)    |  🧹  | Flutter / Backend    |   2   |   ✅   |
 | 🟢 **Baja**    | H-ALM-05    | Almacén  | Herramientas        | Eliminar botón "Herramientas extraviadas"                             |  🧹  | Flutter              |   1   |   ✅   |
 
-**Totales:** 30 hallazgos (22 de la ronda 1, 3 de la ronda 2 y 5 de la ronda 3), con 3 reaperturas (`b`). Todos están corregidos en el código.
+**Totales:** 31 hallazgos (22 de la ronda 1, 3 de la ronda 2 y 6 de la ronda 3), con 3 reaperturas (`b`). Todos están corregidos en el código.
 
 ---
 
@@ -103,6 +104,7 @@
 | **H-ALM-07**  | Dashboard | **Tocar una solicitud aprobada no abre su modal** *(ronda 3)* | `dashboard_almacen_screen.dart` | Las tarjetas de "Repuestos Aprobados para Retiro Físico" eran `ListTile` **sin `onTap`**. Las de préstamos sí lo tenían. | Al tocar una solicitud aprobada se abre el mismo modal de despacho que en la pestaña Despacho. Si se despacha, el dashboard se actualiza. |
 | **H-ALM-08**  | Despacho › Préstamo | **No permite prestar a mecánicos con mal historial (préstamos en mora)** *(ronda 3)* | Backend `PrestamoServiceImpl.registrarPrestamo`, `CupoPrestamoValidator` | El backend ejecutaba `validarAusenciaDeMoras()` y respondía *"Bloqueo preventivo: el mecánico registra préstamos con tiempo vencido sin regularizar"*. **Regla de negocio:** sancionar a un mecánico corresponde a Administración, no al almacén. **Observación del QA:** si se eliminan los préstamos en mora, sí permite prestar, lo que confirma que el bloqueo venía solo de esa validación. | Se puede prestar a un mecánico aunque tenga préstamos en mora. Se mantiene el límite de 5 herramientas simultáneas (RF36). |
 | **H-ALM-09**  | Herramientas | **Al agregar una herramienta no se puede subir la imagen hasta después de crearla** *(ronda 3)* | `registrar_herramienta_screen.dart`, `core/widgets/imagen_producto.dart` | El endpoint de imagen (`POST /inventario/herramientas/{cod}/imagen`) necesita que la herramienta ya exista. Por eso el formulario no tenía campo de foto y la ofrecía en un segundo diálogo después de guardar. | El formulario "Nueva herramienta" tiene un campo de foto opcional con vista previa. Al guardar se crea la herramienta y la foto se sube automáticamente. |
+| **H-ALM-10**  | Herramientas | **Generar los QR de cada herramienta para que el escáner sea 100 % funcional** *(ronda 3, derivado de H-ALM-04b)* | Nuevo `almacen/presentation/widgets/qr_herramienta.dart`, `detalle_herramienta_screen.dart`, `registrar_herramienta_screen.dart`, nuevo `herramientas_qr/imprimir_qr_herramientas.html` | La app escaneaba QR, pero no existía ninguna forma de **generarlos**. Las etiquetas se hacían por fuera (webs de QR que a veces guardan un enlace en lugar del código). | Cada herramienta tiene un QR cuyo contenido es **solo su código** (`HER-PIST-003`). Se puede ver en la app y se pueden imprimir todas las etiquetas de una vez. |
 
 ### 🔧 Módulo 4: Mecánico
 
@@ -160,6 +162,7 @@
 | **H-ALM-07** | Las tarjetas de solicitudes aprobadas del dashboard tienen `onTap`. Abren `mostrarDespachoSolicitud()`, el mismo modal de la pestaña Despacho, y recargan el dashboard si se despachó. El subtítulo agrega "Toque para ver y despachar", igual que las tarjetas de préstamos. | `dashboard_almacen_screen.dart` |
 | **H-ALM-08** | `registrarPrestamo()` ya no llama a `validarAusenciaDeMoras()`. Se mantiene `validarCupoDisponible()` (máx. 5 herramientas). El aviso de mora al mecánico ya no dice "su cupo queda bloqueado". | `PrestamoServiceImpl.java`, `CupoPrestamoValidator.java` |
 | **H-ALM-09** | El diálogo "Nueva herramienta" tiene arriba un campo de foto opcional, con miniatura de 64 px y los botones "Agregar foto", "Cambiar foto" y "Quitar". Al guardar se crea la herramienta y luego se sube la foto. Se quitó el segundo diálogo "¿Desea agregarle una foto ahora?". `seleccionarYSubirImagen()` se dividió en `elegirImagen()` y `subirImagen()`, sin cambiar su comportamiento en las demás pantallas. | `registrar_herramienta_screen.dart`, `imagen_producto.dart` |
+| **H-ALM-10** | 1) **En la app:** la ficha de la herramienta tiene el botón "Ver código QR", con el mismo estilo que "Reportar extravío" pero en azul, que muestra el QR, el código y el nombre. Al crear una herramienta se muestra su QR automáticamente para etiquetarla. Se usa `qr_flutter` y el QR contiene solo el código, con corrección de errores M. 2) **Impresión masiva:** `herramientas_qr/imprimir_qr_herramientas.html` (se abre con doble clic en Chrome o Edge). Carga las herramientas desde `GET /api/v1/inventario/herramientas` y genera una hoja de etiquetas (QR, código y nombre) con buscador, selección por casilla y tamaño de 3, 4 o 5 cm. Se imprime o se guarda como PDF. Si no hay conexión, permite pegar los códigos a mano. | `qr_herramienta.dart`, `detalle_herramienta_screen.dart`, `registrar_herramienta_screen.dart`, `pubspec.yaml`, `imprimir_qr_herramientas.html` |
 | **H-MEC-01** | Catálogo completo, ordenado: con stock, sin stock y deshabilitados (atenuados y sin poder pedirse). | `catalogo_screen.dart`, `repuesto_entity.dart`, `repuesto_model.dart`, `repuesto_remote_datasource.dart` |
 | **H-MEC-02** | "Enviar solicitud" sube junto con el teclado. | `carrito_pedido_screen.dart` |
 
@@ -206,6 +209,8 @@
 - [x] H-ALM-08  Préstamo permitido aunque el mecánico tenga moras (backend)
 - [x] H-ALM-04b mobile_scanner 7.x + extracción del código desde enlace/texto
 - [x] H-ALM-09  Foto opcional en el formulario "Nueva herramienta"
+- [x] H-ALM-10  QR por herramienta en la app + hoja HTML para imprimir todas las etiquetas
+- [ ] H-ALM-10  Imprimir las etiquetas, pegarlas en cada herramienta y probar el escáner con 2 o 3 de ellas
 
 ### Despliegue y verificación
 - [ ] Desplegar el backend en Render (H-GEN-03/05/08, H-ADM-01/01b/06, H-ALM-02b, H-ALM-08, H-MEC-01)
@@ -259,12 +264,20 @@
 | Archivo | Hallazgo | Especificación |
 | :-- | :-- | :-- |
 | `pubspec.yaml` / `pubspec.lock` | **H-ALM-04b** | `mobile_scanner: ^5.1.1` → `^7.1.0` (resuelve 7.5.0). Requiere Flutter ≥ 3.29; el proyecto usa 3.50. |
+| `pubspec.yaml` / `pubspec.lock` | **H-ALM-10** | Nueva dependencia `qr_flutter: ^4.1.0`, escrita en Dart puro, sin código nativo. |
+
+#### Herramienta fuera de la app
+
+| Archivo | Hallazgo | Especificación |
+| :-- | :-- | :-- |
+| `herramientas_qr/imprimir_qr_herramientas.html` | **H-ALM-10** | Página autónoma que usa `qrcodejs 1.0.0` desde cdnjs. Llama a `GET {API}/inventario/herramientas?size=1000`; el CORS del backend ya permite cualquier origen. Genera una etiqueta por herramienta con su QR (solo el código, nivel M), el código y el nombre. CSS de impresión: oculta los controles y las etiquetas desmarcadas, y evita cortar una etiqueta entre páginas. |
 
 #### Archivos nuevos
 
 | Archivo | Hallazgo | Especificación |
 | :-- | :-- | :-- |
 | `lib/core/utils/navegacion_solicitud.dart` | H-ADM-05 | `ValueNotifier` global para pedir al módulo Admin que abra una solicitud en la Bandeja. |
+| `lib/features/almacen/presentation/widgets/qr_herramienta.dart` | **H-ALM-10** | `mostrarQrHerramienta(context, codigo, nombre)`: diálogo con `QrImageView` de 220 px sobre fondo blanco, el código en azul y el nombre. |
 | `lib/core/utils/teclado_guard.dart` | **H-GEN-10** | `cerrarTeclado()`, `TecladoNavigatorObserver` (cierra el teclado en cada push/pop/remove/replace de ruta) y `TecladoGuard` (lo cierra al pasar a `paused`/`hidden` y al tocar una zona vacía con `HitTestBehavior.translucent`; los campos y botones conservan su toque). |
 
 #### Archivos modificados
@@ -290,7 +303,8 @@
 | `lib/features/almacen/presentation/screens/dashboard_almacen_screen.dart` | **H-ALM-07** | Importa `despacho_repuestos_tab.dart`. Cada tarjeta de solicitud aprobada tiene `onTap`, que llama a `mostrarDespachoSolicitud(context, solicitudNum)` y ejecuta `_cargarDatos()` si se despachó. Subtítulo: "Toque para ver y despachar". |
 | `lib/features/almacen/presentation/screens/despacho_repuestos_tab.dart` | H-ALM-01 / H-ADM-06 | Buscador, chips de prioridad y periodo. "(llega al mínimo)" → "(stock bajo)". |
 | `lib/features/almacen/presentation/screens/retorno_qr_screen.dart` | H-ALM-03 / 04 / **04b** | Ciclo de vida de la cámara, `DetectionSpeed.normal` + control de repetidos de 3 s y `padding.bottom` en el modal. **(H-ALM-04b)** `errorBuilder: (ctx, err)` (API de 7.x) y nuevo `_extraerCodigo(raw)`, usado por `_procesarCodigo()`. |
-| `lib/features/almacen/presentation/screens/registrar_herramienta_screen.dart` | H-ALM-05 / 06 / **09** | Sin el FAB de extravío y con `_FilaCustodio`. **(H-ALM-09)** El diálogo "Nueva herramienta" usa `StatefulBuilder` con un campo de foto opcional (vista previa con `Image.memory`). Al guardar, crea la herramienta y, si hay foto, llama a `subirImagen(...)`; si no, muestra "{cod} registrada". El `DropdownButtonFormField` usa `isExpanded: true` para que entre en el diálogo. |
+| `lib/features/almacen/presentation/screens/registrar_herramienta_screen.dart` | H-ALM-05 / 06 / **09** | Sin el FAB de extravío y con `_FilaCustodio`. **(H-ALM-09)** El diálogo "Nueva herramienta" usa `StatefulBuilder` con un campo de foto opcional (vista previa con `Image.memory`). Al guardar, crea la herramienta y, si hay foto, llama a `subirImagen(...)`; si no, muestra "{cod} registrada". El `DropdownButtonFormField` usa `isExpanded: true` para que entre en el diálogo. **(H-ALM-10)** Después de crear la herramienta, se muestra su QR con `mostrarQrHerramienta()`. |
+| `lib/features/almacen/presentation/screens/detalle_herramienta_screen.dart` | **H-ALM-10** | Botón "Ver código QR" (borde azul) encima de "Reportar extravío". |
 | `lib/features/almacen/presentation/screens/reportar_extravio_modal.dart` | H-GEN-07 | Suma la barra del sistema. |
 | `lib/features/mecanico/domain/entities/repuesto_entity.dart` · `data/models/repuesto_model.dart` · `data/datasources/repuesto_remote_datasource.dart` | H-MEC-01 | Campo `activo` en la entidad. Se pide `size: 500` e `incluirInactivos: true`. |
 | `lib/features/mecanico/presentation/screens/catalogo_screen.dart` | H-MEC-01 / H-GEN-07 / H-ADM-06 | Orden en tres grupos y deshabilitados atenuados. El chip dice solo "Físico: X". |

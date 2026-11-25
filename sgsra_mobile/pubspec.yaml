@@ -25,6 +25,8 @@ dependencies:
 
   # Control de Sensores Nativos (Cámara para códigos de barra, QR y Conectividad Híbrida)
   mobile_scanner: ^7.1.0
+  # Generación del código QR de cada herramienta (etiqueta para el escáner de Retorno)
+  qr_flutter: ^4.1.0
   connectivity_plus: ^6.0.3
   image_picker: ^1.1.2
   path_provider: ^2.1.4
