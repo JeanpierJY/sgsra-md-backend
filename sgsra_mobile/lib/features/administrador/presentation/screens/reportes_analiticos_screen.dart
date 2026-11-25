@@ -23,6 +23,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
   String? _error;
   int _dias = 30;
   bool _exportando = false;
+  bool _demandaPlegada = false; // [H-ADM-03]
 
   List<Map<String, dynamic>> _demanda = [];
   List<Map<String, dynamic>> _solicitudes = [];
@@ -113,7 +114,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Métricas y Reportes [RF29]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Métricas y Reportes', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargar),
@@ -218,6 +219,8 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
     return _Tarjeta(
       titulo: 'Repuestos más solicitados',
       icono: Icons.insights_rounded,
+      plegada: _demandaPlegada,
+      onAlternar: () => setState(() => _demandaPlegada = !_demandaPlegada),
       child: _demanda.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(16),
@@ -306,13 +309,13 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
 
   Widget _criticos() {
     return _Tarjeta(
-      titulo: 'Repuestos en stock mínimo (${_stockCritico.length})',
+      titulo: 'Repuestos con stock bajo (${_stockCritico.length})',
       icono: Icons.warning_amber_rounded,
       color: _stockCritico.isEmpty ? Colors.green[700]! : Colors.orange[800]!,
       child: _stockCritico.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(12),
-              child: Text('Todo el catálogo está por encima de su stock mínimo.', style: TextStyle(color: Colors.grey)),
+              child: Text('Ningún repuesto tiene stock bajo.', style: TextStyle(color: Colors.grey)),
             )
           : Column(
               children: _stockCritico.take(8).map((r) {
@@ -322,7 +325,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
                   dense: true,
                   leading: ImagenProducto(url: r['imagenUrl']?.toString(), size: 40),
                   title: Text('${r['nombreRepuesto']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${r['codParte']}  ·  Mínimo: ${r['stockMinimo']}'),
+                  subtitle: Text('${r['codParte']}'),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -341,7 +344,7 @@ class _ReportesAnaliticosScreenState extends State<ReportesAnaliticosScreen> {
 
   Widget _exportacion() {
     return _Tarjeta(
-      titulo: 'Exportar reporte [RF30]',
+      titulo: 'Exportar reporte',
       icono: Icons.download_rounded,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('Incluye las solicitudes de los últimos $_dias días.',
@@ -385,27 +388,61 @@ class _Tarjeta extends StatelessWidget {
   final IconData icono;
   final Widget child;
   final Color color;
-  const _Tarjeta({required this.titulo, required this.icono, required this.child, this.color = AppColors.primaryBlue});
+  /// [H-ADM-03] Si [onAlternar] no es null, la tarjeta muestra una flecha para plegar/desplegar
+  final bool plegada;
+  final VoidCallback? onAlternar;
+  const _Tarjeta({
+    required this.titulo,
+    required this.icono,
+    required this.child,
+    this.color = AppColors.primaryBlue,
+    this.plegada = false,
+    this.onAlternar,
+  });
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: AppColors.pureWhite,
-        elevation: 2,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(icono, color: color, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text(titulo, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color))),
-            ]),
-            const Divider(height: 18),
-            child,
-          ]),
+  Widget build(BuildContext context) {
+    final encabezado = Row(children: [
+      Icon(icono, color: color, size: 20),
+      const SizedBox(width: 8),
+      Expanded(child: Text(titulo, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color))),
+      if (onAlternar != null)
+        AnimatedRotation(
+          turns: plegada ? 0 : 0.5,
+          duration: const Duration(milliseconds: 200),
+          child: Icon(Icons.keyboard_arrow_down_rounded, color: color),
         ),
-      );
+    ]);
+    return Card(
+      color: AppColors.pureWhite,
+      elevation: 2,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (onAlternar != null)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onAlternar,
+              child: Tooltip(message: plegada ? 'Mostrar listado' : 'Ocultar listado', child: encabezado),
+            )
+          else
+            encabezado,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            child: plegada
+                ? const SizedBox(width: double.infinity)
+                : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Divider(height: 18),
+                    child,
+                  ]),
+          ),
+        ]),
+      ),
+    );
+  }
 }
 
 class _Kpi extends StatelessWidget {

@@ -46,6 +46,14 @@ class ImagenProducto extends StatelessWidget {
         localAsset = 'assets/images/repuestos/$code.png';
       } else if (code.startsWith('HER-')) {
         localAsset = 'assets/images/herramientas/$code.png';
+      } else {
+        final matchP = RegExp(r'P-[A-Z0-9]+-[0-9]+', caseSensitive: false).firstMatch(cleanUrl);
+        final matchHer = RegExp(r'HER-[A-Z0-9]+-[0-9]+', caseSensitive: false).firstMatch(cleanUrl);
+        if (matchP != null) {
+          localAsset = 'assets/images/repuestos/${matchP.group(0)!.toUpperCase()}.png';
+        } else if (matchHer != null) {
+          localAsset = 'assets/images/herramientas/${matchHer.group(0)!.toUpperCase()}.png';
+        }
       }
     }
 

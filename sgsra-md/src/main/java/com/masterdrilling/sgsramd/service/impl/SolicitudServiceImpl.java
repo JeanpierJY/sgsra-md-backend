@@ -358,8 +358,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
                 itemsDescontados++;
                 resumenStock.append(String.format(" [%s: %d -> %d]", rep.getCodParte(), stockAnterior, rep.getStockActual()));
                 if (rep.getStockMinimo() != null && rep.getStockActual() <= rep.getStockMinimo()) {
-                    bajoMinimo.add(rep.getNombreRepuesto() + " (" + rep.getCodParte() + "): quedan " + rep.getStockActual()
-                            + ", minimo " + rep.getStockMinimo());
+                    bajoMinimo.add(rep.getNombreRepuesto() + " (" + rep.getCodParte() + "): quedan " + rep.getStockActual());
                 }
             }
         }
@@ -378,9 +377,9 @@ public class SolicitudServiceImpl implements ISolicitudService {
                 "Los repuestos de la solicitud " + s.getSolicitudNum() + " fueron despachados por almacen.", "APROBACION");
         // Alerta de reposicion si algun repuesto quedo en o bajo su stock minimo
         if (!bajoMinimo.isEmpty()) {
-            String detalle = "Tras despachar " + s.getSolicitudNum() + " quedaron en stock minimo: " + String.join("; ", bajoMinimo);
-            notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Stock Minimo Alcanzado", detalle, "STOCK_MINIMO");
-            notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Stock Minimo Alcanzado", detalle, "STOCK_MINIMO");
+            String detalle = "Tras despachar " + s.getSolicitudNum() + " quedaron con stock bajo: " + String.join("; ", bajoMinimo);
+            notificacionService.enviarNotificacionConTipo(null, "ADMINISTRADOR", "Stock Bajo", detalle, "STOCK_MINIMO");
+            notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Stock Bajo", detalle, "STOCK_MINIMO");
         }
 
         return MensajeGenericoResponse.builder()
@@ -391,7 +390,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
     }
 
     // Matriz 6.2 y 6.3: el mecanico recibe toda aprobacion (total o parcial) y el almacenista
-    // las aprobaciones de prioridad ALTA para coordinar el retiro urgente en panol
+    // TODA aprobacion (ALTA como urgente; MEDIA/BAJA como despacho pendiente) [H-ALM-02]
     private void notificarAprobacion(Solicitud s) {
         boolean parcial = s.getEstadoSolicitud() == EstadoSolicitud.APROBADA_PARCIAL;
         notificacionService.enviarNotificacionConTipo(s.getMecanico().getDniMecanico(), null,
@@ -399,11 +398,20 @@ public class SolicitudServiceImpl implements ISolicitudService {
                 "La solicitud " + s.getSolicitudNum() + (parcial ? " fue aprobada parcialmente" : " fue aprobada")
                         + ". Puede retirar los repuestos aprobados en el panol.",
                 "SOLICITUD_APROBADA");
+        // [H-ALM-02] El almacenista recibe aviso de TODA solicitud aprobada (antes solo prioridad ALTA)
         if (s.getPrioridadSolicitud() == PrioridadSolicitud.ALTA) {
             notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA", "Despacho Urgente - Prioridad ALTA",
                     "La solicitud " + s.getSolicitudNum() + " de " + s.getMecanico().getNombreMecanico()
                             + " (prioridad ALTA) fue aprobada. Prepare el despacho fisico.",
                     "PRIORIDAD_ALTA");
+        } else {
+            notificacionService.enviarNotificacionConTipo(null, "ALMACENISTA",
+                    parcial ? "Despacho Pendiente - Aprobacion Parcial" : "Despacho Pendiente",
+                    "La solicitud " + s.getSolicitudNum() + " de " + s.getMecanico().getNombreMecanico()
+                            + " (prioridad " + s.getPrioridadSolicitud() + ")"
+                            + (parcial ? " fue aprobada parcialmente" : " fue aprobada")
+                            + ". Prepare el despacho de los repuestos.",
+                    "SOLICITUD_APROBADA");
         }
     }
 

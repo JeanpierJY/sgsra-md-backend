@@ -8,6 +8,7 @@ RUN chmod +x mvnw && ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-RUN mkdir -p /app/uploads/imagenes /app/uploads/selfies /app/uploads/repuestos /app/uploads/herramientas
+COPY --from=build /app/uploads /app/uploads
+RUN mkdir -p /app/uploads/selfies /app/uploads/imagenes /app/uploads/repuestos /app/uploads/herramientas
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xmx384m", "-jar", "app.jar"]

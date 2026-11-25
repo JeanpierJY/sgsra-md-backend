@@ -133,7 +133,7 @@ class _DetalleHerramientaScreenState extends State<DetalleHerramientaScreen> {
                 ),
                 onPressed: () => mostrarModalReportarExtravio(context, _cargar, codigo: _h.codHerramienta),
                 icon: const Icon(Icons.report_gmailerrorred_rounded),
-                label: const Text('Reportar extravío [RF41]'),
+                label: const Text('Reportar extravío'),
               ),
             ],
             const SizedBox(height: 18),

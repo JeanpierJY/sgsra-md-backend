@@ -21,9 +21,15 @@ public class CatalogoController {
 
     private final ICatalogoService catalogoService;
 
+    // [H-ADM-01] incluirInactivos=true devuelve tambien los repuestos deshabilitados
+    // (antes el admin consumia solo los activos y un repuesto desactivado "desaparecia")
     @GetMapping
-    public ResponseEntity<Page<RepuestoResponse>> listarCatalogo(Pageable pageable) {
-        return ResponseEntity.ok(catalogoService.listarCatalogo(pageable));
+    public ResponseEntity<Page<RepuestoResponse>> listarCatalogo(
+            @RequestParam(value = "incluirInactivos", defaultValue = "false") boolean incluirInactivos,
+            Pageable pageable) {
+        return ResponseEntity.ok(incluirInactivos
+                ? catalogoService.listarCatalogoAdmin(pageable)
+                : catalogoService.listarCatalogo(pageable));
     }
 
     @GetMapping("/buscar")

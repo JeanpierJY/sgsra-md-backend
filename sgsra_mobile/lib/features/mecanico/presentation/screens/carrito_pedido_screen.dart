@@ -160,7 +160,7 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
       widget.onCarritoActualizado();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sin conexión. La solicitud se guardó en el teléfono [RF18]'), backgroundColor: Colors.orange),
+        const SnackBar(content: Text('Sin conexión. La solicitud se guardó en el teléfono'), backgroundColor: Colors.orange),
       );
     }
   }
@@ -170,7 +170,7 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Nueva Solicitud [RF13]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Nueva Solicitud', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: const [NotificacionBell(), PerfilBoton()],
         backgroundColor: AppColors.primaryBlue,
       ),
@@ -201,7 +201,9 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              // [H-GEN-07] Espacio extra al final para poder desplazar el botón por encima del teclado
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -234,14 +236,14 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const _Paso(numero: 2, titulo: 'Máquina afectada [RF15]'),
+                    const _Paso(numero: 2, titulo: 'Máquina afectada'),
                     _BuscadorMaquina(
                       datasource: _remoteDataSource,
                       seleccionada: _maquina,
                       onSeleccion: (m) => setState(() => _maquina = m),
                     ),
                     const SizedBox(height: 18),
-                    const _Paso(numero: 3, titulo: 'Urgencia [RF14]'),
+                    const _Paso(numero: 3, titulo: 'Urgencia'),
                     Row(
                       children: [
                         _OpcionPrioridad('BAJA', 'Rutina', Icons.low_priority_rounded, Colors.blueGrey, _prioridad,
@@ -255,10 +257,12 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
                       ],
                     ),
                     const SizedBox(height: 18),
-                    const _Paso(numero: 4, titulo: 'Justificación técnica [RF16]'),
+                    const _Paso(numero: 4, titulo: 'Justificación técnica'),
                     TextFormField(
                       controller: _justificacionCtrl,
                       maxLines: 3,
+                      // [H-MEC-02] Al enfocar, desplaza también el botón "Enviar solicitud" sobre el teclado
+                      scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
                       decoration: const InputDecoration(
                         hintText: 'Describa por qué necesita cambiar estas piezas...',
                         filled: true,
@@ -281,7 +285,7 @@ class _CarritoPedidoScreenState extends State<CarritoPedidoScreen> {
                         icon: _enviando ? const SizedBox.shrink() : const Icon(Icons.send_rounded, color: Colors.white),
                         label: _enviando
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Enviar solicitud [RF17]', style: TextStyle(color: Colors.white, fontSize: 16)),
+                            : const Text('Enviar solicitud', style: TextStyle(color: Colors.white, fontSize: 16)),
                       ),
                     ),
                   ],

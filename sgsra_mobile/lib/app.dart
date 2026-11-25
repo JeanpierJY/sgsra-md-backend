@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
+import 'core/session/session_manager.dart';
 import 'core/utils/app_router.dart';
 
 class MyApp extends StatelessWidget {
@@ -23,6 +24,9 @@ class MyApp extends StatelessWidget {
           titleTextStyle: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
+      // [H-GEN-08] Permiten cerrar la sesión desde el cliente HTTP si la cuenta fue desactivada
+      navigatorKey: SessionManager.navigatorKey,
+      scaffoldMessengerKey: SessionManager.messengerKey,
       initialRoute: '/',
       onGenerateRoute: AppRouter.generateRoute,
       debugShowCheckedModeBanner: false,

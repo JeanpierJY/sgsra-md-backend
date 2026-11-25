@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/session/session_manager.dart';
+import '../../../../core/utils/navegacion_solicitud.dart';
 import '../../../../core/widgets/detalle_solicitud_sheet.dart';
 import '../../../administrador/presentation/screens/solicitudes_recuperacion_screen.dart';
 import '../../../almacen/presentation/screens/despacho_repuestos_tab.dart';
@@ -219,8 +220,12 @@ class _TarjetaNotificacion extends StatelessWidget {
     if (codigo != null && (rol ?? '').toUpperCase().contains('ALMACENISTA')) {
       // [ALM-01] El almacenista va directo a la hoja de despacho de esa solicitud
       await mostrarDespachoSolicitud(context, codigo);
+    } else if (codigo != null && (rol ?? '').toUpperCase() == 'ADMINISTRADOR') {
+      // [H-ADM-05] El administrador vuelve a su panel, pasa a la Bandeja y se abre la solicitud
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      NavegacionSolicitud.abrirEnBandeja(codigo);
     } else if (codigo != null) {
-      await mostrarDetalleSolicitud(context, codigo, accionesAdmin: rol == 'ADMINISTRADOR');
+      await mostrarDetalleSolicitud(context, codigo);
     } else if (_esRecuperacion && rol == 'ADMINISTRADOR') {
       await Navigator.push(context, MaterialPageRoute(builder: (_) => const SolicitudesRecuperacionScreen()));
     }

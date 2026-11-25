@@ -186,7 +186,7 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Bitacora de Auditoria [RF49]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Bitacora de Auditoria', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarAuditoria),

@@ -7,7 +7,6 @@ import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
 import '../widgets/herramienta_ui.dart';
 import 'detalle_herramienta_screen.dart';
-import 'reportar_extravio_modal.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 import '../../../../core/widgets/perfil_boton.dart';
 
@@ -26,6 +25,8 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
   bool _isLoading = true;
   String? _error;
   List<HerramientaEntity> _herramientas = [];
+  /// [H-ALM-06] Préstamo activo de cada herramienta (código → préstamo) para mostrar al custodio
+  Map<String, PrestamoEntity> _custodios = {};
   String _categoria = 'TODAS';
   String _estado = 'TODOS';
 
@@ -49,16 +50,37 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
     super.dispose();
   }
 
+  Future<List<PrestamoEntity>> _prestamosSinFallar() async {
+    try {
+      return await _dataSource.listarPrestamos();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> _cargarHerramientas() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
     try {
-      final list = await _dataSource.listarHerramientas(categoria: _categoria);
+      final r = await Future.wait([
+        _dataSource.listarHerramientas(categoria: _categoria),
+        // Si falla la consulta de préstamos, la lista de herramientas se muestra igual
+        _prestamosSinFallar(),
+      ]);
+      final list = r[0] as List<HerramientaEntity>;
+      final custodios = <String, PrestamoEntity>{};
+      for (final p in r[1] as List<PrestamoEntity>) {
+        if (p.estadoPrestamo.toUpperCase() == 'DEVUELTO') continue;
+        for (final cod in p.herramientas) {
+          custodios[cod] = p;
+        }
+      }
       if (!mounted) return;
       setState(() {
         _herramientas = list..sort((a, b) => a.codHerramienta.compareTo(b.codHerramienta));
+        _custodios = custodios;
         _isLoading = false;
       });
     } catch (e) {
@@ -115,7 +137,7 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
                 TextFormField(controller: marcaCtrl, decoration: const InputDecoration(labelText: 'Marca / Fabricante')),
                 DropdownButtonFormField<String>(
                   initialValue: catSel,
-                  decoration: const InputDecoration(labelText: 'Categoría [RF45]'),
+                  decoration: const InputDecoration(labelText: 'Categoría'),
                   items: _categorias.entries
                       .where((e) => e.key != 'TODAS')
                       .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
@@ -190,7 +212,7 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Herramientas [RF45]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Herramientas', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarHerramientas),
@@ -198,29 +220,14 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
           const PerfilBoton(),
         ],
       ),
-      // [ALM-05] Acciones como botones flotantes en la esquina inferior derecha
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'fab-extravio',
-            tooltip: 'Reportar extravío [RF41]',
-            backgroundColor: AppColors.errorRed,
-            foregroundColor: Colors.white,
-            onPressed: () => mostrarModalReportarExtravio(context, _cargarHerramientas),
-            child: const Icon(Icons.report_gmailerrorred_rounded),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton.extended(
-            heroTag: 'fab-nueva',
-            backgroundColor: AppColors.primaryBlue,
-            foregroundColor: Colors.white,
-            onPressed: _abrirModalCrear,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Nueva herramienta'),
-          ),
-        ],
+      // [H-ALM-05] Se retiró el botón flotante de extravío: el reporte se hace desde el detalle
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-nueva',
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: Colors.white,
+        onPressed: _abrirModalCrear,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Nueva herramienta'),
       ),
       body: Column(
         children: [
@@ -333,8 +340,16 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
                                       onTap: () => _abrirDetalle(h),
                                       child: Padding(
                                         padding: const EdgeInsets.all(10),
-                                        child: FilaHerramienta(h,
-                                            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black38)),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            FilaHerramienta(h,
+                                                trailing:
+                                                    const Icon(Icons.chevron_right_rounded, color: Colors.black38)),
+                                            if (_custodios[h.codHerramienta] != null)
+                                              _FilaCustodio(_custodios[h.codHerramienta]!),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
@@ -344,6 +359,42 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+/// [H-ALM-06] Nombre y DNI del mecánico que tiene la herramienta, visibles sin abrir el detalle
+class _FilaCustodio extends StatelessWidget {
+  final PrestamoEntity p;
+  const _FilaCustodio(this.p);
+
+  @override
+  Widget build(BuildContext context) {
+    final enMora = claveEstadoHerramienta(p.estadoPrestamo) == 'EN_MORA';
+    final color = enMora ? colorEstadoHerramienta('EN_MORA') : AppColors.primaryBlue;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(children: [
+        Icon(Icons.person_pin_rounded, size: 18, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: p.nombreMecanico, style: const TextStyle(fontWeight: FontWeight.w600)),
+              TextSpan(text: '  ·  DNI ${p.dniMecanico}', style: const TextStyle(color: Colors.black54)),
+            ]),
+            style: const TextStyle(fontSize: 12.5),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Text(p.prestamoNum, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }

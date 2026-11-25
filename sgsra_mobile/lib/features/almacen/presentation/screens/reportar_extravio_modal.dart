@@ -147,7 +147,7 @@ class _ModalExtravioHerramientasState extends State<_ModalExtravioHerramientas> 
       widget.onReportado();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Extravío asentado. Responsabilidad imputada a: $custodio [RF42]'),
+          content: Text('Extravío asentado. Responsabilidad imputada a: $custodio'),
           backgroundColor: AppColors.errorRed,
         ),
       );
@@ -169,7 +169,7 @@ class _ModalExtravioHerramientasState extends State<_ModalExtravioHerramientas> 
         left: 18,
         right: 18,
         top: 18,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 18,
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
@@ -182,7 +182,7 @@ class _ModalExtravioHerramientasState extends State<_ModalExtravioHerramientas> 
                 const Icon(Icons.warning_amber_rounded, color: AppColors.errorRed, size: 24),
                 const SizedBox(width: 8),
                 const Text(
-                  'Herramientas Extraviadas [RF41, RF42]',
+                  'Herramientas Extraviadas',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.errorRed),
                 ),
                 const Spacer(),
@@ -327,7 +327,7 @@ class _ModalExtravioHerramientasState extends State<_ModalExtravioHerramientas> 
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.report_gmailerrorred_rounded, color: Colors.white),
                 label: Text(
-                  _enviando ? 'Asentando...' : 'Confirmar Extravío e Imputar Responsabilidad [RF42]',
+                  _enviando ? 'Asentando...' : 'Confirmar Extravío e Imputar Responsabilidad',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),

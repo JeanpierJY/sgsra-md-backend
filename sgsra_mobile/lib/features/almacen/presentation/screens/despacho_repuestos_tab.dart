@@ -26,6 +26,117 @@ class _DespachoRepuestosTabState extends State<DespachoRepuestosTab> {
   List<Map<String, dynamic>> _porDespachar = [];
   List<Map<String, dynamic>> _entregadas = [];
 
+  // [H-ALM-01] Filtros de la lista de solicitudes
+  final _buscarCtrl = TextEditingController();
+  String _prioridad = 'TODAS';
+  int _dias = 0; // 0 = cualquier fecha
+
+  static const _periodos = {0: 'Cualquier fecha', 1: 'Hoy', 7: 'Últimos 7 días', 30: 'Últimos 30 días'};
+
+  @override
+  void dispose() {
+    _buscarCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _hayFiltros => _buscarCtrl.text.trim().isNotEmpty || _prioridad != 'TODAS' || _dias != 0;
+
+  List<Map<String, dynamic>> _filtrar(List<Map<String, dynamic>> origen) {
+    final q = _buscarCtrl.text.trim().toLowerCase();
+    final hoy = DateTime.now();
+    final desde = DateTime(hoy.year, hoy.month, hoy.day).subtract(Duration(days: _dias <= 1 ? 0 : _dias - 1));
+    return origen.where((s) {
+      if (_prioridad != 'TODAS' && '${s['prioridad']}'.toUpperCase() != _prioridad) return false;
+      if (_dias > 0) {
+        final f = DateTime.tryParse('${s['fechaEmision'] ?? ''}');
+        if (f == null || f.isBefore(desde)) return false;
+      }
+      if (q.isEmpty) return true;
+      return '${s['solicitudNum']} ${s['nombreMecanico']} ${s['codMaquinaria']} ${s['modeloMaquinaria']}'
+          .toLowerCase()
+          .contains(q);
+    }).toList();
+  }
+
+  void _limpiarFiltros() => setState(() {
+        _buscarCtrl.clear();
+        _prioridad = 'TODAS';
+        _dias = 0;
+      });
+
+  Widget _filtros() {
+    Widget chip(String valor, String etiqueta) {
+      final sel = _prioridad == valor;
+      final c = valor == 'TODAS' ? AppColors.primaryBlue : colorPrioridad(valor);
+      return Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: FilterChip(
+          visualDensity: VisualDensity.compact,
+          label: Text(etiqueta),
+          selected: sel,
+          showCheckmark: false,
+          selectedColor: c.withValues(alpha: 0.18),
+          side: BorderSide(color: sel ? c : Colors.grey.shade300),
+          labelStyle: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w600),
+          onSelected: (_) => setState(() => _prioridad = valor),
+        ),
+      );
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      TextField(
+        controller: _buscarCtrl,
+        decoration: InputDecoration(
+          hintText: 'Buscar por N° de solicitud, mecánico o máquina',
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: _buscarCtrl.text.isEmpty
+              ? null
+              : IconButton(icon: const Icon(Icons.clear_rounded), onPressed: () => setState(_buscarCtrl.clear)),
+          isDense: true,
+          filled: true,
+          fillColor: AppColors.pureWhite,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              chip('TODAS', 'Todas'),
+              chip('ALTA', 'Alta'),
+              chip('MEDIA', 'Media'),
+              chip('BAJA', 'Baja'),
+            ]),
+          ),
+        ),
+        PopupMenuButton<int>(
+          tooltip: 'Periodo',
+          initialValue: _dias,
+          onSelected: (v) => setState(() => _dias = v),
+          itemBuilder: (_) =>
+              _periodos.entries.map((e) => PopupMenuItem(value: e.key, child: Text(e.value))).toList(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.calendar_month_rounded,
+                  size: 18, color: _dias == 0 ? Colors.black45 : AppColors.primaryBlue),
+              const SizedBox(width: 4),
+              Text(_periodos[_dias]!,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _dias == 0 ? Colors.black54 : AppColors.primaryBlue)),
+            ]),
+          ),
+        ),
+      ]),
+      const SizedBox(height: 10),
+    ]);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +193,7 @@ class _DespachoRepuestosTabState extends State<DespachoRepuestosTab> {
   @override
   Widget build(BuildContext context) {
     if (_cargando) return const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue));
-    final lista = _verEntregadas ? _entregadas : _porDespachar;
+    final lista = _filtrar(_verEntregadas ? _entregadas : _porDespachar);
     final urgentes = _porDespachar.where((s) => _pesoPrioridad(s['prioridad']) == 0).length;
 
     return RefreshIndicator(
@@ -123,6 +234,7 @@ class _DespachoRepuestosTabState extends State<DespachoRepuestosTab> {
                     onSelectionChanged: (v) => setState(() => _verEntregadas = v.first),
                   ),
                   const SizedBox(height: 12),
+                  _filtros(),
                   if (!_verEntregadas && urgentes > 0)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -151,6 +263,14 @@ class _DespachoRepuestosTabState extends State<DespachoRepuestosTab> {
                       titulo: 'No se pudieron cargar las solicitudes',
                       detalle: _error!,
                       onReintentar: _cargar,
+                    )
+                  else if (lista.isEmpty && _hayFiltros)
+                    _Vacio(
+                      icono: Icons.filter_alt_off_rounded,
+                      titulo: 'Sin resultados',
+                      detalle: 'Ninguna solicitud coincide con los filtros aplicados.',
+                      onReintentar: _limpiarFiltros,
+                      textoBoton: 'Limpiar filtros',
                     )
                   else if (lista.isEmpty)
                     _Vacio(
@@ -402,7 +522,7 @@ class _HojaDespachoState extends State<_HojaDespacho> {
                       Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 20),
                       const SizedBox(width: 8),
                       const Expanded(
-                        child: Text('Algunos repuestos llegaron a su stock mínimo. Se avisó a administración para reponer.',
+                        child: Text('Algunos repuestos quedaron con stock bajo. Se avisó a administración para reponer.',
                             style: TextStyle(fontSize: 12.5)),
                       ),
                     ]),
@@ -627,7 +747,7 @@ class _ItemDespacho extends StatelessWidget {
             style: TextStyle(
                 fontSize: 12.5, fontWeight: FontWeight.bold, color: bajo ? Colors.orange[800] : Colors.green[700])),
         if (bajo)
-          Text('  (llega al mínimo)', style: TextStyle(fontSize: 11.5, color: Colors.orange[800])),
+          Text('  (stock bajo)', style: TextStyle(fontSize: 11.5, color: Colors.orange[800])),
       ]);
     }
 
@@ -759,7 +879,9 @@ class _Vacio extends StatelessWidget {
   final String titulo;
   final String detalle;
   final VoidCallback? onReintentar;
-  const _Vacio({required this.icono, required this.titulo, required this.detalle, this.onReintentar});
+  final String textoBoton;
+  const _Vacio(
+      {required this.icono, required this.titulo, required this.detalle, this.onReintentar, this.textoBoton = 'Reintentar'});
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
@@ -771,7 +893,7 @@ class _Vacio extends StatelessWidget {
           Text(detalle, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
           if (onReintentar != null) ...[
             const SizedBox(height: 12),
-            OutlinedButton.icon(onPressed: onReintentar, icon: const Icon(Icons.refresh_rounded), label: const Text('Reintentar')),
+            OutlinedButton.icon(onPressed: onReintentar, icon: const Icon(Icons.refresh_rounded), label: Text(textoBoton)),
           ],
         ]),
       );

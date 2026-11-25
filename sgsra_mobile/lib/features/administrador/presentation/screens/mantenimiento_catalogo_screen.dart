@@ -33,16 +33,27 @@ class _MantenimientoCatalogoScreenState
   Future<void> _cargarCatalogo() async {
     setState(() => _isLoading = true);
     try {
-      final res =
-          await _dioClient.dio.get('/catalogo', queryParameters: {'size': 300});
+      final res = await _dioClient.dio.get('/catalogo',
+          // [H-ADM-01] Incluye repuestos deshabilitados para poder reactivarlos
+          queryParameters: {'size': 300, 'incluirInactivos': true});
+      final List<dynamic> recibidos;
+      if (res.data is Map && res.data['content'] != null) {
+        recibidos = List<dynamic>.from(res.data['content']);
+      } else if (res.data is List) {
+        recibidos = List<dynamic>.from(res.data);
+      } else {
+        recibidos = [];
+      }
+      // [H-ADM-01b] Si el servidor no devuelve un repuesto que ya se sabía deshabilitado
+      // (backend sin el parámetro incluirInactivos), se conserva en la lista para poder reactivarlo
+      final codigos = recibidos.map((r) => r['codParte']).toSet();
+      final deshabilitadosConocidos = _repuestos
+          .where((r) => r['activo'] == false && !codigos.contains(r['codParte']))
+          .toList();
+      if (!mounted) return;
       setState(() {
-        if (res.data is Map && res.data['content'] != null) {
-          _repuestos = res.data['content'];
-        } else if (res.data is List) {
-          _repuestos = res.data;
-        } else {
-          _repuestos = [];
-        }
+        _repuestos = [...recibidos, ...deshabilitadosConocidos]
+          ..sort((a, b) => '${a['codParte']}'.compareTo('${b['codParte']}'));
         _isLoading = false;
       });
     } catch (e) {
@@ -61,13 +72,21 @@ class _MantenimientoCatalogoScreenState
     );
   }
 
+  /// [H-ADM-01b] Actualiza solo la tarjeta del repuesto (sin recargar toda la lista, que
+  /// hacía desaparecer el repuesto deshabilitado) y revierte el switch si la API falla.
   Future<void> _cambiarEstadoRepuesto(String codParte, bool activo) async {
+    final item = _repuestos.firstWhere((r) => r['codParte'] == codParte, orElse: () => null);
+    if (item == null) return;
+    final anterior = item['activo'] ?? true;
+    setState(() => item['activo'] = activo);
     try {
       await _dioClient.dio.put('/catalogo/$codParte/estado',
           queryParameters: {'activo': activo});
-      _mostrarMensaje('Estado de $codParte actualizado');
-      _cargarCatalogo();
+      _mostrarMensaje(activo
+          ? 'Repuesto $codParte habilitado'
+          : 'Repuesto $codParte deshabilitado: ya no aparece disponible para los mecánicos');
     } catch (e) {
+      if (mounted) setState(() => item['activo'] = anterior);
       _mostrarMensaje('Error al cambiar estado: ${mensajeDeError(e)}',
           esError: true);
     }
@@ -85,13 +104,12 @@ class _MantenimientoCatalogoScreenState
     final codCtrl = TextEditingController();
     final nomCtrl = TextEditingController();
     final stockCtrl = TextEditingController();
-    final minCtrl = TextEditingController();
     final descCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Añadir Repuesto [RF32]',
+        title: const Text('Añadir Repuesto',
             style: TextStyle(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Form(
@@ -131,20 +149,6 @@ class _MantenimientoCatalogoScreenState
                             campo: 'Stock Inicial'),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextFormField(
-                        controller: minCtrl,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                        decoration:
-                            const InputDecoration(labelText: 'Stock Mínimo'),
-                        validator: (v) => AppValidators.validarStock(v,
-                            campo: 'Stock Mínimo'),
-                      ),
-                    ),
                   ],
                 ),
                 TextFormField(
@@ -172,7 +176,7 @@ class _MantenimientoCatalogoScreenState
                     'codParte': codCtrl.text.trim().toUpperCase(),
                     'nombreRepuesto': nomCtrl.text.trim(),
                     'stockActual': int.parse(stockCtrl.text.trim()),
-                    'stockMinimo': int.parse(minCtrl.text.trim()),
+                    'stockMinimo': 0, // [H-ADM-06] campo oculto en la UI; el backend lo exige
                     'descripcion': descCtrl.text.trim(),
                   });
                   _mostrarMensaje('Repuesto guardado en catálogo maestro');
@@ -195,7 +199,6 @@ class _MantenimientoCatalogoScreenState
     final formKey = GlobalKey<FormState>();
     final nomCtrl = TextEditingController(text: repuesto['nombreRepuesto']);
     final stockCtrl = TextEditingController(text: '${repuesto['stockActual']}');
-    final minCtrl = TextEditingController(text: '${repuesto['stockMinimo']}');
     final descCtrl = TextEditingController(text: repuesto['descripcion'] ?? '');
 
     showDialog(
@@ -232,20 +235,6 @@ class _MantenimientoCatalogoScreenState
                             campo: 'Stock Actual'),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextFormField(
-                        controller: minCtrl,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                        decoration:
-                            const InputDecoration(labelText: 'Stock Mínimo'),
-                        validator: (v) => AppValidators.validarStock(v,
-                            campo: 'Stock Mínimo'),
-                      ),
-                    ),
                   ],
                 ),
                 TextFormField(
@@ -272,7 +261,7 @@ class _MantenimientoCatalogoScreenState
                     .put('/catalogo/${repuesto['codParte']}', data: {
                   'nombreRepuesto': nomCtrl.text.trim(),
                   'stockActual': int.parse(stockCtrl.text.trim()),
-                  'stockMinimo': int.parse(minCtrl.text.trim()),
+                  'stockMinimo': repuesto['stockMinimo'] ?? 0, // [H-ADM-06] se conserva el valor guardado
                   'descripcion': descCtrl.text.trim(),
                 });
                 _mostrarMensaje('Repuesto actualizado');
@@ -294,13 +283,13 @@ class _MantenimientoCatalogoScreenState
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Catálogo Maestro [RF32]',
+        title: const Text('Catálogo Maestro',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(
             icon: const Icon(Icons.business_center_rounded),
-            tooltip: 'Proveedores Homologados [RF27]',
+            tooltip: 'Proveedores Homologados',
             onPressed: () => mostrarModalProveedores(context),
           ),
           IconButton(
@@ -403,7 +392,9 @@ class _MantenimientoCatalogoScreenState
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
                             subtitle: Text(
-                              'Stock Actual: ${item['stockActual']} | Mínimo: ${item['stockMinimo']}\nDescripción: ${item['descripcion'] ?? 'Sin descripción'}',
+                              '${activo ? '' : 'DESHABILITADO · no visible para mecánicos\n'}'
+                              'Stock Actual: ${item['stockActual']}\nDescripción: ${item['descripcion'] ?? 'Sin descripción'}',
+                              style: activo ? null : const TextStyle(color: Colors.black45),
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,

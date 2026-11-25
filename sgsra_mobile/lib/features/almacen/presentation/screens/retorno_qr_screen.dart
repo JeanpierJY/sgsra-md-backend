@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -40,7 +42,7 @@ class RetornoQrScreen extends StatefulWidget {
   State<RetornoQrScreen> createState() => _RetornoQrScreenState();
 }
 
-class _RetornoQrScreenState extends State<RetornoQrScreen> {
+class _RetornoQrScreenState extends State<RetornoQrScreen> with WidgetsBindingObserver {
   final AlmacenRemoteDataSource _ds = AlmacenRemoteDataSource(DioClient());
   late final MobileScannerController _scanner;
   final TextEditingController _buscarCtrl = TextEditingController();
@@ -52,6 +54,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
   List<PrestamoEntity> _activos = [];
 
   String? _ultimoCodigo;
+  DateTime? _ultimoEscaneo;
   HerramientaEntity? _fichaEscaneada;
   String? _avisoEscaneo;
 
@@ -59,15 +62,33 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
   void initState() {
     super.initState();
     _scanner = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
+      detectionSpeed: DetectionSpeed.normal,
       facing: CameraFacing.back,
-      formats: const [BarcodeFormat.qrCode],
     );
+    WidgetsBinding.instance.addObserver(this);
     _cargarPrestamos();
+  }
+
+  /// [H-ALM-04] Con un controller propio, mobile_scanner NO gestiona el ciclo de vida:
+  /// tras el diálogo de permisos o al volver de segundo plano la cámara quedaba en negro.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_scanner.value.isInitialized) return;
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (_camaraActiva) unawaited(_scanner.start());
+      case AppLifecycleState.inactive:
+        unawaited(_scanner.stop());
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        break;
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scanner.dispose();
     _buscarCtrl.dispose();
     super.dispose();
@@ -148,7 +169,13 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
   /// Procesa el código QR capturado por la cámara
   Future<void> _procesarCodigo(String raw) async {
     final codigo = raw.trim().toUpperCase();
-    if (_procesandoQr || _modalAbierto || codigo.isEmpty || codigo == _ultimoCodigo) return;
+    // [H-ALM-04] El mismo QR puede volver a leerse pasados unos segundos (antes quedaba bloqueado)
+    final ahora = DateTime.now();
+    final repetido = codigo == _ultimoCodigo &&
+        _ultimoEscaneo != null &&
+        ahora.difference(_ultimoEscaneo!) < const Duration(seconds: 3);
+    if (_procesandoQr || _modalAbierto || codigo.isEmpty || repetido) return;
+    _ultimoEscaneo = ahora;
     setState(() {
       _procesandoQr = true;
       _ultimoCodigo = codigo;
@@ -198,7 +225,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
   String _mensajeErrorCamara(MobileScannerException error) {
     switch (error.errorCode) {
       case MobileScannerErrorCode.permissionDenied:
-        return 'Permiso de cámara denegado. Permita el acceso en ajustes del navegador o dispositivo.';
+        return 'Permiso de cámara denegado. Habilítelo en Ajustes > Aplicaciones > SGSRA > Permisos.';
       case MobileScannerErrorCode.unsupported:
         return 'El escáner no está soportado en esta plataforma.';
       default:
@@ -226,7 +253,8 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
             left: 18,
             right: 18,
             top: 12,
-            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 20,
+            // [H-ALM-03] Suma la barra de navegación del teléfono para que "Confirmar retorno" no quede oculto
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + MediaQuery.of(modalCtx).padding.bottom + 20,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -245,7 +273,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
                   const Icon(Icons.assignment_return_rounded, color: AppColors.primaryBlue),
                   const SizedBox(width: 8),
                   const Expanded(
-                    child: Text('Retorno de Herramienta [RF38]',
+                    child: Text('Retorno de Herramienta',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
                   ),
                   IconButton(
@@ -280,7 +308,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
                   ]),
                 ),
                 const SizedBox(height: 16),
-                const Text('Estado en que devuelve [RF39]', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                const Text('Estado en que devuelve', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
                 const SizedBox(height: 8),
                 Row(children: [
                   _opcionEstadoModal('BUEN_ESTADO', 'Buen estado', Icons.check_circle_outline, Colors.green[700]!,
@@ -295,8 +323,8 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
                 const SizedBox(height: 6),
                 Text(
                   switch (estadoFisico) {
-                    'BUEN_ESTADO' => 'Vuelve a quedar disponible para préstamo [RF40].',
-                    'CON_AVERIA' => 'Pasa a mantenimiento [RF40]. Describa la avería.',
+                    'BUEN_ESTADO' => 'Vuelve a quedar disponible para préstamo.',
+                    'CON_AVERIA' => 'Pasa a mantenimiento. Describa la avería.',
                     _ => 'Requiere informe técnico. Indique qué falta.',
                   },
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
@@ -337,7 +365,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.assignment_turned_in_rounded),
-                  label: Text(enviando ? 'Registrando...' : 'Confirmar retorno [RF40]',
+                  label: Text(enviando ? 'Registrando...' : 'Confirmar retorno',
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ],
@@ -430,8 +458,9 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
                     onDetect: (capture) {
                       if (_modalAbierto || _procesandoQr) return;
                       for (final b in capture.barcodes) {
-                        final v = b.rawValue;
-                        if (v != null && v.isNotEmpty) {
+                        final v = (b.rawValue ?? b.displayValue ?? '').trim();
+                        if (v.isNotEmpty) {
+                          HapticFeedback.mediumImpact();
                           _procesarCodigo(v);
                           break;
                         }
@@ -502,25 +531,15 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
             const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primaryBlue),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('Escanee el QR de la herramienta o elíjala de la lista inferior [RF34]',
+              child: Text('Escanee el QR de la herramienta o elíjala de la lista inferior',
                   style: TextStyle(fontSize: 12.5, color: Colors.black54)),
             ),
             IconButton(
               tooltip: _camaraActiva ? 'Ocultar cámara' : 'Mostrar cámara',
               icon: Icon(_camaraActiva ? Icons.videocam_off_outlined : Icons.videocam_outlined),
-              onPressed: () async {
-                final activa = !_camaraActiva;
-                setState(() => _camaraActiva = activa);
-                try {
-                  if (activa) {
-                    await _scanner.start();
-                  } else {
-                    await _scanner.stop();
-                  }
-                } catch (e) {
-                  debugPrint('Error toggle cámara: $e');
-                }
-              },
+              // [H-ALM-04] El widget MobileScanner arranca/detiene la cámara al montarse/desmontarse
+              // (autoStart); llamar además start()/stop() aquí provocaba arranques duplicados.
+              onPressed: () => setState(() => _camaraActiva = !_camaraActiva),
             ),
           ]),
         ),
@@ -563,7 +582,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
           ]),
           if (h != null) ...[
             const Divider(),
-            const Text('FICHA DEL ACTIVO [RF35]',
+            const Text('FICHA DEL ACTIVO',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
             const SizedBox(height: 8),
             FilaHerramienta(h, tamanoImagen: 60),
@@ -583,7 +602,7 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Retorno de Herramientas [RF38]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Retorno de Herramientas', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarPrestamos),

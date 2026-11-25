@@ -49,8 +49,16 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
         lista = await _dataSource.listarCatalogo();
       }
 
+      // [H-MEC-01] Primero los que se pueden pedir, luego sin stock y al final los deshabilitados.
+      // El orden es estable: dentro de cada grupo se respeta el orden del backend.
+      int grupo(RepuestoEntity r) => !r.activo ? 2 : (r.stockLibre > 0 ? 0 : 1);
+      final ordenada = [
+        for (var g = 0; g <= 2; g++) ...lista.where((r) => grupo(r) == g),
+      ];
+
+      if (!mounted) return;
       setState(() {
-        _repuestos = lista;
+        _repuestos = ordenada;
         _isLoading = false;
       });
     } catch (e) {
@@ -77,7 +85,8 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: const EdgeInsets.all(20),
+          // [H-GEN-07] Respeta la barra de navegación del teléfono
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).padding.bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,7 +145,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Catálogo de Repuestos [RF09]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Catálogo de Repuestos', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarCatalogo),
@@ -154,7 +163,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 TextField(
                   controller: _buscarCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Buscador predictivo (ej. Bomba, Filtro, Valvula) [RF10]',
+                    hintText: 'Buscador predictivo (ej. Bomba, Filtro, Valvula)',
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _buscarCtrl.text.isNotEmpty
                         ? IconButton(
@@ -212,9 +221,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                         itemCount: _repuestos.length,
                         itemBuilder: (context, index) {
                           final item = _repuestos[index];
-                          final tieneStock = item.stockLibre > 0;
+                          final tieneStock = item.activo && item.stockLibre > 0;
 
-                          return Card(
+                          return Opacity(
+                            // [H-MEC-01] Los deshabilitados se ven atenuados y no se pueden pedir
+                            opacity: item.activo ? 1 : 0.55,
+                            child: Card(
                             color: AppColors.pureWhite,
                             elevation: 2,
                             margin: const EdgeInsets.only(bottom: 12),
@@ -232,24 +244,49 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _StockResumen(item: item, enCarrito: widget.carritoGlobal[item] ?? 0),
+                                    if (!item.activo)
+                                      const _EtiquetaNoDisponible()
+                                    else
+                                      _StockResumen(item: item, enCarrito: widget.carritoGlobal[item] ?? 0),
                                     const SizedBox(height: 4),
                                     Text(item.descripcion, maxLines: 2, overflow: TextOverflow.ellipsis),
                                   ],
                                 ),
                               ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryBlue),
-                                onPressed: () => _mostrarDetalleRepuesto(item),
-                              ),
-                              onTap: () => _mostrarDetalleRepuesto(item),
+                              trailing: item.activo
+                                  ? IconButton(
+                                      icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryBlue),
+                                      onPressed: () => _mostrarDetalleRepuesto(item),
+                                    )
+                                  : const Icon(Icons.block_rounded, color: Colors.grey),
+                              onTap: item.activo ? () => _mostrarDetalleRepuesto(item) : null,
                             ),
+                          ),
                           );
                         },
                       ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// [H-MEC-01] Etiqueta para repuestos deshabilitados por el administrador
+class _EtiquetaNoDisponible extends StatelessWidget {
+  const _EtiquetaNoDisponible();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.block_rounded, size: 13, color: Colors.grey),
+        SizedBox(width: 4),
+        Text('No disponible · deshabilitado',
+            style: TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }
@@ -274,7 +311,7 @@ class _StockResumen extends StatelessWidget {
         if (item.stockReservado > 0)
           _chip('${item.stockReservado} reservados', Colors.blueGrey, Icons.schedule_rounded),
         if (enCarrito > 0) _chip('$enCarrito en su solicitud', AppColors.primaryBlue, Icons.shopping_cart_outlined),
-        _chip('Físico: ${item.stockDisponible} · Mín: ${item.stockMinimo}', Colors.grey[700]!, Icons.warehouse_outlined),
+        _chip('Físico: ${item.stockDisponible}', Colors.grey[700]!, Icons.warehouse_outlined),
       ],
     );
   }

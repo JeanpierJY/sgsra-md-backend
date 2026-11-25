@@ -1,8 +1,6 @@
 import '../../domain/entities/repuesto_entity.dart';
 
 class RepuestoModel extends RepuestoEntity {
-  final bool activo;
-
   const RepuestoModel({
     required String codParte,
     required String nombre,
@@ -12,7 +10,7 @@ class RepuestoModel extends RepuestoEntity {
     required int stockDisponible,
     required int stockMinimo,
     int stockReservado = 0,
-    required this.activo,
+    required bool activo,
     String? urlFoto,
   }) : super(
           codParte: codParte,
@@ -24,6 +22,7 @@ class RepuestoModel extends RepuestoEntity {
           stockMinimo: stockMinimo,
           stockReservado: stockReservado,
           urlFoto: urlFoto,
+          activo: activo,
         );
 
   factory RepuestoModel.fromJson(Map<String, dynamic> json) {
