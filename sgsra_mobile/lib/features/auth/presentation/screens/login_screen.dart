@@ -1,13 +1,10 @@
 import 'dart:async';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
-import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/validators.dart';
 import 'home_router.dart';
 import 'recuperar_clave_modal.dart';
@@ -134,172 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _abrirConfiguracionServidor() {
-    final ipCtrl = TextEditingController(text: ApiService.host);
-    String estadoPrueba = '';
-    bool probando = false;
-    Color? colorPrueba;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.dns_rounded, color: AppColors.primaryBlue),
-              SizedBox(width: 8),
-              Text('Servidor Spring Boot',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                  'Configure la IP de la laptop donde corre el backend (puerto 8080):',
-                  style: TextStyle(fontSize: 12.5, color: Colors.black87)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: ipCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'IP del Servidor / Host',
-                  hintText: '192.168.18.57',
-                  prefixIcon: Icon(Icons.wifi_rounded),
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (estadoPrueba.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Icon(
-                          colorPrueba == Colors.green
-                              ? Icons.check_circle_rounded
-                              : Icons.error_outline_rounded,
-                          color: colorPrueba,
-                          size: 18),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(estadoPrueba,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: colorPrueba,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                ),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: probando
-                      ? null
-                      : () async {
-                          setDlgState(() {
-                            probando = true;
-                            estadoPrueba = 'Probando conexión...';
-                            colorPrueba = Colors.blueGrey;
-                          });
-                          final ipPrueba = ipCtrl.text.trim();
-                          try {
-                            final testUrl =
-                                ApiService.urlPruebaConexion(ipPrueba);
-                            final testDio = Dio(
-                              BaseOptions(
-                                connectTimeout: const Duration(seconds: 60),
-                                receiveTimeout: const Duration(seconds: 60),
-                                validateStatus: (status) => true,
-                              ),
-                            );
-                            final res = await testDio
-                                .get(testUrl, queryParameters: {'size': 1});
-                            if (res.statusCode == 200) {
-                              setDlgState(() {
-                                probando = false;
-                                estadoPrueba =
-                                    '¡Conexión exitosa con el servidor!';
-                                colorPrueba = Colors.green;
-                              });
-                            } else {
-                              setDlgState(() {
-                                probando = false;
-                                estadoPrueba =
-                                    'Respondió HTTP ${res.statusCode}: ${res.statusMessage ?? "Verifique logs de Render"}';
-                                colorPrueba = Colors.orange;
-                              });
-                            }
-                          } on DioException catch (dioErr) {
-                            setDlgState(() {
-                              probando = false;
-                              if (dioErr.type ==
-                                      DioExceptionType.connectionTimeout ||
-                                  dioErr.type ==
-                                      DioExceptionType.receiveTimeout) {
-                                estadoPrueba =
-                                    'Tiempo de espera agotado. En Render el servidor duerme tras 15 min de inactividad (~40s para despertar). Reintente en un momento.';
-                              } else {
-                                estadoPrueba =
-                                    'Error de conexión: ${dioErr.message ?? dioErr.error?.toString() ?? "Verifique URL y estado en Render"}.';
-                              }
-                              colorPrueba = AppColors.errorRed;
-                            });
-                          } catch (err) {
-                            setDlgState(() {
-                              probando = false;
-                              estadoPrueba =
-                                  'Error inesperado al conectar: $err';
-                              colorPrueba = AppColors.errorRed;
-                            });
-                          }
-                        },
-                  icon: probando
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.network_check_rounded, size: 18),
-                  label: const Text('Probar conexión'),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await ApiService.restaurarHostDefault();
-                if (ctx.mounted) Navigator.pop(ctx);
-                setState(() {});
-              },
-              child: const Text('Restaurar default'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue),
-              onPressed: () async {
-                final nuevaIp = ipCtrl.text.trim();
-                if (nuevaIp.isNotEmpty) {
-                  await ApiService.guardarHost(nuevaIp);
-                }
-                if (!mounted) return;
-                if (ctx.mounted) Navigator.pop(ctx);
-                setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text('Servidor guardado: ${ApiService.serverUrl}')),
-                );
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _iniciarSesion() {
     FocusScope.of(context).unfocus();
     if (_formKey.currentState!.validate()) {
@@ -381,27 +212,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const SizedBox(width: 36),
-                            Image.asset(
-                              'assets/images/logo_master_drilling.png',
-                              height: 52,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.precision_manufacturing_rounded,
-                                size: 44,
-                                color: AppColors.primaryBlue,
-                              ),
+                        // [H-GEN-02] Se retiró el botón de configuración y prueba de servidor
+                        Center(
+                          child: Image.asset(
+                            'assets/images/logo_master_drilling.png',
+                            height: 52,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.precision_manufacturing_rounded,
+                              size: 44,
+                              color: AppColors.primaryBlue,
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.settings_ethernet_rounded,
-                                  color: Colors.blueGrey, size: 22),
-                              tooltip: 'Configurar IP del Servidor',
-                              onPressed: _abrirConfiguracionServidor,
-                            ),
-                          ],
+                          ),
                         ),
                         const SizedBox(height: 4),
                         const Text(

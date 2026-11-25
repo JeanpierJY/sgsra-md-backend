@@ -78,7 +78,7 @@ class _HerramientasPrestadasScreenState extends State<HerramientasPrestadasScree
       child: Scaffold(
         backgroundColor: AppColors.backgroundGray,
         appBar: AppBar(
-          title: const Text('Herramientas en Custodia [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('Herramientas en Custodia', style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primaryBlue,
           actions: [
             IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarHerramientas),

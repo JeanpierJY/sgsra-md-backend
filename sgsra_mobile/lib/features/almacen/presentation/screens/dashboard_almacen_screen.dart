@@ -87,7 +87,7 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Dashboard de Pañol [RF33]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Dashboard de Pañol', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDatos),
@@ -110,7 +110,7 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                       title: Text(_error!, style: const TextStyle(fontSize: 13)),
                     ),
                   ),
-                const Text('Stock Actual de Herramientas [RF33]:',
+                const Text('Stock Actual de Herramientas:',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
                 const SizedBox(height: 10),
                 GridView.count(
@@ -152,7 +152,7 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                         ),
                       )),
                 const SizedBox(height: 24),
-                const Text('Control y Listado de Préstamos [RF36, RF43]:',
+                const Text('Control y Listado de Préstamos:',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
                 const SizedBox(height: 8),
                 if (_prestamos.isEmpty)

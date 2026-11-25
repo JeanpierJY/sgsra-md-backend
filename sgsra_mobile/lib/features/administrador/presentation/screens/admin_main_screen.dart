@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/navegacion_solicitud.dart';
+import '../../../../core/widgets/detalle_solicitud_sheet.dart';
 import 'bandeja_solicitudes_screen.dart';
 import 'auditoria_screen.dart';
 import 'mantenimiento_catalogo_screen.dart';
@@ -25,6 +27,31 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       if (index != _currentIndex) _visitas[index]++;
       _currentIndex = index;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    NavegacionSolicitud.pendiente.addListener(_abrirSolicitudPendiente);
+  }
+
+  @override
+  void dispose() {
+    NavegacionSolicitud.pendiente.removeListener(_abrirSolicitudPendiente);
+    super.dispose();
+  }
+
+  /// [H-ADM-05] Desde una notificación: ir a la Bandeja y abrir el detalle de la solicitud
+  Future<void> _abrirSolicitudPendiente() async {
+    final codigo = NavegacionSolicitud.pendiente.value;
+    if (codigo == null || !mounted) return;
+    NavegacionSolicitud.pendiente.value = null;
+    _irA(0);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    final cambio = await mostrarDetalleSolicitud(context, codigo, accionesAdmin: true);
+    // Si se aprobó o rechazó, la Bandeja se recarga para reflejar el nuevo estado
+    if (cambio == true && mounted) setState(() => _visitas[0]++);
   }
 
   @override

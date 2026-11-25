@@ -8,6 +8,7 @@ RUN chmod +x mvnw && ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-RUN mkdir -p /app/uploads/imagenes /app/uploads/selfies /app/uploads/repuestos /app/uploads/herramientas
+# [H-GEN-03] Las imagenes subidas se guardan en PostgreSQL; aqui solo se copian las imagenes semilla del repositorio
+COPY --from=build /app/uploads /app/uploads
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xmx384m", "-jar", "app.jar"]

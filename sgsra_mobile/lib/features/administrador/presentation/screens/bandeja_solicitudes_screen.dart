@@ -169,7 +169,7 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Bandeja de Solicitudes [RF21]',
+        title: const Text('Bandeja de Solicitudes',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
@@ -206,7 +206,7 @@ class _BandejaSolicitudesScreenState extends State<BandejaSolicitudesScreen> {
                   ),
                   const SizedBox(width: 8),
                   PopupMenuButton<int>(
-                    tooltip: 'Periodo [RF31]',
+                    tooltip: 'Periodo',
                     initialValue: _periodoDias,
                     onSelected: (v) => setState(() => _periodoDias = v),
                     itemBuilder: (_) => const [

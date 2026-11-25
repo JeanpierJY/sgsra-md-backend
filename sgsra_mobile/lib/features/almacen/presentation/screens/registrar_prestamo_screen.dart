@@ -149,7 +149,7 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           icon: Icon(Icons.check_circle_rounded, color: Colors.green[700], size: 52),
-          title: const Text('Préstamo registrado [RF37]'),
+          title: const Text('Préstamo registrado'),
           content: Text('$codPrestamo\n$n herramienta(s) entregadas a $nombre.\nSu estado ahora es "Prestada".',
               textAlign: TextAlign.center),
           actions: [
@@ -266,7 +266,7 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
                                 ? const SizedBox(
                                     width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                 : const Icon(Icons.assignment_turned_in),
-                            label: Text(_enviando ? 'Registrando…' : 'Registrar entrega [RF36]',
+                            label: Text(_enviando ? 'Registrando…' : 'Registrar entrega',
                                 style: const TextStyle(fontSize: 15)),
                           ),
                         ],
@@ -283,7 +283,7 @@ class _RegistrarPrestamoScreenState extends State<RegistrarPrestamoScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Despacho / Préstamo [RF36]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Despacho / Préstamo', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _cargarDatos),

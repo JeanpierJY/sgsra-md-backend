@@ -49,7 +49,7 @@ void mostrarModalProveedores(BuildContext context) {
                 const Icon(Icons.business_center_rounded, color: AppColors.primaryBlue, size: 24),
                 const SizedBox(width: 8),
                 const Text(
-                  'Proveedores Homologados [RF27]',
+                  'Proveedores Homologados',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
                 ),
                 const Spacer(),

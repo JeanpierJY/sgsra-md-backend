@@ -264,6 +264,19 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+              // [H-GEN-06] "Cerrar sesión" visible sin hacer scroll (antes quedaba al final de la pantalla)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.errorRed, side: const BorderSide(color: AppColors.errorRed)),
+                  onPressed: _cerrarSesion,
+                  icon: const Icon(Icons.exit_to_app_rounded),
+                  label: const Text('Cerrar sesión'),
+                ),
+              ),
               const SizedBox(height: 14),
               // Datos institucionales de solo lectura
               _Seccion(
@@ -339,18 +352,8 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.errorRed, side: const BorderSide(color: AppColors.errorRed)),
-                  onPressed: _cerrarSesion,
-                  icon: const Icon(Icons.exit_to_app_rounded),
-                  label: const Text('Cerrar sesión'),
-                ),
-              ),
+              // Margen final para que el contenido no quede bajo la barra de navegación del teléfono
+              SizedBox(height: 18 + MediaQuery.of(context).padding.bottom),
             ],
           ),
         ),
@@ -477,7 +480,10 @@ class _CambiarClaveDialogState extends State<_CambiarClaveDialog> {
   final _actualCtrl = TextEditingController();
   final _nuevaCtrl = TextEditingController();
   final _confirmarCtrl = TextEditingController();
-  bool _ver = false;
+  // [H-GEN-09] Cada campo tiene su propio botón de ver/ocultar
+  bool _verActual = false;
+  bool _verNueva = false;
+  bool _verConfirmar = false;
   bool _enviando = false;
   String? _error;
 
@@ -510,13 +516,14 @@ class _CambiarClaveDialogState extends State<_CambiarClaveDialog> {
     }
   }
 
-  InputDecoration _deco(String label, IconData icono) => InputDecoration(
+  InputDecoration _deco(String label, IconData icono, bool visible, VoidCallback alternar) => InputDecoration(
         labelText: label,
         prefixIcon: Icon(icono),
         border: const OutlineInputBorder(),
         suffixIcon: IconButton(
-          icon: Icon(_ver ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-          onPressed: () => setState(() => _ver = !_ver),
+          icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+          tooltip: visible ? 'Ocultar contraseña' : 'Ver contraseña',
+          onPressed: () => setState(alternar),
         ),
       );
 
@@ -530,24 +537,28 @@ class _CambiarClaveDialogState extends State<_CambiarClaveDialog> {
           Text('Cambiar contraseña'),
         ],
       ),
+      // [H-GEN-07] Contenido desplazable para que el teclado no tape los campos
       content: SizedBox(
         width: 400,
-        child: Form(
+        child: SingleChildScrollView(
+         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
                 controller: _actualCtrl,
-                obscureText: !_ver,
-                decoration: _deco('Contraseña actual', Icons.lock_outline_rounded),
+                obscureText: !_verActual,
+                decoration: _deco('Contraseña actual', Icons.lock_outline_rounded, _verActual,
+                    () => _verActual = !_verActual),
                 validator: (v) => (v == null || v.isEmpty) ? 'Ingrese su contraseña actual' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _nuevaCtrl,
-                obscureText: !_ver,
-                decoration: _deco('Nueva contraseña', Icons.lock_reset_rounded)
+                obscureText: !_verNueva,
+                decoration: _deco('Nueva contraseña', Icons.lock_reset_rounded, _verNueva,
+                        () => _verNueva = !_verNueva)
                     .copyWith(helperText: 'Mínimo 8 caracteres'),
                 validator: (v) {
                   if (v == null || v.length < 8) return 'Debe tener al menos 8 caracteres';
@@ -558,8 +569,9 @@ class _CambiarClaveDialogState extends State<_CambiarClaveDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _confirmarCtrl,
-                obscureText: !_ver,
-                decoration: _deco('Confirmar nueva contraseña', Icons.check_circle_outline_rounded),
+                obscureText: !_verConfirmar,
+                decoration: _deco('Confirmar nueva contraseña', Icons.check_circle_outline_rounded, _verConfirmar,
+                    () => _verConfirmar = !_verConfirmar),
                 validator: (v) => v != _nuevaCtrl.text ? 'Las contraseñas no coinciden' : null,
               ),
               if (_error != null) ...[
@@ -568,6 +580,7 @@ class _CambiarClaveDialogState extends State<_CambiarClaveDialog> {
               ],
             ],
           ),
+         ),
         ),
       ),
       actions: [
@@ -592,19 +605,38 @@ class _AvatarEditable extends StatelessWidget {
   final VoidCallback? onTap;
   const _AvatarEditable({required this.url, required this.iniciales, required this.subiendo, this.onTap});
 
+  Widget get textoIniciales =>
+      Text(iniciales, style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold));
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Stack(
         children: [
+          // [H-GEN-05] Si la foto no carga se muestran las iniciales en lugar de un círculo vacío
           CircleAvatar(
             radius: 46,
             backgroundColor: AppColors.primaryBlue,
-            backgroundImage: url.isEmpty ? null : NetworkImage(url),
             child: url.isEmpty
-                ? Text(iniciales, style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold))
-                : null,
+                ? textoIniciales
+                : ClipOval(
+                    child: Image.network(
+                      url,
+                      key: ValueKey(url),
+                      width: 92,
+                      height: 92,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (_, child, progreso) => progreso == null
+                          ? child
+                          : const SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                            ),
+                      errorBuilder: (_, __, ___) => textoIniciales,
+                    ),
+                  ),
           ),
           if (subiendo)
             const Positioned.fill(

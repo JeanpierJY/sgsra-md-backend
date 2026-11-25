@@ -19,19 +19,23 @@ Future<T?> mostrarSelectorBuscable<T>({
     isScrollControlled: true,
     backgroundColor: AppColors.backgroundGray,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
-    builder: (_) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.8,
-      maxChildSize: 0.95,
-      builder: (ctx, scroll) => _Selector<T>(
-        titulo: titulo,
-        items: items,
-        textoBusqueda: textoBusqueda,
-        construir: construir,
-        hint: hint,
-        vacio: vacio,
-        habilitado: habilitado,
-        scroll: scroll,
+    // [H-GEN-07] La lista se ajusta al teclado para que los resultados no queden ocultos
+    builder: (sheetCtx) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.8,
+        maxChildSize: 0.95,
+        builder: (ctx, scroll) => _Selector<T>(
+          titulo: titulo,
+          items: items,
+          textoBusqueda: textoBusqueda,
+          construir: construir,
+          hint: hint,
+          vacio: vacio,
+          habilitado: habilitado,
+          scroll: scroll,
+        ),
       ),
     ),
   );
@@ -114,7 +118,7 @@ class _SelectorState<T> extends State<_Selector<T>> {
                 ])
               : ListView.builder(
                   controller: widget.scroll,
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                  padding: EdgeInsets.fromLTRB(12, 4, 12, 24 + MediaQuery.of(context).padding.bottom),
                   itemCount: lista.length,
                   itemBuilder: (ctx, i) {
                     final e = lista[i];

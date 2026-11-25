@@ -9,6 +9,8 @@ class RepuestoEntity {
   /// [MEC-01] Unidades comprometidas en solicitudes pendientes/aprobadas aún no despachadas
   final int stockReservado;
   final String? urlFoto;
+  /// [H-MEC-01] false si el administrador deshabilitó el repuesto (se muestra al final, sin poder pedirlo)
+  final bool activo;
 
   const RepuestoEntity({
     required this.codParte,
@@ -20,6 +22,7 @@ class RepuestoEntity {
     this.stockMinimo = 0,
     this.stockReservado = 0,
     this.urlFoto,
+    this.activo = true,
   });
 
   /// Unidades que realmente se pueden pedir

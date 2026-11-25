@@ -80,7 +80,7 @@ class _HistorialSolicitudesScreenState extends State<HistorialSolicitudesScreen>
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Historial de Solicitudes [RF19]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Historial de Solicitudes', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarHistorial),

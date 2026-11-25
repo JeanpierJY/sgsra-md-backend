@@ -15,11 +15,15 @@ Future<bool?> mostrarDetalleSolicitud(BuildContext context, String solicitudNum,
     isScrollControlled: true,
     backgroundColor: AppColors.backgroundGray,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
-    builder: (_) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.8,
-      maxChildSize: 0.95,
-      builder: (ctx, scroll) => _DetalleSolicitud(num: solicitudNum, scroll: scroll, accionesAdmin: accionesAdmin),
+    // [H-ADM-02] El panel se eleva junto con el teclado al escribir el motivo
+    builder: (sheetCtx) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.8,
+        maxChildSize: 0.95,
+        builder: (ctx, scroll) => _DetalleSolicitud(num: solicitudNum, scroll: scroll, accionesAdmin: accionesAdmin),
+      ),
     ),
   );
 }
@@ -277,7 +281,8 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
 
     return ListView(
       controller: widget.scroll,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      // [H-GEN-07] Margen inferior que respeta la barra de navegación del teléfono
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 32 + MediaQuery.of(context).padding.bottom),
       children: [
         handle,
         Row(
@@ -432,6 +437,8 @@ class _DetalleSolicitudState extends State<_DetalleSolicitud> {
               controller: _motivoCtrl,
               focusNode: _motivoFocus,
               maxLines: 2,
+              // [H-ADM-02] Mantiene visibles los botones de decisión bajo el campo
+              scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 160),
               onChanged: (v) {
                 if (_motivoError != null) setState(() => _motivoError = null);
               },

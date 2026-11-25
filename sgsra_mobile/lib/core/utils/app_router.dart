@@ -14,7 +14,7 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             body: Center(
-              child: Text('Acceso no autorizado o ruta no encontrada para: ${settings.name} [RF08]'),
+              child: Text('Acceso no autorizado o ruta no encontrada para: ${settings.name}'),
             ),
           ),
         );

@@ -18,13 +18,13 @@ class ApiService {
   static set customHost(String? host) => _customHost = host;
   static String? get customHost => _customHost;
 
-  /// Carga el host persistido si el usuario configuró una IP personalizada
+  /// [H-GEN-02] La configuración manual de IP se retiró del login: se descarta
+  /// cualquier host personalizado guardado por versiones anteriores para que la
+  /// app siempre apunte al servidor por defecto (Render o `--dart-define=API_HOST`).
   static Future<void> inicializar() async {
+    _customHost = null;
     try {
-      final h = await _storage.read(key: _keyCustomHost);
-      if (h != null && h.trim().isNotEmpty) {
-        _customHost = h.trim();
-      }
+      await _storage.delete(key: _keyCustomHost);
     } catch (_) {}
   }
 

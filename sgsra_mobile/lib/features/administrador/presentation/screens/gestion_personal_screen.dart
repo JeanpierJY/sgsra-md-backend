@@ -173,11 +173,13 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
     final corCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     String rolSel = 'MECANICO';
+    bool verPass = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Añadir Usuario [RF08]', style: TextStyle(fontWeight: FontWeight.bold)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+        title: const Text('Añadir Usuario', style: TextStyle(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -210,8 +212,16 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                 ),
                 TextFormField(
                   controller: passCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Contraseña'),
+                  // [H-GEN-09] Botón para mostrar/ocultar la contraseña
+                  obscureText: !verPass,
+                  decoration: InputDecoration(
+                    labelText: 'Contraseña',
+                    suffixIcon: IconButton(
+                      icon: Icon(verPass ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+                      tooltip: verPass ? 'Ocultar contraseña' : 'Ver contraseña',
+                      onPressed: () => setDlg(() => verPass = !verPass),
+                    ),
+                  ),
                   validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
                 ),
                 const SizedBox(height: 10),
@@ -258,6 +268,7 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -276,7 +287,7 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Gestión de Personal [RF07, RF08]', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Gestión de Personal', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryBlue,
         actions: [
           IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Actualizar', onPressed: _cargarUsuarios),
@@ -379,7 +390,9 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                     : RefreshIndicator(
                         onRefresh: _cargarUsuarios,
                         child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
+                          // [H-ADM-04] Espacio inferior para que los dos FAB apilados no tapen
+                          // el switch de activar/desactivar de las últimas tarjetas
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 170),
                           itemCount: lista.length,
                           itemBuilder: (context, index) => _tarjeta(lista[index]),
                         ),

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 import '../errors/exceptions.dart';
+import '../session/session_manager.dart';
 
 /// [RF01, RF02] Cliente HTTP configurado con Dio para interceptar cabeceras y JWT
 class DioClient {
@@ -29,6 +30,14 @@ class DioClient {
           return handler.next(options);
         },
         onError: (DioException e, handler) {
+          // [H-GEN-08] Cuenta desactivada por el administrador: cerrar sesión automáticamente
+          final cuerpo = e.response?.data;
+          if (e.response?.statusCode == 401 && cuerpo is Map && cuerpo['codigo'] == 'CUENTA_INACTIVA') {
+            final mensaje = cuerpo['mensaje'] is String
+                ? cuerpo['mensaje'] as String
+                : 'Su cuenta fue desactivada por el administrador.';
+            SessionManager.forzarCierreSesion(mensaje);
+          }
           if (e.response?.statusCode == 423) {
             // [RF04, RF06] Bloqueo escalonado: el backend informa los segundos restantes
             final data = e.response?.data;

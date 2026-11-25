@@ -68,7 +68,9 @@ class _SolicitudesRecuperacionScreenState extends State<SolicitudesRecuperacionS
       builder: (ctx) => AlertDialog(
         icon: Icon(Icons.lock_reset_rounded, color: Colors.green[700], size: 40),
         title: const Text('Asignar clave temporal'),
-        content: Form(
+        // [H-GEN-07] Desplazable para que el teclado no corte el contenido en pantallas pequeñas
+        content: SingleChildScrollView(
+         child: Form(
           key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -95,6 +97,7 @@ class _SolicitudesRecuperacionScreenState extends State<SolicitudesRecuperacionS
                   style: TextStyle(fontSize: 12, color: Colors.black54), textAlign: TextAlign.center),
             ],
           ),
+         ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),

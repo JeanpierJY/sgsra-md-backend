@@ -22,8 +22,10 @@ class RepuestoRemoteDataSource {
     return await _storage.read(key: 'dni_usuario') ?? '70000001';
   }
 
-  Future<List<RepuestoModel>> listarCatalogo({int page = 0, int size = 20}) async {
-    final res = await _dioClient.dio.get('/catalogo', queryParameters: {'page': page, 'size': size});
+  Future<List<RepuestoModel>> listarCatalogo({int page = 0, int size = 500}) async {
+    // [H-MEC-01] Catálogo completo (antes solo 20) incluyendo deshabilitados, que se listan al final
+    final res = await _dioClient.dio.get('/catalogo',
+        queryParameters: {'page': page, 'size': size, 'incluirInactivos': true});
     if (res.data is Map && res.data['content'] != null) {
       return (res.data['content'] as List).map((x) => RepuestoModel.fromJson(x)).toList();
     } else if (res.data is List) {
