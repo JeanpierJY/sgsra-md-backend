@@ -47,7 +47,8 @@ public class PrestamoServiceImpl implements IPrestamoService {
     @Override
     @Transactional
     public MensajeGenericoResponse registrarPrestamo(String correoAlmacenista, RegistrarPrestamoRequest request, String ipOrigen) {
-        cupoValidator.validarAusenciaDeMoras(request.getDniMecanico());
+        // [H-ALM-08] Ya no se bloquea el prestamo por moras previas: sancionar es decision de administracion.
+        // Solo se mantiene el limite de herramientas simultaneas (RF36).
         cupoValidator.validarCupoDisponible(request.getDniMecanico(), request.getCodigosHerramienta().size());
 
         Usuario usuario = usuarioRepository.findByCorreoCorporativo(correoAlmacenista)
@@ -260,7 +261,7 @@ public class PrestamoServiceImpl implements IPrestamoService {
                 // Mecanico: aviso de mora
                 if (dniMec != null) {
                     notificacionService.enviarNotificacionConTipo(dniMec, "MECANICO", "Prestamo Vencido en Mora",
-                            "Su prestamo " + p.getPrestamoNum() + " ha superado el plazo maximo de 7 dias sin devolverse. Su cupo para nuevos prestamos queda bloqueado.",
+                            "Su prestamo " + p.getPrestamoNum() + " ha superado el plazo maximo de 7 dias sin devolverse. Devuelva las herramientas cuanto antes.",
                             "MORA");
                 }
                 moras++;

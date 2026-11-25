@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// [RF01] Constantes de conexión y URLs base hacia el Backend Spring Boot.

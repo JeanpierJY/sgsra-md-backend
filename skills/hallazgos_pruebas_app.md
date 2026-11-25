@@ -3,201 +3,226 @@
 > **Documento de Control de Hallazgos (QA funcional en dispositivo físico)**
 > **Sistema de Gestión de Solicitud de Repuestos y Almacén (SGSRA - Master Drilling)**
 > **Alcance:** Frontend Móvil (Flutter / Android APK) y Backend (Spring Boot en Render)
-> **Fecha de levantamiento:** 24/11/2026 · **Rama:** `KR_rama`
+> **Rama:** `KR_rama` · **Ronda 1:** 24/11/2026 · **Ronda 2:** 24/11/2026 (reaperturas) · **Ronda 3:** 25/11/2026
 
 **Convención de IDs:** `H-GEN-xx` (todos los roles) · `H-ADM-xx` (Administrador) · `H-ALM-xx` (Almacenista) · `H-MEC-xx` (Mecánico).
-Se usa el prefijo `H-` para no confundirlos con las etiquetas `[ADM-xx]` / `[ALM-xx]` que ya existen en comentarios del código.
+- El sufijo **`b`** (p. ej. `H-ALM-04b`) indica una **reapertura**: el hallazgo volvió a aparecer después de su primera corrección.
+- Se usa el prefijo `H-` para no confundir estos IDs con las etiquetas `[ADM-xx]` / `[ALM-xx]` que ya existen en comentarios del código.
 
-**Tipos:** 🐞 Bug · 🎨 UI/UX · ✨ Mejora · 🧹 Limpieza · ❓ Requiere aclaración
+**Tipos:** 🐞 Bug · 🎨 UI/UX · ✨ Mejora · 🧹 Limpieza · 🔁 Regla de negocio
+
+**Estado:**
+- ✅ Corregido en el código.
+- 🚀 Corregido, pero requiere desplegar el backend en Render.
+- 📱 Corregido, pero falta verificarlo en un teléfono físico.
 
 ---
 
 ## 📊 1. Resumen Ejecutivo de Hallazgos
 
-| Prioridad      | ID          | Rol        | Pantalla             | Hallazgo (resumen)                                          | Tipo | Capa              |
-| :------------- | :---------- | :--------- | :------------------- | :---------------------------------------------------------- | :--: | :---------------- |
-| 🔴 **Crítica** | H-GEN-01    | Todos      | Login                | La autenticación por huella no funciona                     |  🐞  | Android / Flutter |
-| 🔴 **Crítica** | H-GEN-03    | Todos      | Global               | No se pueden subir imágenes                                 |  🐞  | Flutter / Backend |
-| 🔴 **Crítica** | H-GEN-08    | Todos      | Global               | Una cuenta desactivada no cierra su sesión automáticamente  |  🐞  | Backend / Flutter |
-| 🔴 **Crítica** | H-ADM-01    | Admin      | Catálogo             | Desactivar un repuesto lo "elimina"                         |  🐞  | Flutter / Backend |
-| 🔴 **Crítica** | H-ALM-02    | Almacén    | Notificaciones       | Al almacenista no le llegan notificaciones                  |  🐞  | Backend           |
-| 🔴 **Crítica** | H-ALM-04    | Almacén    | Retorno              | La cámara QR no funciona                                    |  🐞  | Flutter / Android |
-| 🟠 **Alta**    | H-GEN-07    | Todos      | Formularios          | El teclado tapa botones y campos (inputs que no "suben")    |  🎨  | Flutter           |
-| 🟠 **Alta**    | H-ALM-03    | Almacén    | Retorno              | Botón "Confirmar retorno" queda bajo la barra del teléfono  |  🎨  | Flutter           |
-| 🟠 **Alta**    | H-MEC-02    | Mecánico   | Solicitud (carrito)  | El teclado oculta "Enviar solicitud" al escribir justificación |  🎨  | Flutter        |
-| 🟠 **Alta**    | H-ADM-02    | Admin      | Solicitudes          | El teclado cubre el panel al escribir una notificación      |  🎨  | Flutter           |
-| 🟠 **Alta**    | H-ADM-05    | Admin      | Notificaciones       | Tocar una notificación de solicitud no redirige             |  🐞  | Flutter           |
-| 🟡 **Media**   | H-GEN-09    | Todos      | Contraseñas          | Falta el botón "ver contraseña" en algunos campos           |  🎨  | Flutter           |
-| 🟡 **Media**   | H-GEN-06    | Todos      | Perfil               | Botón "Cerrar sesión" demasiado abajo                       |  🎨  | Flutter           |
-| 🟡 **Media**   | H-ADM-04    | Admin      | Personal             | Los botones flotantes tapan el switch de activar/desactivar |  🎨  | Flutter           |
-| 🟡 **Media**   | H-ALM-01    | Almacén    | Despacho             | Faltan filtros para las solicitudes                         |  ✨  | Flutter           |
-| 🟡 **Media**   | H-ALM-06    | Almacén    | Préstamo             | Mostrar DNI y nombre del mecánico en el selector            |  ✨  | Flutter           |
-| 🟡 **Media**   | H-MEC-01    | Mecánico   | Catálogo             | Ítems sin stock o desactivados al final del catálogo        |  ✨  | Flutter           |
-| 🟢 **Baja**    | H-GEN-02    | Todos      | Login                | Eliminar botón "Probar conexión"                            |  🧹  | Flutter           |
-| 🟢 **Baja**    | H-GEN-04    | Todos      | Todas                | Eliminar etiquetas `[RFxx]` visibles en la interfaz         |  🧹  | Flutter           |
-| 🟢 **Baja**    | H-ADM-03    | Admin      | Reportes             | Flecha para plegar "Repuestos más solicitados"              |  ✨  | Flutter           |
-| 🟢 **Baja**    | H-ALM-05    | Almacén    | Herramientas         | Eliminar botón "Herramientas extraviadas"                   |  🧹  | Flutter           |
-| 🔴 **Crítica** | H-GEN-05    | Todos      | Perfil               | La foto de perfil subida no carga por completo              |  🐞  | Backend / Flutter |
-| 🔴 **Crítica** | H-ADM-01b   | Admin      | Catálogo             | Tras la 1.ª corrección, el repuesto deshabilitado sigue desapareciendo |  🐞  | Flutter / Despliegue |
-| 🔴 **Crítica** | H-ALM-02b   | Almacén    | Notificaciones       | Reapertura: el almacenista sigue recibiendo solo las de prioridad ALTA |  🐞  | Backend / Despliegue |
-| 🟢 **Baja**    | H-ADM-06    | Todos      | Repuestos            | Quitar "Stock Mínimo" / "Mínimo" de los repuestos (no se entiende) |  🧹  | Flutter / Backend |
+| Prioridad      | ID          | Rol      | Pantalla            | Hallazgo (resumen)                                                    | Tipo | Capa                 | Ronda | Estado |
+| :------------- | :---------- | :------- | :------------------ | :-------------------------------------------------------------------- | :--: | :------------------- | :---: | :----: |
+| 🔴 **Crítica** | H-GEN-01    | Todos    | Login               | La autenticación por huella no funciona                               |  🐞  | Android / Flutter    |   1   |   📱   |
+| 🔴 **Crítica** | H-GEN-03    | Todos    | Global              | No se pueden subir imágenes                                           |  🐞  | Flutter / Backend    |   1   |   🚀   |
+| 🔴 **Crítica** | H-GEN-05    | Todos    | Perfil              | La foto de perfil subida no carga por completo                        |  🐞  | Backend / Flutter    |   1   |   🚀   |
+| 🔴 **Crítica** | H-GEN-08    | Todos    | Global              | Una cuenta desactivada no cierra su sesión automáticamente            |  🐞  | Backend / Flutter    |   1   |   🚀   |
+| 🔴 **Crítica** | H-ADM-01    | Admin    | Catálogo            | Desactivar un repuesto lo "elimina"                                   |  🐞  | Flutter / Backend    |   1   |   🚀   |
+| 🔴 **Crítica** | H-ADM-01b   | Admin    | Catálogo            | Reapertura: el repuesto deshabilitado sigue desapareciendo            |  🐞  | Flutter / Despliegue |   2   |   🚀   |
+| 🔴 **Crítica** | H-ALM-02    | Almacén  | Notificaciones      | Al almacenista no le llegan notificaciones                            |  🐞  | Backend              |   1   |   🚀   |
+| 🔴 **Crítica** | H-ALM-02b   | Almacén  | Notificaciones      | Reapertura: solo le llegan las de prioridad ALTA                      |  🐞  | Backend / Despliegue |   2   |   🚀   |
+| 🔴 **Crítica** | H-ALM-04    | Almacén  | Retorno             | La cámara QR no funciona                                              |  🐞  | Flutter / Android    |   1   |   📱   |
+| 🔴 **Crítica** | H-ALM-04b   | Almacén  | Retorno             | Reapertura: el escáner QR sigue sin leer (Google Lens sí lee el QR)   |  🐞  | Flutter / Android    |   3   |   📱   |
+| 🔴 **Crítica** | H-ALM-08    | Almacén  | Despacho › Préstamo | No permite prestar a mecánicos con préstamos en mora                  |  🔁  | Backend              |   3   |   🚀   |
+| 🟠 **Alta**    | H-GEN-07    | Todos    | Formularios         | El teclado tapa botones y campos (inputs que no "suben")              |  🎨  | Flutter              |   1   |   📱   |
+| 🟠 **Alta**    | H-GEN-10    | Todos    | Global              | A veces el teclado se cierra y queda su espacio en blanco             |  🐞  | Flutter / Android    |   3   |   📱   |
+| 🟠 **Alta**    | H-ADM-02    | Admin    | Solicitudes         | El teclado cubre el panel al escribir una notificación                |  🎨  | Flutter              |   1   |   📱   |
+| 🟠 **Alta**    | H-ADM-05    | Admin    | Notificaciones      | Tocar una notificación de solicitud no redirige                       |  🐞  | Flutter              |   1   |   ✅   |
+| 🟠 **Alta**    | H-ALM-03    | Almacén  | Retorno             | Botón "Confirmar retorno" queda bajo la barra del teléfono            |  🎨  | Flutter              |   1   |   📱   |
+| 🟠 **Alta**    | H-ALM-07    | Almacén  | Dashboard           | Tocar una solicitud aprobada no abre su modal                         |  🐞  | Flutter              |   3   |   ✅   |
+| 🟠 **Alta**    | H-MEC-02    | Mecánico | Solicitud (carrito) | El teclado oculta "Enviar solicitud" al escribir la justificación     |  🎨  | Flutter              |   1   |   📱   |
+| 🟡 **Media**   | H-GEN-06    | Todos    | Perfil              | Botón "Cerrar sesión" demasiado abajo                                 |  🎨  | Flutter              |   1   |   ✅   |
+| 🟡 **Media**   | H-GEN-09    | Todos    | Contraseñas         | Falta el botón "ver contraseña" en algunos campos                     |  🎨  | Flutter              |   1   |   ✅   |
+| 🟡 **Media**   | H-ADM-04    | Admin    | Personal            | Los botones flotantes tapan el switch de activar/desactivar           |  🎨  | Flutter              |   1   |   ✅   |
+| 🟡 **Media**   | H-ALM-01    | Almacén  | Despacho            | Faltan filtros para las solicitudes                                   |  ✨  | Flutter              |   1   |   ✅   |
+| 🟡 **Media**   | H-ALM-06    | Almacén  | Herramientas        | Mostrar DNI y nombre del mecánico sin abrir el detalle                |  ✨  | Flutter              |   1   |   ✅   |
+| 🟡 **Media**   | H-ALM-09    | Almacén  | Herramientas        | Al crear una herramienta no se puede subir la imagen hasta después    |  ✨  | Flutter              |   3   |   ✅   |
+| 🟡 **Media**   | H-MEC-01    | Mecánico | Catálogo            | Ítems sin stock o desactivados al final del catálogo                  |  ✨  | Flutter              |   1   |   🚀   |
+| 🟢 **Baja**    | H-GEN-02    | Todos    | Login               | Eliminar botón "Probar conexión"                                      |  🧹  | Flutter              |   1   |   ✅   |
+| 🟢 **Baja**    | H-GEN-04    | Todos    | Todas               | Eliminar etiquetas `[RFxx]` visibles en la interfaz                   |  🧹  | Flutter              |   1   |   ✅   |
+| 🟢 **Baja**    | H-ADM-03    | Admin    | Reportes            | Flecha para plegar "Repuestos más solicitados"                        |  ✨  | Flutter              |   1   |   ✅   |
+| 🟢 **Baja**    | H-ADM-06    | Todos    | Repuestos           | Quitar "Stock Mínimo" / "Mínimo" de los repuestos (no se entiende)    |  🧹  | Flutter / Backend    |   2   |   ✅   |
+| 🟢 **Baja**    | H-ALM-05    | Almacén  | Herramientas        | Eliminar botón "Herramientas extraviadas"                             |  🧹  | Flutter              |   1   |   ✅   |
+
+**Totales:** 30 hallazgos (22 de la ronda 1, 3 de la ronda 2 y 5 de la ronda 3), con 3 reaperturas (`b`). Todos están corregidos en el código.
 
 ---
 
 ## 🗂️ 2. Desglose Detallado por Rol y Pantalla
 
 > Las rutas son relativas a `sgsra_mobile/lib/` (Flutter) y `sgsra-md/src/main/java/com/masterdrilling/sgsramd/` (backend).
-> La columna **Causa probable** sale de una revisión del código. Hay que confirmarla al corregir cada hallazgo.
 
 ### 🌐 Módulo 1: Hallazgos Generales (afectan a todos los roles)
 
-| ID           | Hallazgo                                   | Archivo(s) afectado(s)                                                                 | Causa probable / Análisis                                                                                                                                                                                                 | Criterio de Aceptación                                                                                                                                  |
-| :----------- | :----------------------------------------- | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **H-GEN-01** | **La huella no funciona**                  | `android/app/src/main/kotlin/.../MainActivity.kt`, `auth/presentation/screens/login_screen.dart` | `MainActivity` hereda de `FlutterActivity`, pero el plugin `local_auth` exige `FlutterFragmentActivity`. Además conviene revisar que el tema de Android sea `Theme.AppCompat`/`MaterialComponents`.                        | En un dispositivo con huella registrada, el diálogo biométrico aparece y al validar inicia sesión. Si no hay huella, se muestra un mensaje claro.         |
-| **H-GEN-02** | **Eliminar botón "Probar conexión"**       | `auth/presentation/screens/login_screen.dart` (≈ L200-265)                             | Era una herramienta de depuración para la IP local. Con el backend ya desplegado en Render no hace falta.                                                                                                                  | La pantalla de login no muestra el botón ni el bloque de prueba de IP.                                                                                  |
-| **H-GEN-03** | **No se pueden subir imágenes**            | `core/widgets/imagen_producto.dart`, `auth/presentation/screens/mi_perfil_screen.dart`, backend `StorageService` | La subida va a Render (`api_constants.dart`). El disco de Render es **temporal**: los archivos de `uploads/` se pierden en cada redeploy o reinicio, y puede fallar la escritura. Hay que revisar también el límite de 5 MB (`application.properties`) y el permiso de cámara/galería en tiempo de ejecución. | La foto se sube (repuesto, herramienta, perfil), se ve al recargar y sigue ahí después de un reinicio del servidor. Para eso hace falta un almacenamiento externo (Cloudinary, S3, Supabase Storage, etc.). |
-| **H-GEN-04** | **Eliminar las etiquetas `[RFxx]`**        | 42 textos visibles en `features/**` (p. ej. `auditoria_screen.dart`, `bandeja_solicitudes_screen.dart`, `gestion_personal_screen.dart`) | Los códigos de requerimiento quedaron dentro de títulos, tooltips y textos de la UI. En los **comentarios** del código se pueden mantener.                                                                        | Ningún texto visible de la app contiene `[RF..]`. Comprobar con `grep -rnE "['\"][^'\"]*\[RF[0-9]+" lib/features` → 0 resultados.                         |
-| **H-GEN-05** | **La foto de perfil no carga por completo** | `auth/presentation/screens/mi_perfil_screen.dart`, backend `config/WebMvcResourceConfig.java` | Misma causa que H-GEN-03. Además, `WebMvcResourceConfig` servía `/uploads/**` como `"file:/" + ruta`, que en Linux (Render) da `file://app/uploads/` (ruta inválida → 404), y el avatar usaba `NetworkImage` sin respaldo, por lo que quedaba un círculo vacío. | La foto subida se ve en el perfil y en Personal. Si falla, se muestran las iniciales.                                                                  |
-| **H-GEN-06** | **"Cerrar sesión" muy abajo en Perfil**    | `auth/presentation/screens/mi_perfil_screen.dart`                                      | El botón queda al final del scroll y/o debajo de la barra de navegación del sistema.                                                                                                                                      | El botón se ve sin hacer scroll excesivo (o va en el AppBar) y nunca queda tapado por la barra del sistema (`SafeArea`).                                |
-| **H-GEN-07** | **Inputs que no suben con el teclado**     | `mecanico/.../carrito_pedido_screen.dart`, `administrador/.../bandeja_solicitudes_screen.dart`, modales con `showModalBottomSheet` | Solo 2 pantallas suman `MediaQuery.viewInsets.bottom` (`retorno_qr_screen.dart`, `reportar_extravio_modal.dart`). Los demás formularios y bottom sheets no se ajustan al teclado. | En todo formulario, al abrir el teclado el campo activo y el botón de acción quedan visibles, con un espacio en blanco extra abajo para poder hacer scroll. Bottom sheets con `isScrollControlled: true` + `padding: viewInsets.bottom`. |
-| **H-GEN-08** | **Desactivar cuenta no cierra su sesión**  | Backend `config/SecurityFilterConfig.java`, `core/network/dio_client.dart`              | El backend tiene `anyRequest().permitAll()`: no valida token ni estado `activo` en cada petición. El cliente Dio no maneja `401/403` para forzar el cierre de sesión.                                                     | Cuando el admin desactiva una cuenta, la siguiente petición de ese usuario devuelve `401/403` y la app lo saca al login con el mensaje "Cuenta desactivada". |
-| **H-GEN-09** | **Botón "ver contraseña" en todos los campos** | `administrador/.../gestion_personal_screen.dart` (L213), `auth/.../mi_perfil_screen.dart` (L542-561), `auth/.../recuperar_clave_modal.dart` | En *Añadir usuario* el campo tiene `obscureText: true` sin icono. En *Mi perfil* un único `_ver` controla los 3 campos a la vez.                                                                                       | Cada campo de contraseña tiene su propio icono 👁 para mostrar u ocultar.                                                                                 |
-
----
+| ID           | Hallazgo | Archivo(s) afectado(s) | Causa / Análisis | Criterio de Aceptación |
+| :----------- | :------- | :--------------------- | :--------------- | :--------------------- |
+| **H-GEN-01** | **La huella no funciona** | `android/.../MainActivity.kt`, `core/session/session_manager.dart` | `MainActivity` heredaba de `FlutterActivity`, pero `local_auth` exige `FlutterFragmentActivity`. Además, al cerrar sesión se ejecutaba `deleteAll()`, que borraba también las credenciales de la huella. | En un dispositivo con huella registrada, aparece el diálogo biométrico y al validar se inicia sesión. Si no hay huella, se muestra un mensaje claro. |
+| **H-GEN-02** | **Eliminar botón "Probar conexión"** | `auth/presentation/screens/login_screen.dart`, `core/constants/api_constants.dart` | Era una herramienta de depuración para la IP local. Con el backend en Render ya no hace falta. | La pantalla de login no muestra el botón ni el bloque de prueba de IP. |
+| **H-GEN-03** | **No se pueden subir imágenes** | `core/widgets/imagen_producto.dart`, backend `LocalStorageServiceImpl` | El disco de Render es **temporal**: los archivos de `uploads/` se pierden en cada redeploy o reinicio. | La foto se sube (repuesto, herramienta, perfil), se ve al recargar y sigue ahí después de reiniciar el servidor. |
+| **H-GEN-04** | **Eliminar las etiquetas `[RFxx]`** | 42 textos visibles en `features/**` | Los códigos de requerimiento quedaron en títulos, tooltips y textos de la UI. En los comentarios del código se mantienen. | Ningún texto visible contiene `[RF..]`. |
+| **H-GEN-05** | **La foto de perfil no carga por completo** | `auth/.../mi_perfil_screen.dart`, backend `WebMvcResourceConfig.java` | Misma causa que H-GEN-03. Además, `"file:/" + ruta` daba una ruta inválida en Linux (404), y el avatar no tenía imagen de respaldo. | La foto subida se ve en Perfil y en Personal. Si falla, se muestran las iniciales. |
+| **H-GEN-06** | **"Cerrar sesión" muy abajo en Perfil** | `auth/.../mi_perfil_screen.dart` | El botón quedaba al final del scroll o debajo de la barra del sistema. | El botón se ve sin hacer scroll y nunca lo tapa la barra del sistema. |
+| **H-GEN-07** | **Inputs que no suben con el teclado** | `carrito_pedido_screen.dart`, `detalle_solicitud_sheet.dart`, `selector_buscable.dart` y otros modales | Solo 2 pantallas sumaban `viewInsets.bottom`. Los demás formularios y bottom sheets no se ajustaban al teclado. | Al abrir el teclado, el campo activo y el botón de acción quedan visibles. |
+| **H-GEN-08** | **Desactivar una cuenta no cierra su sesión** | Backend `SecurityFilterConfig.java`, `core/network/dio_client.dart` | El backend tenía `permitAll()` y no revisaba el estado de la cuenta en cada petición. Dio no reaccionaba ante un 401. | La siguiente petición de una cuenta desactivada devuelve 401 y la app vuelve al login con el aviso "Cuenta desactivada". |
+| **H-GEN-09** | **Botón "ver contraseña" en todos los campos** | `gestion_personal_screen.dart`, `mi_perfil_screen.dart` | En *Añadir usuario* no había icono. En *Mi perfil* un único `_ver` controlaba los 3 campos. | Cada campo de contraseña tiene su propio botón 👁. |
+| **H-GEN-10** | **A veces el teclado "se bugea" y queda su espacio en blanco** *(ronda 3; difícil de reproducir)* | `app.dart`, nuevo `core/utils/teclado_guard.dart` | Se descartó la causa más común (Scaffolds anidados que restan el teclado dos veces): Flutter quita `viewInsets` del body cuando el Scaffold ya se ajusta. La causa es intermitente. Si el teclado está abierto cuando **se cierra un diálogo o bottom sheet, se cambia de pantalla o la app pasa a segundo plano**, Android a veces no avisa del cierre. Entonces Flutter conserva el `viewInsets.bottom` anterior y queda el hueco blanco hasta volver a tocar un campo. | Al cerrar diálogos, cambiar de pantalla o salir y volver a la app, el teclado se cierra primero y no queda espacio en blanco. Tocar una zona vacía también cierra el teclado. |
 
 ### 🛡️ Módulo 2: Administrador
 
-| ID           | Pantalla       | Hallazgo                                                 | Archivo(s) afectado(s)                                                                 | Causa probable / Análisis                                                                                                                                                                                    | Criterio de Aceptación                                                                                                       |
-| :----------- | :------------- | :------------------------------------------------------- | :------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| **H-ADM-01** | Catálogo       | **Si se desactiva un repuesto, se elimina**              | `administrador/.../mantenimiento_catalogo_screen.dart`, backend `CatalogoServiceImpl.cambiarEstadoRepuesto` | El backend **no borra el registro**: solo hace `setActivo(false)` y la vista admin (`findAll`) incluye inactivos. Hay que reproducirlo: probablemente el listado se recarga con otro endpoint o la paginación lo saca de la página. Verificar también si en BD se ve el cambio. | El repuesto desactivado sigue en el listado del admin con el switch apagado y se puede reactivar. En BD el registro existe con `activo = false`. |
-| **H-ADM-01b** | Catálogo      | **Reapertura: al deshabilitar un repuesto, este sigue desapareciendo de la lista** | `administrador/.../mantenimiento_catalogo_screen.dart` | 1) La app apunta al backend de **Render**, que aún tiene el código anterior: ignora `incluirInactivos=true` y solo devuelve los activos (verificado: `GET /catalogo?incluirInactivos=true` devolvió 21 repuestos, todos `"activo":true`). 2) Después de cambiar el switch, la pantalla **recargaba toda la lista**, así que la tarjeta dependía por completo de esa respuesta. | El repuesto deshabilitado se queda en la lista con el switch apagado y la etiqueta "DESHABILITADO", y se puede reactivar. Tras desplegar el backend, sigue apareciendo aunque se cierre y vuelva a abrir la app. |
-| **H-ADM-02** | Solicitudes    | **El teclado cubre el panel al escribir una notificación o motivo** | `administrador/.../bandeja_solicitudes_screen.dart`                               | Mismo problema que H-GEN-07: el panel o modal no se ajusta a `viewInsets`.                                                                                                                                    | Al escribir, el panel se desplaza hacia arriba y el botón de envío queda visible.                                             |
-| **H-ADM-03** | Reportes       | **Flecha para plegar "Repuestos más solicitados"**       | `administrador/.../reportes_analiticos_screen.dart`                                    | La lista ocupa mucho espacio y no se puede plegar.                                                                                                                                                             | La sección tiene un encabezado con flecha (▲/▼) que pliega y despliega la lista (`ExpansionTile`).                            |
-| **H-ADM-04** | Personal       | **Los botones flotantes tapan el switch de activar/desactivar** | `administrador/.../gestion_personal_screen.dart`                                | Los dos FAB apilados ("Recuperar contraseña" + "Añadir usuario") miden unos 130 px, pero la lista solo dejaba 80 px de margen inferior, así que tapaban el switch de las últimas tarjetas. | La lista tiene un relleno inferior de 170 px y el switch de cualquier tarjeta se puede desplazar por encima de los FAB.        |
-| **H-ADM-05** | Notificaciones | **Al tocar una solicitud, redirigir directo**            | `notificaciones/presentation/screens/centro_notificaciones_screen.dart` (`_abrir`)     | La redirección existe, pero depende de `extraerCodigoSolicitud()`, que saca el número **del texto** del título o mensaje. Si el texto no coincide con el patrón, no navega. Sería más robusto que el backend envíe un `idReferencia` o `tipo` en la notificación. | Toda notificación que menciona una solicitud abre su detalle al tocarla.                                                     |
-| **H-ADM-06** | Catálogo (y pantallas de repuestos) | **Quitar todo lo que dice "Mínimo" en los repuestos** | `administrador/.../mantenimiento_catalogo_screen.dart`, `mecanico/.../catalogo_screen.dart`, `administrador/.../reportes_analiticos_screen.dart`, `almacen/.../despacho_repuestos_tab.dart`, backend `SolicitudServiceImpl.java` | El "stock mínimo" (umbral de reposición) no se entendía en los formularios ni en las tarjetas. El backend lo sigue exigiendo (`@NotNull` en `CrearRepuestoRequest` / `ActualizarRepuestoRequest`) y lo usa para la alerta de reposición, así que se oculta en la UI sin romper el contrato. | Ninguna pantalla de repuestos muestra "Mínimo"/"Mín". Crear y editar repuestos sigue funcionando. |
-
----
+| ID            | Pantalla | Hallazgo | Archivo(s) afectado(s) | Causa / Análisis | Criterio de Aceptación |
+| :------------ | :------- | :------- | :--------------------- | :--------------- | :--------------------- |
+| **H-ADM-01**  | Catálogo | **Si se desactiva un repuesto, se elimina** | `mantenimiento_catalogo_screen.dart`, backend `CatalogoController` | El backend no borra el registro (`setActivo(false)`), pero el admin consumía `/catalogo`, que solo devuelve los activos. | El repuesto desactivado sigue en la lista con el switch apagado y se puede reactivar. |
+| **H-ADM-01b** | Catálogo | **Reapertura: el repuesto deshabilitado sigue desapareciendo** | `mantenimiento_catalogo_screen.dart` | 1) Render tiene el backend anterior e ignora `incluirInactivos=true` (verificado: devolvió 21 repuestos, todos activos). 2) Al cambiar el switch, la pantalla recargaba toda la lista. | La tarjeta queda con el switch apagado y la etiqueta "DESHABILITADO". Tras desplegar, se mantiene aunque se cierre la app. |
+| **H-ADM-02**  | Solicitudes | **El teclado cubre el panel al escribir un motivo** | `core/widgets/detalle_solicitud_sheet.dart` | Es un caso de H-GEN-07: el panel no se ajustaba a `viewInsets`. | Al escribir, el panel sube y el botón de envío queda visible. |
+| **H-ADM-03**  | Reportes | **Flecha para plegar "Repuestos más solicitados"** | `reportes_analiticos_screen.dart` | La lista ocupaba mucho espacio y no se podía plegar. | La sección tiene una flecha ▲/▼ que la pliega y la despliega. |
+| **H-ADM-04**  | Personal | **Los FAB tapan el switch de activar/desactivar** | `gestion_personal_screen.dart` | Los dos FAB miden unos 130 px y la lista solo dejaba 80 px de margen. | Relleno inferior de 170 px: cualquier switch se puede desplazar por encima de los FAB. |
+| **H-ADM-05**  | Notificaciones | **Al tocar una solicitud, abrirla directamente** | `centro_notificaciones_screen.dart`, `admin_main_screen.dart` | La redirección no llevaba al admin a la Bandeja con la solicitud abierta. | Toda notificación de solicitud abre su detalle con aprobar/rechazar. |
+| **H-ADM-06**  | Catálogo y pantallas de repuestos | **Quitar todo lo que dice "Mínimo"** | `mantenimiento_catalogo_screen.dart`, `catalogo_screen.dart`, `reportes_analiticos_screen.dart`, `despacho_repuestos_tab.dart`, backend `SolicitudServiceImpl` | El "stock mínimo" no se entendía. El backend lo exige (`@NotNull`) y lo usa para la alerta de reposición, así que se oculta en la UI sin romper el contrato. | Ninguna pantalla de repuestos muestra "Mínimo" ni "Mín", y crear y editar repuestos sigue funcionando. |
 
 ### 📦 Módulo 3: Almacenista
 
-| ID           | Pantalla       | Hallazgo                                                 | Archivo(s) afectado(s)                                                                 | Causa probable / Análisis                                                                                                                                                                                    | Criterio de Aceptación                                                                                                       |
-| :----------- | :------------- | :------------------------------------------------------- | :------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| **H-ALM-01** | Despacho       | **Faltan filtros para las solicitudes**                  | `almacen/.../despacho_screen.dart`, `despacho_repuestos_tab.dart`                      | Solo hay un listado plano de solicitudes aprobadas.                                                                                                                                                            | Filtros por prioridad (ALTA/MEDIA/BAJA), estado (aprobada / parcial / entregada), fecha y búsqueda por N° de solicitud o mecánico. |
-| **H-ALM-02** | Notificaciones | **No le llegan notificaciones**                          | Backend `service/impl/SolicitudServiceImpl.notificarAprobacion` (≈ L395)                | El rol `ALMACENISTA` solo recibe una notificación **cuando la solicitud aprobada es de prioridad ALTA**. Las de prioridad MEDIA y BAJA no le avisan.                                                         | Toda solicitud aprobada (total o parcial) notifica al almacenista. Las de prioridad ALTA se marcan como urgentes.             |
-| **H-ALM-02b** | Notificaciones | **Reapertura: siguen llegando solo las de prioridad ALTA** | Backend `SolicitudServiceImpl.notificarAprobacion`, `FirebaseNotificacionServiceImpl`, `Notificacion_DAO` | Se revisó toda la cadena. `notificarAprobacion()` (llamado desde la aprobación total y la parcial) ya crea la notificación para el rol `ALMACENISTA` en **todas** las prioridades. La consulta `listarPorDestinatario` devuelve las notificaciones por `dni` **o** por `rol`, y la app las pide con `/notificaciones/{dni}`, así que no hay ningún filtro por prioridad en el frontend. La causa es que **Render sigue ejecutando el backend anterior**, que solo avisaba con prioridad ALTA. Además, las solicitudes aprobadas antes del despliegue no generan la notificación de forma retroactiva. | Tras desplegar, al aprobar una solicitud MEDIA o BAJA (total o parcial), el almacenista ve "Despacho Pendiente" o "Despacho Pendiente - Aprobacion Parcial" en la campana en ≤ 30 s. Las de prioridad ALTA siguen llegando como "Despacho Urgente - Prioridad ALTA". |
-| **H-ALM-03** | Retorno        | **"Confirmar retorno" no se ve: queda bajo la barra del teléfono** | `almacen/.../retorno_qr_screen.dart` (modal ≈ L229)                            | El modal suma `viewInsets` pero no el padding de la barra de navegación del sistema (`MediaQuery.padding.bottom` / `SafeArea`).                                                                                 | El botón se ve completo en teléfonos con barra de gestos o de 3 botones, con y sin teclado abierto.                             |
-| **H-ALM-04** | Retorno        | **La cámara QR no funciona**                             | `almacen/.../retorno_qr_screen.dart` (`MobileScannerController`), `AndroidManifest.xml` | Revisar: permiso `CAMERA` pedido en tiempo de ejecución, ciclo de vida del controller (`start/stop` al cambiar de pestaña) y el mensaje de `_mensajeErrorCamara`. `mobile_scanner ^5.1.1`.                     | Al abrir la pestaña Retorno se pide el permiso, la cámara muestra la vista previa y al leer un QR válido se abre el modal de la herramienta. |
-| **H-ALM-05** | Herramientas   | **Eliminar el botón "Herramientas extraviadas"**         | `almacen/.../registrar_herramienta_screen.dart` (FAB `fab-extravio` ≈ L206)            | Es redundante: el reporte de extravío ya existe en `detalle_herramienta_screen.dart`.                                                                                                                         | Desaparece el FAB pequeño de extravío. El reporte sigue disponible desde el detalle de la herramienta.                         |
-| **H-ALM-06** | Herramientas   | **Mostrar DNI y nombre del mecánico sin abrir el detalle** | `almacen/.../registrar_herramienta_screen.dart`                                      | El selector de préstamo ya mostraba nombre y DNI. El problema estaba en la lista de Herramientas: para saber quién tenía una herramienta prestada había que abrir su detalle.                                     | Cada herramienta prestada o en mora muestra `Nombre · DNI · N° de préstamo` en su tarjeta.                                    |
-
----
+| ID            | Pantalla | Hallazgo | Archivo(s) afectado(s) | Causa / Análisis | Criterio de Aceptación |
+| :------------ | :------- | :------- | :--------------------- | :--------------- | :--------------------- |
+| **H-ALM-01**  | Despacho | **Faltan filtros para las solicitudes** | `despacho_repuestos_tab.dart` | Solo había un listado plano. | Buscador, filtro de prioridad y filtro de periodo. |
+| **H-ALM-02**  | Notificaciones | **No le llegan notificaciones** | Backend `SolicitudServiceImpl.notificarAprobacion` | El almacenista solo recibía aviso de las aprobaciones de prioridad ALTA. | Toda aprobación, total o parcial, notifica al almacenista. |
+| **H-ALM-02b** | Notificaciones | **Reapertura: solo llegan las de prioridad ALTA** | Backend `SolicitudServiceImpl`, `FirebaseNotificacionServiceImpl`, `Notificacion_DAO` | Se revisó toda la cadena (backend → BD → app) y el código es correcto. Render sigue ejecutando el backend anterior, y las aprobaciones previas al despliegue no generan aviso de forma retroactiva. | Tras desplegar, una aprobación MEDIA/BAJA muestra "Despacho Pendiente" en la campana en ≤ 30 s. |
+| **H-ALM-03**  | Retorno | **"Confirmar retorno" queda bajo la barra del teléfono** | `retorno_qr_screen.dart` | El modal no sumaba `MediaQuery.padding.bottom`. | El botón se ve completo con barra de gestos o de 3 botones, con y sin teclado. |
+| **H-ALM-04**  | Retorno | **La cámara QR no funciona** | `retorno_qr_screen.dart` | Con un controller propio, `mobile_scanner` no gestionaba el ciclo de vida: tras pedir el permiso o volver de segundo plano, la cámara quedaba en negro. | La vista previa aparece después de conceder el permiso y al volver a la app. |
+| **H-ALM-04b** | Retorno | **Reapertura: el escáner sigue sin leer. Solo funciona con Google Lens, que lee cualquier enlace** | `pubspec.yaml`, `retorno_qr_screen.dart` | Hay **dos causas**: 1) `mobile_scanner 5.2.3` es anterior al motor Impeller de Android (Flutter 3.50). En Android, el análisis de cuadros se podía **detener para siempre mientras la vista previa seguía activa** (corregido en 7.4.1: *"barcode scanning permanently stalling when a camera frame was never released"*). Además, en release, R8 podía eliminar clases internas de ML Kit (regla ProGuard añadida en 7.4.1). 2) El lector solo aceptaba un QR cuyo contenido fuera **exactamente** el código (`HER-TOR-004`). Si el QR trae un **enlace** o texto (p. ej. generado en una web: `https://…/HER-TOR-004` o `?codigo=HER-TOR-004`), Google Lens lo lee, pero la app no lo reconocía. | El escáner lee el QR de la herramienta y abre el modal de retorno, tanto si el QR contiene solo el código como si contiene un enlace o texto que lo incluye. |
+| **H-ALM-05**  | Herramientas | **Eliminar el botón "Herramientas extraviadas"** | `registrar_herramienta_screen.dart` | Es redundante: el reporte ya existe en el detalle de la herramienta. | Desaparece el FAB y el reporte sigue disponible desde el detalle. |
+| **H-ALM-06**  | Herramientas | **DNI y nombre del mecánico sin abrir el detalle** | `registrar_herramienta_screen.dart` | Para saber quién tenía la herramienta había que abrir su detalle. | Cada herramienta prestada o en mora muestra `Nombre · DNI · N° de préstamo`. |
+| **H-ALM-07**  | Dashboard | **Tocar una solicitud aprobada no abre su modal** *(ronda 3)* | `dashboard_almacen_screen.dart` | Las tarjetas de "Repuestos Aprobados para Retiro Físico" eran `ListTile` **sin `onTap`**. Las de préstamos sí lo tenían. | Al tocar una solicitud aprobada se abre el mismo modal de despacho que en la pestaña Despacho. Si se despacha, el dashboard se actualiza. |
+| **H-ALM-08**  | Despacho › Préstamo | **No permite prestar a mecánicos con mal historial (préstamos en mora)** *(ronda 3)* | Backend `PrestamoServiceImpl.registrarPrestamo`, `CupoPrestamoValidator` | El backend ejecutaba `validarAusenciaDeMoras()` y respondía *"Bloqueo preventivo: el mecánico registra préstamos con tiempo vencido sin regularizar"*. **Regla de negocio:** sancionar a un mecánico corresponde a Administración, no al almacén. **Observación del QA:** si se eliminan los préstamos en mora, sí permite prestar, lo que confirma que el bloqueo venía solo de esa validación. | Se puede prestar a un mecánico aunque tenga préstamos en mora. Se mantiene el límite de 5 herramientas simultáneas (RF36). |
+| **H-ALM-09**  | Herramientas | **Al agregar una herramienta no se puede subir la imagen hasta después de crearla** *(ronda 3)* | `registrar_herramienta_screen.dart`, `core/widgets/imagen_producto.dart` | El endpoint de imagen (`POST /inventario/herramientas/{cod}/imagen`) necesita que la herramienta ya exista. Por eso el formulario no tenía campo de foto y la ofrecía en un segundo diálogo después de guardar. | El formulario "Nueva herramienta" tiene un campo de foto opcional con vista previa. Al guardar se crea la herramienta y la foto se sube automáticamente. |
 
 ### 🔧 Módulo 4: Mecánico
 
-| ID           | Pantalla            | Hallazgo                                                 | Archivo(s) afectado(s)                                    | Causa probable / Análisis                                                                                     | Criterio de Aceptación                                                                                       |
-| :----------- | :------------------ | :------------------------------------------------------- | :-------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------- |
-| **H-MEC-01** | Catálogo            | **Ítems sin stock o desactivados al final del catálogo** | `mecanico/.../catalogo_screen.dart`                       | El listado no se ordena por disponibilidad (`stockLibre`).                                                     | Orden: primero los que tienen stock y luego los que tienen `stockLibre == 0` o están desactivados (en gris). Se mantiene el orden alfabético dentro de cada grupo. |
-| **H-MEC-02** | Solicitud (carrito) | **El teclado oculta "Enviar solicitud"**                 | `mecanico/.../carrito_pedido_screen.dart`                 | Caso concreto de H-GEN-07: el botón de envío no sube con el teclado.                                          | Al escribir la justificación, el botón "Enviar solicitud" sube junto al teclado y sigue visible y usable.     |
+| ID           | Pantalla | Hallazgo | Archivo(s) afectado(s) | Causa / Análisis | Criterio de Aceptación |
+| :----------- | :------- | :------- | :--------------------- | :--------------- | :--------------------- |
+| **H-MEC-01** | Catálogo | **Ítems sin stock o desactivados al final** | `catalogo_screen.dart`, `repuesto_*` | El listado no se ordenaba por disponibilidad y solo cargaba 20 ítems. | Orden: con stock, sin stock y deshabilitados (en gris), con orden alfabético dentro de cada grupo. |
+| **H-MEC-02** | Solicitud (carrito) | **El teclado oculta "Enviar solicitud"** | `carrito_pedido_screen.dart` | Es un caso de H-GEN-07. | Al escribir la justificación, "Enviar solicitud" sube con el teclado. |
 
 ---
 
 ## ❓ 3. Puntos que Requieren Aclaración
 
-| ID / Origen        | Texto original                                          | Qué falta definir / Respuesta                                           |
-| :----------------- | :------------------------------------------------------ | :---------------------------------------------------------------------- |
-| **H-GEN-05**       | "Si subo una foto de perfil,"                           | ✅ Aclarado: la foto subida no carga por completo (error de imágenes).  |
-| **H-ADM-04**       | "Los botones ocultan los botones flotantes ocultan los" | ✅ Aclarado: los FAB tapan el switch de activar/desactivar al personal. |
-| Admin › Catálogo   | Dos viñetas vacías                                      | ¿Faltan hallazgos por registrar?                                        |
-| Admin › Notificaciones | Dos viñetas vacías                                  | ¿Faltan hallazgos por registrar?                                        |
-| Almacén › Notificación / Préstamo | Viñetas vacías                           | ¿Faltan hallazgos por registrar?                                        |
+| ID / Origen | Texto original | Qué falta definir / Respuesta |
+| :---------- | :------------- | :---------------------------- |
+| **H-GEN-05** | "Si subo una foto de perfil," | ✅ Aclarado: la foto subida no carga por completo. |
+| **H-ADM-04** | "Los botones ocultan los botones flotantes ocultan los" | ✅ Aclarado: los FAB tapan el switch de activar/desactivar. |
+| **H-GEN-10** | "No sé en qué momento ni en qué parte…" | Se aplicó una corrección preventiva global. Si vuelve a ocurrir, anotar **la pantalla y la acción previa** (cerrar un diálogo, cambiar de pestaña, volver desde otra app) para acotarlo. |
+| **H-ALM-04b** | "…a menos que use Google Lens… para que lea cualquier enlace" | Confirmar **qué contiene el QR impreso**: solo el código o un enlace. La app ahora acepta ambos. Si es un enlace de un acortador (p. ej. `qrco.de/xyz`) que **no** incluye el código, hay que reimprimir el QR con el código de la herramienta. |
+| Admin › Catálogo | Dos viñetas vacías | ¿Faltan hallazgos por registrar? |
+| Admin › Notificaciones | Dos viñetas vacías | ¿Faltan hallazgos por registrar? |
+| Almacén › Notificación / Préstamo | Viñetas vacías | ¿Faltan hallazgos por registrar? |
 
 ---
 
-## ✅ 4. Estado de Correcciones (24/11/2026)
+## ✅ 4. Estado de Correcciones
 
 > Todas las correcciones están aplicadas en el código. `flutter analyze` no reporta errores y el backend compila.
-> **Falta probar en un teléfono físico**: no se pudo compilar el APK aquí porque no hay Android SDK.
+> **Falta probarlas en un teléfono físico:** el APK no se pudo compilar aquí porque no hay Android SDK.
 
 | ID | Corrección aplicada | Archivos |
 | :-- | :-- | :-- |
-| **H-GEN-01** | `MainActivity` ahora hereda de `FlutterFragmentActivity`. Además, `SessionManager.cerrar()` usaba `deleteAll()` y borraba las credenciales de la huella al cerrar sesión; ahora borra solo los datos de sesión. | `MainActivity.kt`, `core/session/session_manager.dart` |
-| **H-GEN-02** | Se quitaron el botón y el diálogo de configuración/prueba de servidor. Al iniciar, la app descarta cualquier IP guardada antes y usa siempre el servidor por defecto. | `login_screen.dart`, `api_constants.dart` |
-| **H-GEN-03 / 05** | Las imágenes se guardan en PostgreSQL (tabla `archivo_almacenado`, creada por `ddl-auto=update`) y se sirven desde `ArchivoController` en las mismas URLs `/uploads/...`, con respaldo a las imágenes semilla del disco. Se eliminó `WebMvcResourceConfig`. El avatar muestra un indicador de carga y vuelve a las iniciales si falla. | `ArchivoAlmacenado.java`, `ArchivoAlmacenado_DAO.java`, `LocalStorageServiceImpl.java`, `ArchivoController.java`, `Dockerfile`, `mi_perfil_screen.dart` |
-| **H-GEN-04** | Se quitaron las 42 etiquetas `[RFxx]` visibles. Los comentarios del código se mantienen. | Varias pantallas |
-| **H-GEN-06** | "Cerrar sesión" se movió debajo de la tarjeta de cabecera del perfil. | `mi_perfil_screen.dart` |
-| **H-GEN-07** | Ajustes de teclado y barra del sistema: `viewInsets` en los bottom sheets, `scrollPadding` en los campos con botón debajo, contenido desplazable en los diálogos y margen para la barra de navegación. | `carrito_pedido_screen.dart`, `detalle_solicitud_sheet.dart`, `selector_buscable.dart`, `retorno_qr_screen.dart`, `reportar_extravio_modal.dart`, `catalogo_screen.dart`, `mi_perfil_screen.dart`, `solicitudes_recuperacion_screen.dart` |
-| **H-GEN-08** | Nuevo `CuentaActivaFilter` en el backend: si la cuenta está `INACTIVO`, responde 401 `CUENTA_INACTIVA`. Dio detecta esa respuesta, cierra la sesión, borra la huella y vuelve al login con un aviso. La campana consulta cada 30 s, así que la sesión se cierra en ≤ 30 s. | `CuentaActivaFilter.java`, `dio_client.dart`, `session_manager.dart`, `app.dart` |
-| **H-GEN-09** | Botón 👁 en "Añadir usuario" y un botón independiente en cada campo de "Cambiar contraseña". | `gestion_personal_screen.dart`, `mi_perfil_screen.dart` |
-| **H-ADM-01** | Causa: el admin consumía `/catalogo`, que solo devuelve activos, así que el repuesto desactivado "desaparecía" de la lista (no se borraba de la BD). Nuevo parámetro `GET /catalogo?incluirInactivos=true`. | `CatalogoController.java`, `mantenimiento_catalogo_screen.dart` |
-| **H-ADM-01b** | El switch actualiza solo la tarjeta del repuesto (sin recargar la lista) y vuelve al estado anterior si la API falla. Al recargar, los repuestos que se sabía deshabilitados se conservan aunque el servidor no los devuelva. La tarjeta muestra "DESHABILITADO · no visible para mecánicos" en gris. **Para que el arreglo sea permanente, hay que desplegar el backend en Render** (`incluirInactivos`). | `mantenimiento_catalogo_screen.dart` |
-| **H-ADM-02** | El panel de detalle de la solicitud sube con el teclado al escribir el motivo. | `detalle_solicitud_sheet.dart` |
-| **H-ADM-03** | Flecha para plegar y desplegar "Repuestos más solicitados". | `reportes_analiticos_screen.dart` |
-| **H-ADM-04** | Relleno inferior de 170 px en la lista de Personal. | `gestion_personal_screen.dart` |
-| **H-ADM-05** | Al tocar una notificación de solicitud, el admin vuelve a su panel, pasa a la pestaña Bandeja y se abre el detalle con aprobar/rechazar. | `navegacion_solicitud.dart`, `centro_notificaciones_screen.dart`, `admin_main_screen.dart` |
-| **H-ADM-06** | Se quitó el campo "Stock Mínimo" de *Nuevo repuesto* y *Editar repuesto* (el campo de stock ocupa ahora todo el ancho). Al crear se envía `stockMinimo: 0` y al editar se conserva el valor guardado. Se quitó "Mínimo: X" de la tarjeta del admin, "Mín: X" del chip del mecánico y "Mínimo: X" de Reportes. Los textos de alerta dicen ahora "stock bajo" ("Repuestos con stock bajo", "(stock bajo)", notificación "Stock Bajo"). | `mantenimiento_catalogo_screen.dart`, `catalogo_screen.dart`, `reportes_analiticos_screen.dart`, `despacho_repuestos_tab.dart`, `SolicitudServiceImpl.java` |
-| **H-ALM-01** | Filtros en Despacho: buscador (N°, mecánico, máquina), prioridad y periodo. | `despacho_repuestos_tab.dart` |
-| **H-ALM-02** | El almacenista recibe aviso de **toda** solicitud aprobada (antes solo de prioridad ALTA). | `SolicitudServiceImpl.java` |
-| **H-ALM-02b** | Se verificó en el código que el almacenista recibe aviso de toda aprobación: ALTA como urgente (tipo `PRIORIDAD_ALTA` → `SOLICITUD` en BD) y MEDIA/BAJA como "Despacho Pendiente" (tipo `SOLICITUD_APROBADA` → `APROBACION` en BD, válido para el *check constraint*). Se corrigió el comentario de `notificarAprobacion()`, que todavía decía "solo prioridad ALTA". **Para que funcione en la app hay que desplegar el backend en Render.** | `SolicitudServiceImpl.java` |
-| **H-ALM-03** | El modal de retorno suma el espacio de la barra de navegación del teléfono. | `retorno_qr_screen.dart` |
-| **H-ALM-04** | Como la pantalla usa su propio controller, `mobile_scanner` no gestionaba el ciclo de vida: tras el diálogo de permiso o al volver de segundo plano, la cámara quedaba en negro. Se agregó `WidgetsBindingObserver`, se eliminaron los arranques duplicados de la cámara y el mismo QR se puede volver a leer después de 3 s. | `retorno_qr_screen.dart` |
-| **H-ALM-05** | Se quitó el FAB de extravío. El reporte sigue disponible desde el detalle de la herramienta. | `registrar_herramienta_screen.dart` |
-| **H-ALM-06** | Nombre, DNI y N° de préstamo del custodio en cada tarjeta de herramienta prestada. | `registrar_herramienta_screen.dart` |
-| **H-MEC-01** | Catálogo completo (antes solo se cargaban 20) ordenado así: con stock, sin stock y al final los deshabilitados, que aparecen atenuados y no se pueden pedir. | `catalogo_screen.dart`, `repuesto_entity.dart`, `repuesto_model.dart`, `repuesto_remote_datasource.dart` |
-| **H-MEC-02** | "Enviar solicitud" sube junto con el teclado al escribir la justificación. | `carrito_pedido_screen.dart` |
-
-**Notas para el despliegue:**
-- Las fotos subidas **antes** de este cambio ya se perdieron del disco de Render. Hay que volver a subirlas.
-- Los tests del backend tienen **3 fallas que ya existían** antes de estos cambios (`SolicitudServiceTest.testAprobarSolicitudTotal_Exito`, `AutenticacionServiceTest.testAutenticar_BloqueoPorTresIntentos`, `FlujoCompletoTddIntegrationTest.testTdd_AutenticacionExitosa`).
+| **H-GEN-01** | `MainActivity` hereda de `FlutterFragmentActivity`. `SessionManager.cerrar()` borra solo los datos de sesión, sin tocar la huella. | `MainActivity.kt`, `session_manager.dart` |
+| **H-GEN-02** | Se quitaron el botón y el diálogo de configuración/prueba de servidor. Al iniciar, la app descarta cualquier IP guardada. | `login_screen.dart`, `api_constants.dart` |
+| **H-GEN-03 / 05** | Las imágenes se guardan en PostgreSQL (`archivo_almacenado`) y se sirven desde `ArchivoController` en las mismas URLs `/uploads/...`. Se eliminó `WebMvcResourceConfig`. El avatar muestra un indicador de carga y vuelve a las iniciales si falla. | `ArchivoAlmacenado.java`, `ArchivoAlmacenado_DAO.java`, `LocalStorageServiceImpl.java`, `ArchivoController.java`, `Dockerfile`, `mi_perfil_screen.dart` |
+| **H-GEN-04** | Se quitaron las 42 etiquetas `[RFxx]` visibles. | Varias pantallas |
+| **H-GEN-06** | "Cerrar sesión" está debajo de la cabecera del perfil. | `mi_perfil_screen.dart` |
+| **H-GEN-07** | `viewInsets` en los bottom sheets, `scrollPadding`, diálogos desplazables y margen para la barra del sistema. | `carrito_pedido_screen.dart`, `detalle_solicitud_sheet.dart`, `selector_buscable.dart`, `retorno_qr_screen.dart`, `reportar_extravio_modal.dart`, `catalogo_screen.dart`, `mi_perfil_screen.dart`, `solicitudes_recuperacion_screen.dart` |
+| **H-GEN-08** | `CuentaActivaFilter` responde 401 `CUENTA_INACTIVA`. Dio cierra la sesión y vuelve al login (≤ 30 s). | `CuentaActivaFilter.java`, `dio_client.dart`, `session_manager.dart`, `app.dart` |
+| **H-GEN-09** | Botón 👁 independiente en cada campo de contraseña. | `gestion_personal_screen.dart`, `mi_perfil_screen.dart` |
+| **H-GEN-10** | Protección global del teclado: `TecladoNavigatorObserver` cierra el teclado en cada push/pop/replace de ruta (pantallas, diálogos, bottom sheets y menús). `TecladoGuard` lo cierra cuando la app pasa a segundo plano y al tocar una zona vacía. Así Android notifica el cierre a tiempo y no queda el `viewInsets` "pegado". No cambia nada visual. | `core/utils/teclado_guard.dart` (nuevo), `app.dart` |
+| **H-ADM-01** | Nuevo parámetro `GET /catalogo?incluirInactivos=true`, usado por el admin. | `CatalogoController.java`, `mantenimiento_catalogo_screen.dart` |
+| **H-ADM-01b** | El switch actualiza solo su tarjeta y vuelve al estado anterior si la API falla. Al recargar se conservan los deshabilitados conocidos. Etiqueta "DESHABILITADO · no visible para mecánicos". | `mantenimiento_catalogo_screen.dart` |
+| **H-ADM-02** | El panel de la solicitud sube con el teclado. | `detalle_solicitud_sheet.dart` |
+| **H-ADM-03** | Flecha para plegar "Repuestos más solicitados". | `reportes_analiticos_screen.dart` |
+| **H-ADM-04** | Relleno inferior de 170 px en Personal. | `gestion_personal_screen.dart` |
+| **H-ADM-05** | La notificación lleva a la Bandeja y abre el detalle con aprobar/rechazar. | `navegacion_solicitud.dart`, `centro_notificaciones_screen.dart`, `admin_main_screen.dart` |
+| **H-ADM-06** | Se quitó el campo "Stock Mínimo" al crear y al editar: se envía `0` al crear y se conserva el valor al editar. Ya no se muestran "Mínimo" ni "Mín". Las alertas dicen "stock bajo". | `mantenimiento_catalogo_screen.dart`, `catalogo_screen.dart`, `reportes_analiticos_screen.dart`, `despacho_repuestos_tab.dart`, `SolicitudServiceImpl.java` |
+| **H-ALM-01** | Filtros en Despacho: buscador, prioridad y periodo. | `despacho_repuestos_tab.dart` |
+| **H-ALM-02 / 02b** | El almacenista recibe aviso de **toda** aprobación: ALTA como urgente y MEDIA/BAJA como "Despacho Pendiente". | `SolicitudServiceImpl.java` |
+| **H-ALM-03** | El modal de retorno suma la barra del sistema. | `retorno_qr_screen.dart` |
+| **H-ALM-04** | `WidgetsBindingObserver` para el ciclo de vida de la cámara, sin arranques duplicados. El mismo QR se puede volver a leer después de 3 s. | `retorno_qr_screen.dart` |
+| **H-ALM-04b** | 1) **`mobile_scanner` pasa de `^5.1.1` (5.2.3) a `^7.1.0` (resuelve 7.5.0)**. Incluye compatibilidad con Impeller (`SurfaceProducer`), la corrección del análisis que se detenía con la vista previa activa y la regla ProGuard de ML Kit para release. El único cambio de API fue `errorBuilder: (ctx, err)`, sin el tercer argumento. 2) Nuevo `_extraerCodigo()`, que reconoce el código aunque el QR traiga un enlace o texto. Busca primero un código de herramienta prestada dentro del contenido, luego los parámetros `codigo/cod/code/codHerramienta/id`, después el último segmento de la URL y, por último, el patrón `LETRAS-XXX[-XXX]`. | `pubspec.yaml`, `pubspec.lock`, `retorno_qr_screen.dart` |
+| **H-ALM-05** | Se quitó el FAB de extravío. | `registrar_herramienta_screen.dart` |
+| **H-ALM-06** | Nombre, DNI y N° de préstamo del custodio en cada tarjeta. | `registrar_herramienta_screen.dart` |
+| **H-ALM-07** | Las tarjetas de solicitudes aprobadas del dashboard tienen `onTap`. Abren `mostrarDespachoSolicitud()`, el mismo modal de la pestaña Despacho, y recargan el dashboard si se despachó. El subtítulo agrega "Toque para ver y despachar", igual que las tarjetas de préstamos. | `dashboard_almacen_screen.dart` |
+| **H-ALM-08** | `registrarPrestamo()` ya no llama a `validarAusenciaDeMoras()`. Se mantiene `validarCupoDisponible()` (máx. 5 herramientas). El aviso de mora al mecánico ya no dice "su cupo queda bloqueado". | `PrestamoServiceImpl.java`, `CupoPrestamoValidator.java` |
+| **H-ALM-09** | El diálogo "Nueva herramienta" tiene arriba un campo de foto opcional, con miniatura de 64 px y los botones "Agregar foto", "Cambiar foto" y "Quitar". Al guardar se crea la herramienta y luego se sube la foto. Se quitó el segundo diálogo "¿Desea agregarle una foto ahora?". `seleccionarYSubirImagen()` se dividió en `elegirImagen()` y `subirImagen()`, sin cambiar su comportamiento en las demás pantallas. | `registrar_herramienta_screen.dart`, `imagen_producto.dart` |
+| **H-MEC-01** | Catálogo completo, ordenado: con stock, sin stock y deshabilitados (atenuados y sin poder pedirse). | `catalogo_screen.dart`, `repuesto_entity.dart`, `repuesto_model.dart`, `repuesto_remote_datasource.dart` |
+| **H-MEC-02** | "Enviar solicitud" sube junto con el teclado. | `carrito_pedido_screen.dart` |
 
 ---
 
 ## 🔄 5. Checklist de Ejecución
 
 ```markdown
-### Sprint 1 – Críticos
-- [x] H-GEN-01  MainActivity → FlutterFragmentActivity y prueba de huella en dispositivo físico
-- [x] H-GEN-03  Almacenamiento externo de imágenes + prueba de subida (repuesto, herramienta, perfil)
-- [x] H-GEN-08  Validar usuario activo en backend + interceptor 401/403 en Dio → logout
-- [x] H-ADM-01  Reproducir y corregir la "eliminación" al desactivar un repuesto
-- [x] H-ALM-02  Notificar al ALMACENISTA en toda aprobación (no solo prioridad ALTA)
-- [x] H-ALM-04  Corregir la cámara QR en Retorno
-- [x] H-ADM-01b Reapertura: el switch ya no recarga la lista y conserva los deshabilitados
-- [ ] H-ADM-01b Desplegar el backend en Render y verificar `GET /catalogo?incluirInactivos=true`
-- [x] H-ALM-02b Revisar la cadena de notificaciones del almacenista (backend → BD → app): toda aprobación lo notifica
-- [ ] H-ALM-02b Tras desplegar en Render, aprobar una solicitud MEDIA/BAJA y confirmar que llega "Despacho Pendiente" al almacenista
+### Ronda 1 – Críticos
+- [x] H-GEN-01  MainActivity → FlutterFragmentActivity y la huella no se borra al cerrar sesión
+- [x] H-GEN-03  Imágenes persistidas en PostgreSQL
+- [x] H-GEN-08  Validar cuenta activa en el backend + interceptor 401 en Dio → logout
+- [x] H-ADM-01  Corregir la "eliminación" al desactivar un repuesto
+- [x] H-ALM-02  Notificar al ALMACENISTA en toda aprobación
+- [x] H-ALM-04  Ciclo de vida de la cámara QR en Retorno
 
-### Sprint 2 – Teclado y SafeArea
-- [x] H-GEN-07  Auditar todos los formularios y bottom sheets (viewInsets + isScrollControlled + espacio inferior)
-- [x] H-MEC-02  Carrito: botón "Enviar solicitud" sube con el teclado
-- [x] H-ADM-02  Bandeja: el panel de notificación o motivo sube con el teclado
+### Ronda 1 – Teclado y SafeArea
+- [x] H-GEN-07  Formularios y bottom sheets (viewInsets + isScrollControlled + espacio inferior)
+- [x] H-MEC-02  Carrito: "Enviar solicitud" sube con el teclado
+- [x] H-ADM-02  Bandeja: el panel del motivo sube con el teclado
 - [x] H-ALM-03  Retorno: "Confirmar retorno" respeta la barra del sistema
 - [x] H-GEN-06  Perfil: reubicar "Cerrar sesión"
 - [x] H-ADM-04  Personal: relleno inferior para los FAB
 
-### Sprint 3 – Mejoras y limpieza
-- [x] H-GEN-09  Icono 👁 independiente en cada campo de contraseña
-- [x] H-ADM-05  Redirección robusta desde notificaciones (idReferencia)
+### Ronda 1 – Mejoras y limpieza
+- [x] H-GEN-09  Botón 👁 independiente en cada contraseña
+- [x] H-ADM-05  Redirección desde notificaciones
 - [x] H-ALM-01  Filtros en Despacho
-- [x] H-ALM-06  DNI y nombre en el selector de mecánico
-- [x] H-MEC-01  Ordenar el catálogo: sin stock o desactivados al final
+- [x] H-ALM-06  DNI y nombre del custodio en Herramientas
+- [x] H-MEC-01  Catálogo ordenado por disponibilidad
 - [x] H-ADM-03  Sección plegable "Repuestos más solicitados"
-- [x] H-GEN-02  Quitar "Probar conexión" del login
+- [x] H-GEN-02  Quitar "Probar conexión"
 - [x] H-ALM-05  Quitar el FAB "Herramientas extraviadas"
-- [x] H-GEN-04  Quitar [RFxx] de todos los textos visibles (42 ocurrencias)
-- [x] H-ADM-06  Quitar "Stock Mínimo" / "Mínimo" de formularios, tarjetas, reportes y alertas de repuestos
+- [x] H-GEN-04  Quitar [RFxx] visibles (42)
 
-### Cierre
+### Ronda 2 – Reaperturas y ajustes
+- [x] H-ADM-01b El switch ya no recarga la lista y conserva los deshabilitados
+- [x] H-ALM-02b Revisión de la cadena de notificaciones del almacenista
+- [x] H-ADM-06  Quitar "Stock Mínimo" / "Mínimo"
+
+### Ronda 3 – Nuevos hallazgos
+- [x] H-GEN-10  Protección global del teclado (rutas + segundo plano + tocar fuera)
+- [x] H-ALM-07  Dashboard: tocar una solicitud aprobada abre el modal de despacho
+- [x] H-ALM-08  Préstamo permitido aunque el mecánico tenga moras (backend)
+- [x] H-ALM-04b mobile_scanner 7.x + extracción del código desde enlace/texto
+- [x] H-ALM-09  Foto opcional en el formulario "Nueva herramienta"
+
+### Despliegue y verificación
+- [ ] Desplegar el backend en Render (H-GEN-03/05/08, H-ADM-01/01b/06, H-ALM-02b, H-ALM-08, H-MEC-01)
+- [ ] Verificar `GET /catalogo?incluirInactivos=true` (debe incluir los repuestos con `"activo":false`)
+- [ ] Aprobar una solicitud MEDIA/BAJA y confirmar que llega "Despacho Pendiente" al almacenista
+- [ ] Prestar a un mecánico con un préstamo en mora (debe permitirlo)
+- [ ] Compilar el APK (desinstalar antes la versión anterior) y probar: huella, QR (código y enlace), teclado y foto al crear herramienta
 - [ ] Completar los puntos de la sección 3 (aclaraciones)
-- [ ] Generar el APK de release y hacer una prueba de regresión con los 3 roles
+- [ ] Prueba de regresión con los 3 roles
 ```
 
 ---
 
-## 🧾 6. Registro Detallado de Cambios (Changelog – 24/11/2026)
+## 🧾 6. Registro Detallado de Cambios (Changelog)
 
-> Rama: `KR_rama`. Esta sección lista **cada archivo tocado**, qué cambió y por qué.
-> Rutas Flutter relativas a `sgsra_mobile/`. Rutas backend relativas a `sgsra-md/`.
+> Esta sección lista **cada archivo tocado**, qué cambió y por qué.
+> Rutas Flutter relativas a `sgsra_mobile/` y rutas backend relativas a `sgsra-md/`.
 
 ### 6.1 Backend (Spring Boot)
 
@@ -205,72 +230,85 @@ Se usa el prefijo `H-` para no confundirlos con las etiquetas `[ADM-xx]` / `[ALM
 
 | Archivo | Hallazgo | Especificación |
 | :-- | :-- | :-- |
-| `src/main/java/.../model/entity/ArchivoAlmacenado.java` | H-GEN-03 / 05 | Entidad JPA de la tabla `archivo_almacenado`. Campos: `ruta` (PK, `varchar(200)`, ej. `perfiles/uuid.jpg`), `content_type` (`varchar(60)`), `datos` (`bytea`), `tamano_bytes` y `fecha_subida`. Hibernate crea la tabla con `ddl-auto=update`, así que no hace falta migración manual. |
+| `src/main/java/.../model/entity/ArchivoAlmacenado.java` | H-GEN-03 / 05 | Entidad de la tabla `archivo_almacenado`: `ruta` (PK, `varchar(200)`), `content_type`, `datos` (`bytea`), `tamano_bytes` y `fecha_subida`. La crea `ddl-auto=update`. |
 | `src/main/java/.../DAO/ArchivoAlmacenado_DAO.java` | H-GEN-03 / 05 | `JpaRepository<ArchivoAlmacenado, String>`. |
-| `src/main/java/.../controller/ArchivoController.java` | H-GEN-03 / 05 | `GET /uploads/{carpeta}/{archivo}`: devuelve los bytes de la imagen desde la BD con su `Content-Type` y `Cache-Control: max-age=30 días` (cada subida tiene nombre UUID nuevo, así que el contenido no cambia). Si no está en la BD, la busca en el disco local (imágenes semilla) y, si tampoco existe, devuelve 404. |
-| `src/main/java/.../config/CuentaActivaFilter.java` | H-GEN-08 | `OncePerRequestFilter` que se aplica a `/api/v1/**`, excepto `/auth/login`, `/auth/recuperar-clave` y las peticiones `OPTIONS`. Lee el correo del token `Bearer`; si el usuario no existe o su estado es `INACTIVO`, responde **401** con `{"exito":false,"codigo":"CUENTA_INACTIVA","mensaje":"..."}`. Los tokens que no se pueden leer pasan sin cambios. |
+| `src/main/java/.../controller/ArchivoController.java` | H-GEN-03 / 05 | `GET /uploads/{carpeta}/{archivo}`: devuelve la imagen desde la BD o, si no está, desde el disco (imágenes semilla). Responde 404 si no existe en ninguno. Cache de 30 días. |
+| `src/main/java/.../config/CuentaActivaFilter.java` | H-GEN-08 | Filtro de `/api/v1/**` (excepto login, recuperar clave y OPTIONS). Si la cuenta no existe o está `INACTIVO`, responde 401 `{"codigo":"CUENTA_INACTIVA"}`. |
 
 #### Archivos modificados
 
 | Archivo | Hallazgo | Especificación |
 | :-- | :-- | :-- |
-| `src/main/java/.../service/impl/LocalStorageServiceImpl.java` | H-GEN-03 / 05 | `guardarArchivo()` guarda la imagen en PostgreSQL en vez del disco. Mantiene las validaciones (5 MB, `image/*`) y solo acepta las extensiones `.jpg/.jpeg/.png/.webp/.gif`. La URL devuelta conserva el formato `/uploads/{carpeta}/{uuid}.{ext}`. `eliminarArchivo()` borra el registro de la BD. Nuevo método `obtenerArchivo()`: busca primero en la BD y luego en el disco, con protección contra *path traversal*. |
-| `src/main/java/.../controller/CatalogoController.java` | H-ADM-01 / H-MEC-01 | `GET /api/v1/catalogo` acepta el parámetro opcional `incluirInactivos` (por defecto `false`). Con `true` usa `listarCatalogoAdmin()` (activos + inactivos), que ya existía pero ningún endpoint exponía. |
-| `src/main/java/.../service/impl/SolicitudServiceImpl.java` | H-ALM-02 / H-ALM-02b / H-ADM-06 | `notificarAprobacion()`: además del aviso urgente de prioridad ALTA, ahora envía al rol `ALMACENISTA` "Despacho Pendiente" o "Despacho Pendiente - Aprobación Parcial" para las prioridades MEDIA y BAJA (tipo `SOLICITUD_APROBADA`). **(H-ADM-06)** La alerta de reposición tras un despacho se titula "Stock Bajo" (antes "Stock Minimo Alcanzado") y ya no menciona el mínimo. El tipo interno `STOCK_MINIMO` no cambia. **(H-ALM-02b)** El comentario de `notificarAprobacion()` ahora dice que el almacenista recibe toda aprobación. |
-| `Dockerfile` | H-GEN-03 | Ya no crea carpetas `uploads` vacías. Ahora copia `uploads/` (imágenes semilla versionadas) a la imagen final con `COPY --from=build /app/uploads /app/uploads`. |
+| `src/main/java/.../service/impl/LocalStorageServiceImpl.java` | H-GEN-03 / 05 | Guarda las imágenes en PostgreSQL. Mantiene las validaciones (5 MB, `image/*`, extensiones permitidas) y el formato de URL `/uploads/{carpeta}/{uuid}.{ext}`. Nuevo `obtenerArchivo()`, con protección contra *path traversal*. |
+| `src/main/java/.../controller/CatalogoController.java` | H-ADM-01 / H-MEC-01 | `GET /catalogo` acepta `incluirInactivos` (por defecto `false`). |
+| `src/main/java/.../service/impl/SolicitudServiceImpl.java` | H-ALM-02 / 02b / H-ADM-06 | `notificarAprobacion()` avisa al almacenista en todas las prioridades. La alerta de reposición se titula "Stock Bajo" y no menciona el mínimo; el tipo interno `STOCK_MINIMO` no cambia. |
+| `src/main/java/.../service/impl/PrestamoServiceImpl.java` | **H-ALM-08** | `registrarPrestamo()` ya no ejecuta `validarAusenciaDeMoras()`: un mecánico con préstamos en mora puede recibir nuevos préstamos. Se mantiene el límite de 5 herramientas simultáneas. El aviso de mora al mecánico dice ahora "Devuelva las herramientas cuanto antes", en lugar de "Su cupo para nuevos préstamos queda bloqueado". |
+| `src/main/java/.../service/validator/CupoPrestamoValidator.java` | **H-ALM-08** | Se documenta que `validarAusenciaDeMoras()` ya no se usa en el registro de préstamos. Se conserva por si Administración decide reactivar la sanción. |
+| `Dockerfile` | H-GEN-03 | Copia `uploads/` (imágenes semilla) a la imagen final. |
 
 #### Archivos eliminados
 
 | Archivo | Hallazgo | Motivo |
 | :-- | :-- | :-- |
-| `src/main/java/.../config/WebMvcResourceConfig.java` | H-GEN-05 | Servía `/uploads/**` con `"file:/" + ruta`, que en Linux da `file://app/uploads/` (ruta inválida → 404 en Render). Lo reemplaza `ArchivoController`. |
+| `src/main/java/.../config/WebMvcResourceConfig.java` | H-GEN-05 | `"file:/" + ruta` daba una ruta inválida en Linux (404 en Render). Lo reemplaza `ArchivoController`. |
 
 ### 6.2 Frontend móvil (Flutter / Android)
+
+#### Dependencias
+
+| Archivo | Hallazgo | Especificación |
+| :-- | :-- | :-- |
+| `pubspec.yaml` / `pubspec.lock` | **H-ALM-04b** | `mobile_scanner: ^5.1.1` → `^7.1.0` (resuelve 7.5.0). Requiere Flutter ≥ 3.29; el proyecto usa 3.50. |
 
 #### Archivos nuevos
 
 | Archivo | Hallazgo | Especificación |
 | :-- | :-- | :-- |
-| `lib/core/utils/navegacion_solicitud.dart` | H-ADM-05 | `ValueNotifier<String?>` global con `abrirEnBandeja(codigo)`, para pedir al módulo Administrador que abra una solicitud desde otra pantalla. |
+| `lib/core/utils/navegacion_solicitud.dart` | H-ADM-05 | `ValueNotifier` global para pedir al módulo Admin que abra una solicitud en la Bandeja. |
+| `lib/core/utils/teclado_guard.dart` | **H-GEN-10** | `cerrarTeclado()`, `TecladoNavigatorObserver` (cierra el teclado en cada push/pop/remove/replace de ruta) y `TecladoGuard` (lo cierra al pasar a `paused`/`hidden` y al tocar una zona vacía con `HitTestBehavior.translucent`; los campos y botones conservan su toque). |
 
 #### Archivos modificados
 
 | Archivo | Hallazgo | Especificación |
 | :-- | :-- | :-- |
-| `android/app/src/main/kotlin/.../MainActivity.kt` | H-GEN-01 | Hereda de `FlutterFragmentActivity` (requisito de `local_auth`). El canal `telefono` sigue igual. |
-| `lib/core/session/session_manager.dart` | H-GEN-01 / 08 | `cerrar()` borra solo las 5 llaves de sesión (antes usaba `deleteAll()` y eliminaba también la huella y el último correo). Nuevos: `cerrarPorCuentaDesactivada()` (además olvida la huella), `navigatorKey`, `messengerKey` y `forzarCierreSesion(mensaje)`, que solo se ejecuta una vez: vuelve a `/` y muestra un SnackBar rojo. |
-| `lib/core/network/dio_client.dart` | H-GEN-08 | El interceptor `onError` detecta un 401 con `codigo == CUENTA_INACTIVA` y llama a `SessionManager.forzarCierreSesion`. |
-| `lib/app.dart` | H-GEN-08 | `MaterialApp` registra `navigatorKey` y `scaffoldMessengerKey`. |
-| `lib/core/constants/api_constants.dart` | H-GEN-02 | `inicializar()` descarta cualquier host personalizado guardado. Se eliminó `urlPruebaConexion()`. |
-| `lib/features/auth/presentation/screens/login_screen.dart` | H-GEN-02 / 04 | Se eliminaron el botón ⚙ "Configurar IP" y el diálogo "Probar conexión". El logo queda centrado. Se quitaron los imports que ya no se usan. |
-| `lib/features/auth/presentation/screens/mi_perfil_screen.dart` | H-GEN-05 / 06 / 07 / 09 | El avatar usa `Image.network` con `loadingBuilder` y `errorBuilder`, y si falla muestra las iniciales. "Cerrar sesión" se movió debajo de la cabecera y al final se agregó un margen igual a la barra del sistema. En el diálogo "Cambiar contraseña" cada campo tiene su propio botón 👁 (`_verActual`, `_verNueva`, `_verConfirmar`) y el contenido es desplazable. |
-| `lib/core/widgets/detalle_solicitud_sheet.dart` | H-ADM-02 / H-GEN-07 | La hoja se envuelve en `Padding(viewInsets.bottom)`. El campo "Motivo" tiene `scrollPadding` inferior de 160. La lista suma la barra del sistema. |
-| `lib/core/widgets/selector_buscable.dart` | H-GEN-07 | La hoja con buscador se ajusta al teclado y la lista suma la barra del sistema. |
-| `lib/features/administrador/presentation/screens/admin_main_screen.dart` | H-ADM-05 | Escucha `NavegacionSolicitud.pendiente`: cambia a la pestaña Bandeja, abre `mostrarDetalleSolicitud(accionesAdmin: true)` y recarga la Bandeja si hubo aprobación o rechazo. |
-| `lib/features/notificaciones/presentation/screens/centro_notificaciones_screen.dart` | H-ADM-05 | Para el ADMINISTRADOR: `popUntil(isFirst)` y luego `NavegacionSolicitud.abrirEnBandeja(codigo)`. El almacenista y el mecánico mantienen su comportamiento anterior. |
-| `lib/features/administrador/presentation/screens/mantenimiento_catalogo_screen.dart` | H-ADM-01 / H-ADM-01b / H-GEN-04 | Carga con `incluirInactivos: true`. **(H-ADM-01b)** `_cambiarEstadoRepuesto()` actualiza solo `item['activo']` y ya no llama a `_cargarCatalogo()`; si la API falla, vuelve al valor anterior. El mensaje indica si el repuesto quedó habilitado o deshabilitado. `_cargarCatalogo()` conserva los repuestos con `activo == false` que el servidor no devuelva y ordena la lista por `codParte`. La tarjeta deshabilitada muestra "DESHABILITADO · no visible para mecánicos" en gris. **(H-ADM-06)** Se eliminaron el campo "Stock Mínimo" y su controlador en los diálogos de crear y editar. El POST envía `stockMinimo: 0` y el PUT reenvía `repuesto['stockMinimo'] ?? 0`. La tarjeta ya no muestra "Mínimo". |
-| `lib/features/administrador/presentation/screens/reportes_analiticos_screen.dart` (H-ADM-06) | H-ADM-06 | La sección se llama "Repuestos con stock bajo" y la lista ya no muestra "Mínimo: X". |
-| `lib/features/almacen/presentation/screens/despacho_repuestos_tab.dart` (H-ADM-06) | H-ADM-06 | "(llega al mínimo)" → "(stock bajo)". El aviso de reposición dice "Algunos repuestos quedaron con stock bajo". |
-| `lib/features/administrador/presentation/screens/gestion_personal_screen.dart` | H-ADM-04 / H-GEN-09 / H-GEN-04 | Margen inferior de la lista: 80 → 170 px. "Añadir usuario" usa `StatefulBuilder` con un botón 👁 en la contraseña. |
-| `lib/features/administrador/presentation/screens/reportes_analiticos_screen.dart` | H-ADM-03 / H-GEN-04 | `_Tarjeta` acepta `plegada` y `onAlternar` (flecha animada y `AnimatedSize`). Se aplicó a "Repuestos más solicitados". |
-| `lib/features/administrador/presentation/screens/solicitudes_recuperacion_screen.dart` | H-GEN-07 | El diálogo "Asignar clave temporal" es desplazable. |
-| `lib/features/almacen/presentation/screens/despacho_repuestos_tab.dart` | H-ALM-01 | Buscador (N° de solicitud, mecánico, máquina), chips de prioridad (Todas/Alta/Media/Baja) y menú de periodo (Cualquier fecha/Hoy/7/30 días). Si no hay resultados, muestra "Sin resultados" con el botón "Limpiar filtros". `_Vacio` acepta `textoBoton`. |
-| `lib/features/almacen/presentation/screens/retorno_qr_screen.dart` | H-ALM-03 / 04 / H-GEN-04 | Usa `WidgetsBindingObserver`: reinicia la cámara al volver a la app y la detiene cuando pasa a `inactive`. `DetectionSpeed.normal` reemplaza a `noDuplicates`, y un mismo QR solo se ignora si se repite en menos de 3 s. El botón de ocultar/mostrar cámara ya no llama a `start()`/`stop()` dos veces. El modal de retorno suma `padding.bottom`. Se mejoró el mensaje cuando falta el permiso de cámara. |
-| `lib/features/almacen/presentation/screens/registrar_herramienta_screen.dart` | H-ALM-05 / 06 / H-GEN-04 | Se eliminó el FAB de extravío y su import. Carga los préstamos en paralelo; si esa carga falla, la lista de herramientas se muestra igual. Cada herramienta con préstamo activo muestra `_FilaCustodio`: nombre, DNI y N° de préstamo, en naranja si está en mora. |
-| `lib/features/almacen/presentation/screens/reportar_extravio_modal.dart` | H-GEN-07 / H-GEN-04 | El modal suma la barra del sistema. |
-| `lib/features/mecanico/domain/entities/repuesto_entity.dart` | H-MEC-01 | Nuevo campo `activo` (por defecto `true`). |
-| `lib/features/mecanico/data/models/repuesto_model.dart` | H-MEC-01 | `activo` se pasa a la entidad (antes el modelo lo guardaba en un campo propio). |
-| `lib/features/mecanico/data/datasources/repuesto_remote_datasource.dart` | H-MEC-01 | `listarCatalogo()` pide `size: 500` (antes 20) e `incluirInactivos: true`. |
-| `lib/features/mecanico/presentation/screens/catalogo_screen.dart` | H-MEC-01 / H-GEN-07 / H-GEN-04 | Orden estable en tres grupos: con stock, sin stock y deshabilitados. Los deshabilitados aparecen al 55 % de opacidad, con la etiqueta "No disponible · deshabilitado" y sin poder agregarse. El modal de detalle suma la barra del sistema. **(H-ADM-06)** El chip de stock físico muestra solo "Físico: X" (se quitó "· Mín: X"). |
-| `lib/features/mecanico/presentation/screens/carrito_pedido_screen.dart` | H-MEC-02 / H-GEN-04 | La justificación tiene `scrollPadding` inferior de 140, para que "Enviar solicitud" suba con el teclado. Margen inferior de 40 y `keyboardDismissBehavior.onDrag`. |
-| `auditoria_screen.dart`, `bandeja_solicitudes_screen.dart`, `proveedores_modal.dart`, `dashboard_almacen_screen.dart`, `detalle_herramienta_screen.dart`, `registrar_prestamo_screen.dart`, `herramientas_prestadas_screen.dart`, `historial_solicitudes_screen.dart`, `core/utils/app_router.dart` | H-GEN-04 | Se quitaron las etiquetas `[RFxx]` de los textos visibles (42 en total). |
+| `android/app/src/main/kotlin/.../MainActivity.kt` | H-GEN-01 | Hereda de `FlutterFragmentActivity`. |
+| `lib/app.dart` | H-GEN-08 / **H-GEN-10** | Registra `navigatorKey` y `scaffoldMessengerKey`. **(H-GEN-10)** Agrega `navigatorObservers: [TecladoNavigatorObserver()]` y `builder: TecladoGuard(...)`. |
+| `lib/core/session/session_manager.dart` | H-GEN-01 / 08 | `cerrar()` borra solo la sesión. Nuevos `cerrarPorCuentaDesactivada()` y `forzarCierreSesion()`. |
+| `lib/core/network/dio_client.dart` | H-GEN-08 | Un 401 con `CUENTA_INACTIVA` fuerza el cierre de sesión. |
+| `lib/core/constants/api_constants.dart` | H-GEN-02 | Descarta el host personalizado. Se eliminó `urlPruebaConexion()` y el import de `foundation` que ya no se usaba. |
+| `lib/core/widgets/imagen_producto.dart` | **H-ALM-09** | `seleccionarYSubirImagen()` ahora usa dos funciones nuevas: `elegirImagen(context, {titulo})`, que devuelve el `XFile` sin subirlo, y `subirImagen(context, endpoint, foto)`. Las pantallas que ya lo usaban funcionan igual. |
+| `lib/core/widgets/detalle_solicitud_sheet.dart` | H-ADM-02 / H-GEN-07 | `Padding(viewInsets.bottom)`, `scrollPadding` de 160 y la barra del sistema. |
+| `lib/core/widgets/selector_buscable.dart` | H-GEN-07 | Se ajusta al teclado y a la barra del sistema. |
+| `lib/features/auth/presentation/screens/login_screen.dart` | H-GEN-02 / 04 | Sin configuración ni prueba de IP. |
+| `lib/features/auth/presentation/screens/mi_perfil_screen.dart` | H-GEN-05 / 06 / 07 / 09 | Avatar con `Image.network` y respaldo a las iniciales, "Cerrar sesión" más arriba, 👁 por campo y diálogo desplazable. |
+| `lib/features/administrador/presentation/screens/admin_main_screen.dart` | H-ADM-05 | Escucha `NavegacionSolicitud` y abre la solicitud en la Bandeja. |
+| `lib/features/notificaciones/presentation/screens/centro_notificaciones_screen.dart` | H-ADM-05 | El admin es redirigido a la Bandeja. |
+| `lib/features/administrador/presentation/screens/mantenimiento_catalogo_screen.dart` | H-ADM-01 / 01b / 06 / H-GEN-04 | `incluirInactivos: true` y switch optimista con reversión. Conserva los deshabilitados y muestra la etiqueta "DESHABILITADO". Sin el campo "Stock Mínimo" (`stockMinimo: 0` al crear, valor conservado al editar). |
+| `lib/features/administrador/presentation/screens/gestion_personal_screen.dart` | H-ADM-04 / H-GEN-09 | Relleno de 170 px y 👁 en "Añadir usuario". |
+| `lib/features/administrador/presentation/screens/reportes_analiticos_screen.dart` | H-ADM-03 / 06 | `_Tarjeta` plegable. La sección "Repuestos con stock bajo" ya no muestra "Mínimo: X". |
+| `lib/features/administrador/presentation/screens/solicitudes_recuperacion_screen.dart` | H-GEN-07 | Diálogo desplazable. |
+| `lib/features/almacen/presentation/screens/dashboard_almacen_screen.dart` | **H-ALM-07** | Importa `despacho_repuestos_tab.dart`. Cada tarjeta de solicitud aprobada tiene `onTap`, que llama a `mostrarDespachoSolicitud(context, solicitudNum)` y ejecuta `_cargarDatos()` si se despachó. Subtítulo: "Toque para ver y despachar". |
+| `lib/features/almacen/presentation/screens/despacho_repuestos_tab.dart` | H-ALM-01 / H-ADM-06 | Buscador, chips de prioridad y periodo. "(llega al mínimo)" → "(stock bajo)". |
+| `lib/features/almacen/presentation/screens/retorno_qr_screen.dart` | H-ALM-03 / 04 / **04b** | Ciclo de vida de la cámara, `DetectionSpeed.normal` + control de repetidos de 3 s y `padding.bottom` en el modal. **(H-ALM-04b)** `errorBuilder: (ctx, err)` (API de 7.x) y nuevo `_extraerCodigo(raw)`, usado por `_procesarCodigo()`. |
+| `lib/features/almacen/presentation/screens/registrar_herramienta_screen.dart` | H-ALM-05 / 06 / **09** | Sin el FAB de extravío y con `_FilaCustodio`. **(H-ALM-09)** El diálogo "Nueva herramienta" usa `StatefulBuilder` con un campo de foto opcional (vista previa con `Image.memory`). Al guardar, crea la herramienta y, si hay foto, llama a `subirImagen(...)`; si no, muestra "{cod} registrada". El `DropdownButtonFormField` usa `isExpanded: true` para que entre en el diálogo. |
+| `lib/features/almacen/presentation/screens/reportar_extravio_modal.dart` | H-GEN-07 | Suma la barra del sistema. |
+| `lib/features/mecanico/domain/entities/repuesto_entity.dart` · `data/models/repuesto_model.dart` · `data/datasources/repuesto_remote_datasource.dart` | H-MEC-01 | Campo `activo` en la entidad. Se pide `size: 500` e `incluirInactivos: true`. |
+| `lib/features/mecanico/presentation/screens/catalogo_screen.dart` | H-MEC-01 / H-GEN-07 / H-ADM-06 | Orden en tres grupos y deshabilitados atenuados. El chip dice solo "Físico: X". |
+| `lib/features/mecanico/presentation/screens/carrito_pedido_screen.dart` | H-MEC-02 | `scrollPadding` de 140 y `keyboardDismissBehavior.onDrag`. |
+| `auditoria_screen.dart`, `bandeja_solicitudes_screen.dart`, `proveedores_modal.dart`, `detalle_herramienta_screen.dart`, `registrar_prestamo_screen.dart`, `herramientas_prestadas_screen.dart`, `historial_solicitudes_screen.dart`, `core/utils/app_router.dart` | H-GEN-04 | Se quitaron las etiquetas `[RFxx]` visibles. |
 
 ### 6.3 Cambios de contrato / operación
 
-- **API:** `GET /api/v1/catalogo?incluirInactivos=true` es nuevo y opcional. Sin el parámetro, el endpoint responde igual que antes.
-- **API:** `GET /uploads/{carpeta}/{archivo}` ahora lo sirve un controlador, pero la URL pública no cambia.
+- **API:** `GET /api/v1/catalogo?incluirInactivos=true` es nuevo y opcional. Sin el parámetro, responde igual que antes.
+- **API:** `GET /uploads/{carpeta}/{archivo}` ahora lo sirve un controlador, pero la URL no cambia.
 - **API:** cualquier petición `/api/v1/**` de una cuenta `INACTIVO` responde `401 CUENTA_INACTIVA`.
+- **API (H-ALM-08):** `POST` de registro de préstamo ya no responde 400 "Bloqueo preventivo" por moras. Solo valida el cupo de 5 herramientas.
 - **BD:** nueva tabla `archivo_almacenado`, creada automáticamente al arrancar.
-- **Datos:** las fotos subidas antes de este cambio ya no existen en Render y hay que volver a subirlas.
-- **Despliegue (H-ADM-01b / H-ALM-02b):** las correcciones del backend (`incluirInactivos`, imágenes en BD, `CuentaActivaFilter`, avisos al almacenista en toda prioridad, título "Stock Bajo") **no funcionan en la app hasta desplegar en Render**, porque la app usa ese servidor. Al 24/11/2026, Render todavía ejecuta el código anterior.
-- **Verificación:** `flutter analyze` sin errores y backend compilado. Los tests del backend tienen 30 casos con 3 fallas que **ya existían** antes de estos cambios (verificado ejecutándolos sobre el código original). Falta compilar el APK y probarlo en un teléfono físico.
+- **Datos:** las fotos subidas antes de este cambio se perdieron del disco de Render y hay que volver a subirlas.
+- **Despliegue:** las correcciones del backend **no se ven en la app hasta desplegar en Render**, porque la app usa ese servidor. Al 25/11/2026, Render todavía ejecuta el código anterior.
+- **APK:** el cambio de `MainActivity` y la actualización de `mobile_scanner` (código nativo) **exigen recompilar e instalar el APK**. No basta con un hot reload. Se recomienda desinstalar la versión anterior.
+- **Verificación:**
+  - `flutter analyze` no muestra errores y el backend compila.
+  - Los tests del backend dan 30 casos con 3 fallas que **ya existían** antes de estos cambios: `SolicitudServiceTest.testAprobarSolicitudTotal_Exito`, `AutenticacionServiceTest.testAutenticar_BloqueoPorTresIntentos` y `FlujoCompletoTddIntegrationTest.testTdd_AutenticacionExitosa`.
+  - `PrestamoServiceTest` y `PrestamoIntegrationTest` pasan.
+  - Falta compilar el APK y probarlo en un teléfono físico.

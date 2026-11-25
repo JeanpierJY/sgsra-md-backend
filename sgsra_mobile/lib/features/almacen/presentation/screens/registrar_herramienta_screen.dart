@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -112,10 +114,14 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
     final nomCtrl = TextEditingController();
     final marcaCtrl = TextEditingController();
     String catSel = 'MANUALES';
+    // [H-ALM-09] Foto opcional elegida antes de crear la herramienta
+    XFile? foto;
+    Uint8List? fotoBytes;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
         title: const Text('Nueva herramienta'),
         content: SingleChildScrollView(
           child: Form(
@@ -123,6 +129,55 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // [H-ALM-09] Foto de la herramienta (opcional) desde el alta
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: fotoBytes != null
+                          ? Image.memory(fotoBytes!, width: 64, height: 64, fit: BoxFit.cover)
+                          : Container(
+                              width: 64,
+                              height: 64,
+                              color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                              child: const Icon(Icons.handyman_outlined, color: AppColors.primaryBlue),
+                            ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        TextButton.icon(
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
+                          onPressed: () async {
+                            final f = await elegirImagen(ctx, titulo: 'Foto de la herramienta');
+                            if (f == null) return;
+                            final b = await f.readAsBytes();
+                            setDlg(() {
+                              foto = f;
+                              fotoBytes = b;
+                            });
+                          },
+                          icon: Icon(fotoBytes == null ? Icons.add_a_photo_outlined : Icons.cached_rounded, size: 18),
+                          label: Text(fotoBytes == null ? 'Agregar foto' : 'Cambiar foto'),
+                        ),
+                        if (fotoBytes != null)
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero, alignment: Alignment.centerLeft, foregroundColor: Colors.black54),
+                            onPressed: () => setDlg(() {
+                              foto = null;
+                              fotoBytes = null;
+                            }),
+                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            label: const Text('Quitar'),
+                          )
+                        else
+                          const Text('Opcional', style: TextStyle(fontSize: 12, color: Colors.black45)),
+                      ]),
+                    ),
+                  ]),
+                ),
                 TextFormField(
                   controller: codCtrl,
                   textCapitalization: TextCapitalization.characters,
@@ -143,6 +198,7 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
                       .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                       .toList(),
                   onChanged: (val) => catSel = val ?? 'MANUALES',
+                  isExpanded: true,
                 ),
               ],
             ),
@@ -165,38 +221,25 @@ class _RegistrarHerramientaScreenState extends State<RegistrarHerramientaScreen>
                   'categoria': catSel,
                   'estadoActual': 'DISPONIBLE',
                 });
-                await _cargarHerramientas();
-                if (!mounted) return;
-                // Ofrece agregar la foto de inmediato
-                final foto = await showDialog<bool>(
-                  context: context,
-                  builder: (c) => AlertDialog(
-                    icon: Icon(Icons.check_circle_rounded, color: Colors.green[700], size: 48),
-                    title: Text('$cod registrada'),
-                    content: const Text('¿Desea agregarle una foto ahora?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Después')),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-                        onPressed: () => Navigator.pop(c, true),
-                        icon: const Icon(Icons.photo_camera_outlined),
-                        label: const Text('Agregar foto'),
-                      ),
-                    ],
-                  ),
-                );
-                if (foto == true && mounted) {
-                  final r = await seleccionarYSubirImagen(context, '/inventario/herramientas/$cod/imagen');
-                  if (r != null) _cargarHerramientas();
-                }
               } catch (e) {
                 messenger.showSnackBar(
                     SnackBar(content: Text(mensajeDeError(e)), backgroundColor: AppColors.errorRed));
+                return;
               }
+              // [H-ALM-09] La foto elegida en el formulario se sube justo después de crear el registro
+              final fotoElegida = foto;
+              if (fotoElegida != null && mounted) {
+                await subirImagen(context, '/inventario/herramientas/$cod/imagen', fotoElegida);
+              } else {
+                messenger.showSnackBar(
+                    SnackBar(content: Text('$cod registrada'), backgroundColor: Colors.green[700]));
+              }
+              await _cargarHerramientas();
             },
             child: const Text('Guardar'),
           ),
         ],
+      ),
       ),
     );
   }

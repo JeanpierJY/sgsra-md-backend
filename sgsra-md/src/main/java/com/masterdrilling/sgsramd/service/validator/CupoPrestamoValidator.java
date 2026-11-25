@@ -22,6 +22,7 @@ public class CupoPrestamoValidator {
         }
     }
 
+    // [H-ALM-08] Sin uso en el registro de prestamos: las moras no bloquean nuevos prestamos.
     public void validarAusenciaDeMoras(String dniMecanico) {
         long enMora = prestamoRepository.contarPrestamosEnMoraPorMecanico(dniMecanico);
         if (enMora > 0) {
