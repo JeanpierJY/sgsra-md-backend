@@ -7,6 +7,7 @@ import '../../../../core/widgets/imagen_producto.dart';
 import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
 import '../widgets/herramienta_ui.dart';
+import '../widgets/qr_herramienta.dart';
 import 'reportar_extravio_modal.dart';
 
 /// [RF35, ALM-04] Ficha de una herramienta: foto (editable), datos, estado e historial de préstamos.
@@ -122,6 +123,18 @@ class _DetalleHerramientaScreenState extends State<DetalleHerramientaScreen> {
                   ]),
                 ),
               ]),
+            ),
+            // [H-ALM-10] QR de la herramienta para imprimir o mostrar en el escáner de Retorno
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                side: const BorderSide(color: AppColors.primaryBlue),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () => mostrarQrHerramienta(context, _h.codHerramienta, _h.nombre),
+              icon: const Icon(Icons.qr_code_2_rounded),
+              label: const Text('Ver código QR'),
             ),
             if (clave != 'EXTRAVIADA' && clave != 'BAJA_TECNICA') ...[
               const SizedBox(height: 10),

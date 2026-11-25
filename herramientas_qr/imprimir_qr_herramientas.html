@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etiquetas QR de Herramientas</title>
+<!--
+  [H-ALM-10] Genera e imprime las etiquetas QR de las herramientas del pañol (SGSRA).
+  Cada QR contiene SOLO el código de la herramienta (p. ej. HER-PIST-003), que es lo que
+  lee el escáner de la pestaña Retorno de la app.
+  Uso: abrir este archivo con doble clic (Chrome/Edge) -> "Cargar herramientas" -> "Imprimir".
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --azul: #0d47a1; --gris: #f4f6f9; --borde: #d0d7e2; --texto: #1f2937; --suave: #6b7280; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background: var(--gris); color: var(--texto); }
+  header { background: var(--azul); color: #fff; padding: 16px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  .panel { max-width: 1100px; margin: 16px auto; padding: 16px; background: #fff; border-radius: 12px;
+           box-shadow: 0 1px 3px rgba(0,0,0,.1); display: grid; gap: 12px; }
+  .fila { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  label { font-size: 12px; color: var(--suave); display: grid; gap: 4px; }
+  input, select, textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 8px; }
+  input[type=text] { min-width: 240px; }
+  textarea { width: 100%; min-height: 70px; }
+  button { font: inherit; padding: 9px 14px; border: 0; border-radius: 8px; cursor: pointer; background: var(--azul); color: #fff; }
+  button.sec { background: #fff; color: var(--azul); border: 1px solid var(--azul); }
+  .estado { font-size: 13px; color: var(--suave); }
+  .estado.error { color: #c62828; }
+  details summary { cursor: pointer; font-size: 13px; color: var(--azul); }
+  #hoja { max-width: 1100px; margin: 0 auto 32px; padding: 0 16px; display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(var(--ancho), 1fr)); gap: 10px; }
+  .etiqueta { background: #fff; border: 1px dashed #9aa5b5; border-radius: 6px; padding: 8px; text-align: center;
+              break-inside: avoid; page-break-inside: avoid; position: relative; }
+  .etiqueta .qr { display: flex; justify-content: center; }
+  .etiqueta .qr img, .etiqueta .qr canvas { width: var(--qr) !important; height: var(--qr) !important; }
+  .etiqueta .cod { font-weight: 700; font-size: 13px; letter-spacing: .5px; margin-top: 4px; }
+  .etiqueta .nom { font-size: 10px; color: var(--suave); line-height: 1.2; max-height: 2.4em; overflow: hidden; }
+  .etiqueta input { position: absolute; top: 4px; left: 4px; }
+  .etiqueta.off { opacity: .35; }
+  @media (max-width: 600px) { input[type=text] { min-width: 0; width: 100%; } }
+  @media print {
+    @page { margin: 10mm; }
+    body { background: #fff; }
+    header, .panel { display: none; }
+    #hoja { padding: 0; max-width: none; }
+    .etiqueta.off { display: none; }
+    .etiqueta input { display: none; }
+    .etiqueta { border-color: #bbb; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Etiquetas QR de herramientas</h1>
+  <p>Cada QR contiene solo el código de la herramienta. Es lo que lee el escáner de la pestaña <b>Retorno</b> de la app.</p>
+</header>
+
+<section class="panel">
+  <div class="fila">
+    <label>Servidor (API)
+      <input type="text" id="api" value="https://sgsra-md-backend.onrender.com/api/v1">
+    </label>
+    <button id="cargar">Cargar herramientas</button>
+    <span class="estado" id="estado">Render puede tardar ~1 min en despertar la primera vez.</span>
+  </div>
+
+  <details>
+    <summary>¿Sin conexión? Pegar códigos manualmente</summary>
+    <p class="estado">Un código por línea. Opcional: <code>CÓDIGO;Nombre</code></p>
+    <textarea id="manual" placeholder="HER-PIST-003;Pistola de impacto&#10;HER-BOM-008"></textarea>
+    <button class="sec" id="usarManual">Generar desde la lista</button>
+  </details>
+
+  <div class="fila">
+    <label>Buscar
+      <input type="text" id="buscar" placeholder="Código, nombre o categoría">
+    </label>
+    <label>Tamaño del QR
+      <select id="tamano">
+        <option value="30">3 cm (pequeño)</option>
+        <option value="40" selected>4 cm (recomendado)</option>
+        <option value="50">5 cm (grande)</option>
+      </select>
+    </label>
+    <button class="sec" id="todas">Marcar todas</button>
+    <button class="sec" id="ninguna">Desmarcar todas</button>
+    <button id="imprimir">Imprimir / Guardar PDF</button>
+  </div>
+  <span class="estado" id="resumen"></span>
+</section>
+
+<main id="hoja"></main>
+
+<script>
+  let herramientas = [];
+  const $ = (id) => document.getElementById(id);
+
+  function aplicarTamano() {
+    const mm = Number($('tamano').value);
+    document.documentElement.style.setProperty('--qr', mm + 'mm');
+    document.documentElement.style.setProperty('--ancho', (mm + 12) + 'mm');
+  }
+
+  function render() {
+    const q = $('buscar').value.trim().toLowerCase();
+    const hoja = $('hoja');
+    hoja.innerHTML = '';
+    const visibles = herramientas.filter(h =>
+      !q || `${h.cod} ${h.nombre} ${h.categoria}`.toLowerCase().includes(q));
+    for (const h of visibles) {
+      const div = document.createElement('div');
+      div.className = 'etiqueta' + (h.sel ? '' : ' off');
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = h.sel;
+      chk.title = 'Incluir en la impresión';
+      chk.onchange = () => { h.sel = chk.checked; div.classList.toggle('off', !h.sel); resumen(); };
+      const qr = document.createElement('div');
+      qr.className = 'qr';
+      // El QR lleva únicamente el código: exactamente lo que espera la app
+      new QRCode(qr, { text: h.cod, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M });
+      const cod = document.createElement('div');
+      cod.className = 'cod';
+      cod.textContent = h.cod;
+      const nom = document.createElement('div');
+      nom.className = 'nom';
+      nom.textContent = h.nombre || '';
+      div.append(chk, qr, cod, nom);
+      hoja.append(div);
+    }
+    resumen();
+  }
+
+  function resumen() {
+    const n = herramientas.filter(h => h.sel).length;
+    $('resumen').textContent = herramientas.length
+      ? `${herramientas.length} herramientas · ${n} marcadas para imprimir`
+      : '';
+  }
+
+  function cargarLista(lista) {
+    const vistos = new Set();
+    herramientas = lista
+      .map(h => ({ cod: String(h.cod || '').trim().toUpperCase(), nombre: h.nombre || '', categoria: h.categoria || '', sel: true }))
+      .filter(h => h.cod && !vistos.has(h.cod) && vistos.add(h.cod))
+      .sort((a, b) => a.cod.localeCompare(b.cod));
+    render();
+  }
+
+  $('cargar').onclick = async () => {
+    const est = $('estado');
+    est.className = 'estado';
+    est.textContent = 'Cargando…';
+    try {
+      const base = $('api').value.replace(/\/+$/, '');
+      const res = await fetch(`${base}/inventario/herramientas?size=1000`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : (data.content || []);
+      cargarLista(arr.map(h => ({ cod: h.codHerramienta, nombre: h.nombreHerramienta, categoria: h.categoria })));
+      est.textContent = `Listo: ${herramientas.length} herramientas cargadas.`;
+    } catch (e) {
+      est.className = 'estado error';
+      est.textContent = 'No se pudo cargar (' + e.message + '). Reintente en un minuto o use la lista manual.';
+    }
+  };
+
+  $('usarManual').onclick = () => {
+    const lista = $('manual').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+      const [cod, ...resto] = l.split(';');
+      return { cod, nombre: resto.join(';').trim() };
+    });
+    cargarLista(lista);
+  };
+
+  $('buscar').oninput = render;
+  $('tamano').onchange = aplicarTamano;
+  $('todas').onclick = () => { herramientas.forEach(h => h.sel = true); render(); };
+  $('ninguna').onclick = () => { herramientas.forEach(h => h.sel = false); render(); };
+  $('imprimir').onclick = () => window.print();
+  aplicarTamano();
+</script>
+</body>
+</html>

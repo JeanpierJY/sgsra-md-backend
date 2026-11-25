@@ -6,6 +6,7 @@ import '../../data/datasources/almacen_remote_datasource.dart';
 import '../../domain/entities/almacen_entities.dart';
 import '../../../notificaciones/presentation/widgets/notificacion_bell.dart';
 import '../../../../core/widgets/perfil_boton.dart';
+import 'despacho_repuestos_tab.dart';
 
 class DashboardAlmacenScreen extends StatefulWidget {
   const DashboardAlmacenScreen({Key? key}) : super(key: key);
@@ -145,9 +146,14 @@ class _DashboardAlmacenScreenState extends State<DashboardAlmacenScreen> {
                         color: AppColors.pureWhite,
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
+                          // [H-ALM-07] Abre el mismo modal de despacho que la pestaña Despacho
+                          onTap: () async {
+                            final despachada = await mostrarDespachoSolicitud(context, '${s['solicitudNum']}');
+                            if (despachada == true && mounted) _cargarDatos();
+                          },
                           leading: const Icon(Icons.inventory_2, color: Colors.teal),
                           title: Text('Orden: ${s['solicitudNum']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Mecánico: ${s['nombreMecanico']} | Máquina: ${s['codMaquinaria']}'),
+                          subtitle: Text('Mecánico: ${s['nombreMecanico']} | Máquina: ${s['codMaquinaria']}\nToque para ver y despachar'),
                           trailing: const Chip(label: Text('AUTORIZADO', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.teal),
                         ),
                       )),

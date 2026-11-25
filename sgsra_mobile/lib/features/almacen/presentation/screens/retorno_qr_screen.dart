@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -62,8 +61,11 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> with WidgetsBindingOb
   void initState() {
     super.initState();
     _scanner = MobileScannerController(
+      // [H-ALM-04] "noDuplicates" impedía volver a leer el mismo QR; el control de repetidos
+      // se hace en _procesarCodigo
       detectionSpeed: DetectionSpeed.normal,
       facing: CameraFacing.back,
+      formats: const [BarcodeFormat.qrCode],
     );
     WidgetsBinding.instance.addObserver(this);
     _cargarPrestamos();
@@ -166,9 +168,40 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> with WidgetsBindingOb
     }).toList();
   }
 
+  /// [H-ALM-04b] El QR puede traer solo el código ("HER-TOR-004") o un enlace/texto que lo
+  /// contiene (p. ej. generado con una web de QR: "https://.../herramienta/HER-TOR-004" o
+  /// "?codigo=HER-TOR-004"). Se extrae el código para que la lectura funcione en ambos casos.
+  String _extraerCodigo(String raw) {
+    final texto = raw.trim();
+    final mayus = texto.toUpperCase();
+
+    // 1) Si el contenido incluye el código de una herramienta prestada, se usa ese
+    for (final h in _herramientasPendientes) {
+      final cod = h.codHerramienta.toUpperCase();
+      if (cod.isNotEmpty && mayus.contains(cod)) return cod;
+    }
+
+    // 2) Enlace: parámetro "codigo/cod/code/id" o el último segmento de la ruta
+    final uri = Uri.tryParse(texto);
+    if (uri != null && uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      for (final k in const ['codigo', 'cod', 'code', 'codHerramienta', 'id']) {
+        final v = uri.queryParameters[k];
+        if (v != null && v.trim().isNotEmpty) return v.trim().toUpperCase();
+      }
+      final segmentos = uri.pathSegments.where((s) => s.trim().isNotEmpty).toList();
+      if (segmentos.isNotEmpty) return Uri.decodeComponent(segmentos.last).trim().toUpperCase();
+    }
+
+    // 3) Texto libre: primer patrón con forma de código (LETRAS-XXX[-XXX])
+    final m = RegExp(r'[A-Z]{2,}(?:-[A-Z0-9]+)+').firstMatch(mayus);
+    if (m != null) return m.group(0)!;
+
+    return mayus;
+  }
+
   /// Procesa el código QR capturado por la cámara
   Future<void> _procesarCodigo(String raw) async {
-    final codigo = raw.trim().toUpperCase();
+    final codigo = _extraerCodigo(raw);
     // [H-ALM-04] El mismo QR puede volver a leerse pasados unos segundos (antes quedaba bloqueado)
     final ahora = DateTime.now();
     final repetido = codigo == _ultimoCodigo &&
@@ -458,15 +491,14 @@ class _RetornoQrScreenState extends State<RetornoQrScreen> with WidgetsBindingOb
                     onDetect: (capture) {
                       if (_modalAbierto || _procesandoQr) return;
                       for (final b in capture.barcodes) {
-                        final v = (b.rawValue ?? b.displayValue ?? '').trim();
-                        if (v.isNotEmpty) {
-                          HapticFeedback.mediumImpact();
+                        final v = b.rawValue;
+                        if (v != null && v.isNotEmpty) {
                           _procesarCodigo(v);
                           break;
                         }
                       }
                     },
-                    errorBuilder: (ctx, err, child) => Center(
+                    errorBuilder: (ctx, err) => Center(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(

@@ -46,14 +46,6 @@ class ImagenProducto extends StatelessWidget {
         localAsset = 'assets/images/repuestos/$code.png';
       } else if (code.startsWith('HER-')) {
         localAsset = 'assets/images/herramientas/$code.png';
-      } else {
-        final matchP = RegExp(r'P-[A-Z0-9]+-[0-9]+', caseSensitive: false).firstMatch(cleanUrl);
-        final matchHer = RegExp(r'HER-[A-Z0-9]+-[0-9]+', caseSensitive: false).firstMatch(cleanUrl);
-        if (matchP != null) {
-          localAsset = 'assets/images/repuestos/${matchP.group(0)!.toUpperCase()}.png';
-        } else if (matchHer != null) {
-          localAsset = 'assets/images/herramientas/${matchHer.group(0)!.toUpperCase()}.png';
-        }
       }
     }
 
@@ -126,6 +118,14 @@ void ampliarImagen(BuildContext context, String url) {
 /// [GEN-01, ADM-08] Pide cámara o galería y sube la imagen al endpoint indicado
 /// (parte multipart "imagen"). Devuelve la respuesta del backend o null si se canceló.
 Future<Map<String, dynamic>?> seleccionarYSubirImagen(BuildContext context, String endpoint) async {
+  final foto = await elegirImagen(context);
+  if (foto == null || !context.mounted) return null;
+  return subirImagen(context, endpoint, foto);
+}
+
+/// [H-ALM-09] Solo pide cámara o galería y devuelve la foto elegida (sin subirla), para
+/// poder adjuntarla en un formulario antes de que exista el registro en el backend.
+Future<XFile?> elegirImagen(BuildContext context, {String titulo = 'Cambiar imagen'}) async {
   final origen = await showModalBottomSheet<ImageSource>(
     context: context,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
@@ -133,9 +133,9 @@ Future<Map<String, dynamic>?> seleccionarYSubirImagen(BuildContext context, Stri
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(14),
-            child: Text('Cambiar imagen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           ListTile(
             leading: const Icon(Icons.photo_camera_outlined, color: AppColors.primaryBlue),
@@ -153,8 +153,11 @@ Future<Map<String, dynamic>?> seleccionarYSubirImagen(BuildContext context, Stri
     ),
   );
   if (origen == null) return null;
-  final foto = await ImagePicker().pickImage(source: origen, maxWidth: 1280, imageQuality: 80);
-  if (foto == null) return null;
+  return ImagePicker().pickImage(source: origen, maxWidth: 1280, imageQuality: 80);
+}
+
+/// Sube una foto ya elegida al endpoint indicado (parte multipart "imagen").
+Future<Map<String, dynamic>?> subirImagen(BuildContext context, String endpoint, XFile foto) async {
   if (!context.mounted) return null;
   final messenger = ScaffoldMessenger.of(context);
   messenger.showSnackBar(const SnackBar(content: Text('Subiendo imagen...'), duration: Duration(seconds: 1)));

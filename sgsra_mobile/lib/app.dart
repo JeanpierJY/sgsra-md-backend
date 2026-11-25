@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/app_router.dart';
+import 'core/utils/teclado_guard.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -27,6 +28,10 @@ class MyApp extends StatelessWidget {
       // [H-GEN-08] Permiten cerrar la sesión desde el cliente HTTP si la cuenta fue desactivada
       navigatorKey: SessionManager.navigatorKey,
       scaffoldMessengerKey: SessionManager.messengerKey,
+      // [H-GEN-10] Cierra el teclado en cada cambio de ruta y al pasar a segundo plano,
+      // para que no quede el espacio en blanco del teclado "pegado"
+      navigatorObservers: [TecladoNavigatorObserver()],
+      builder: (context, child) => TecladoGuard(child: child ?? const SizedBox.shrink()),
       initialRoute: '/',
       onGenerateRoute: AppRouter.generateRoute,
       debugShowCheckedModeBanner: false,
