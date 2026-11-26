@@ -102,7 +102,12 @@ class AlmacenRemoteDataSource {
   }
 
   Future<void> registrarNuevaHerramienta(Map<String, dynamic> data) async {
-    await _dioClient.dio.post('/inventario/herramientas', data: data);
+    final correo = await obtenerCorreoAlmacenista();
+    await _dioClient.dio.post(
+      '/inventario/herramientas',
+      queryParameters: {'correoAlmacenista': correo},
+      data: data,
+    );
   }
 
   Future<List<dynamic>> listarSolicitudesAprobadas() => listarSolicitudesPorEstado('APROBADA');
