@@ -23,6 +23,7 @@ class _MantenimientoCatalogoScreenState
   bool _isLoading = true;
   List<dynamic> _repuestos = [];
   String _busqueda = '';
+  String _filtroEstado = 'TODOS';
 
   @override
   void initState() {
@@ -314,29 +315,73 @@ class _MantenimientoCatalogoScreenState
         Container(
           color: AppColors.pureWhite,
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Buscar repuesto por nombre o código',
-              prefixIcon: const Icon(Icons.search_rounded),
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.backgroundGray,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-            ),
-            onChanged: (v) =>
-                setState(() => _busqueda = v.trim().toLowerCase()),
+          child: Column(
+            children: [
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Buscar repuesto por nombre o código',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  isDense: true,
+                  filled: true,
+                  fillColor: AppColors.backgroundGray,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none),
+                ),
+                onChanged: (v) =>
+                    setState(() => _busqueda = v.trim().toLowerCase()),
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final entry in [
+                      ('TODOS', 'Todos (${_repuestos.length})'),
+                      (
+                        'HABILITADOS',
+                        'Habilitados (${_repuestos.where((r) => (r['activo'] ?? true) == true).length})'
+                      ),
+                      (
+                        'DESHABILITADOS',
+                        'Deshabilitados (${_repuestos.where((r) => (r['activo'] ?? true) == false).length})'
+                      ),
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(entry.$2),
+                          selected: _filtroEstado == entry.$1,
+                          selectedColor: AppColors.primaryBlue,
+                          labelStyle: TextStyle(
+                            color: _filtroEstado == entry.$1
+                                ? Colors.white
+                                : Colors.black87,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                          onSelected: (_) =>
+                              setState(() => _filtroEstado = entry.$1),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(child: Builder(builder: (context) {
-          final lista = _repuestos
-              .where((r) =>
-                  _busqueda.isEmpty ||
-                  '${r['nombreRepuesto']} ${r['codParte']}'
-                      .toLowerCase()
-                      .contains(_busqueda))
-              .toList();
+          final lista = _repuestos.where((r) {
+            final coincideTexto = _busqueda.isEmpty ||
+                '${r['nombreRepuesto']} ${r['codParte']}'
+                    .toLowerCase()
+                    .contains(_busqueda);
+            final activo = (r['activo'] ?? true) == true;
+            final coincideEstado = _filtroEstado == 'TODOS' ||
+                (_filtroEstado == 'HABILITADOS' && activo) ||
+                (_filtroEstado == 'DESHABILITADOS' && !activo);
+            return coincideTexto && coincideEstado;
+          }).toList();
           return _isLoading
               ? const Center(
                   child:

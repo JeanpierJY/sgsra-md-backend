@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -145,6 +146,20 @@ class _SolicitudesRecuperacionScreenState extends State<SolicitudesRecuperacionS
               },
               icon: const Icon(Icons.copy_rounded),
               label: const Text('Copiar'),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
+              onPressed: () async {
+                final rawTel = '${s['telefono'] ?? s['telefonoSolicitante'] ?? ''}'.replaceAll(RegExp(r'\D'), '');
+                final tel = rawTel.length == 9 ? '51$rawTel' : rawTel;
+                final msg = Uri.encodeComponent(
+                  'Tu contraseña temporal es: $clave\n\nRecuerda cambiarla una vez inicies sesión.',
+                );
+                final uri = Uri.parse(tel.isNotEmpty ? 'https://wa.me/$tel?text=$msg' : 'https://wa.me/?text=$msg');
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+              icon: const Icon(Icons.chat_rounded, size: 18),
+              label: const Text('WhatsApp'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
