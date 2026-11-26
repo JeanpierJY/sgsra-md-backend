@@ -89,8 +89,6 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
   void _abrirModalEditar(dynamic user) {
     final formKey = GlobalKey<FormState>();
     final nomCtrl = TextEditingController(text: user['nombre']);
-    final telCtrl = TextEditingController(text: user['telefono']?.toString() ?? '');
-    final tieneTelefono = user['rol'] != 'ADMINISTRADOR';
     bool guardando = false;
 
     showDialog(
@@ -113,24 +111,6 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                   decoration: const InputDecoration(labelText: 'Nombre completo (solo letras)', prefixIcon: Icon(Icons.badge_outlined)),
                   validator: AppValidators.validarNombre,
                 ),
-                if (tieneTelefono)
-                  TextFormField(
-                    controller: telCtrl,
-                    keyboardType: TextInputType.phone,
-                    maxLength: 9,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(9),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'Teléfono móvil (9 dígitos, inicia en 9)',
-                      prefixIcon: Icon(Icons.phone_android_rounded),
-                      helperText: 'Debe iniciar con 9 y tener 9 dígitos',
-                      counterText: '',
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? null : AppValidators.validarTelefono(v),
-                  ),
               ],
             ),
           ),
@@ -146,7 +126,6 @@ class _GestionPersonalScreenState extends State<GestionPersonalScreen> {
                       try {
                         await _dioClient.dio.put('/auth/usuarios/dni/${user['dni']}', data: {
                           'nombre': nomCtrl.text.trim(),
-                          if (tieneTelefono && telCtrl.text.trim().isNotEmpty) 'telefono': telCtrl.text.trim(),
                         });
                         if (ctx.mounted) Navigator.pop(ctx);
                         _mostrarMensaje('Datos de ${nomCtrl.text.trim()} guardados');

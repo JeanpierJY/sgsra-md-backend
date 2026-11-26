@@ -150,12 +150,54 @@ class _SolicitudesRecuperacionScreenState extends State<SolicitudesRecuperacionS
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
               onPressed: () async {
-                final rawTel = '${s['telefono'] ?? s['telefonoSolicitante'] ?? ''}'.replaceAll(RegExp(r'\D'), '');
-                final tel = rawTel.length == 9 ? '51$rawTel' : rawTel;
+                String rawTel = '${s['telefono'] ?? s['telefonoSolicitante'] ?? ''}'.replaceAll(RegExp(r'\D'), '');
+                if (rawTel.isEmpty) {
+                  try {
+                    final uRes = await _dio.dio.get('/auth/usuarios', queryParameters: {'size': 100});
+                    final list = (uRes.data is Map && uRes.data['content'] != null)
+                        ? List<dynamic>.from(uRes.data['content'])
+                        : (uRes.data is List ? List<dynamic>.from(uRes.data) : <dynamic>[]);
+                    final match = list.cast<Map<String, dynamic>>().firstWhere(
+                          (u) => '${u['dni']}' == '${s['dniSolicitante']}',
+                          orElse: () => <String, dynamic>{},
+                        );
+                    rawTel = '${match['telefono'] ?? ''}'.replaceAll(RegExp(r'\D'), '');
+                  } catch (_) {}
+                }
+                String tel = rawTel.length == 9 ? '51$rawTel' : rawTel;
+                if (tel.isEmpty && context.mounted) {
+                  final telCtrl = TextEditingController();
+                  final entered = await showDialog<String>(
+                    context: context,
+                    builder: (dCtx) => AlertDialog(
+                      title: const Text('Número de WhatsApp'),
+                      content: TextField(
+                        controller: telCtrl,
+                        keyboardType: TextInputType.phone,
+                        maxLength: 9,
+                        decoration: const InputDecoration(
+                          labelText: 'Celular (9 dígitos)',
+                          hintText: '934841369',
+                          border: OutlineInputBorder(),
+                          counterText: '',
+                        ),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancelar')),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(dCtx, telCtrl.text.replaceAll(RegExp(r'\D'), '')),
+                          child: const Text('Abrir WhatsApp'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (entered == null || entered.isEmpty) return;
+                  tel = entered.length == 9 ? '51$entered' : entered;
+                }
                 final msg = Uri.encodeComponent(
                   'Tu contraseña temporal es: $clave\n\nRecuerda cambiarla una vez inicies sesión.',
                 );
-                final uri = Uri.parse(tel.isNotEmpty ? 'https://wa.me/$tel?text=$msg' : 'https://wa.me/?text=$msg');
+                final uri = Uri.parse('https://wa.me/$tel?text=$msg');
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               icon: const Icon(Icons.chat_rounded, size: 18),

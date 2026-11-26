@@ -213,7 +213,7 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
 
   Widget _contenido() {
     final p = _perfil!;
-    final telefonoEditable = p['telefonoEditable'] == true;
+    final telefonoEditable = p['rol'] != 'ADMINISTRADOR' && p['telefonoEditable'] == true;
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),

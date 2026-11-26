@@ -52,16 +52,6 @@ Stop-Process -Name "dart", "chrome" -Force -ErrorAction SilentlyContinue
 
 ---
 
-## 👥 USUARIOS OFICIALES DE PRUEBA
-
-| Rol               | Correo Corporativo               | Contraseña |
-| :---------------- | :------------------------------- | :--------- |
-| **Administrador** | `leao.chura@masterdrilling.com`  | `admin`    |
-| **Mecánico**      | `carlos.baro@masterdrilling.com` | `meca`     |
-| **Almacenista**   | `marcos.baro@masterdrilling.com` | `alma`     |
-
----
-
 ## 📱 GENERACIÓN DE APK RELEASE ANDROID
 
 Para generar el APK de producción conectado a Render:
