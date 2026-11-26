@@ -191,7 +191,9 @@ _Alineación con las observaciones de revisión y requerimientos académicos/cor
   - [x] 6.3 Monitor Keep-Alive 24/7 con UptimeRobot: Configuración de sondeo HTTP periódico cada 5 minutos hacia `/api/v1/catalogo` para evitar la suspensión (spin down) tras 15 minutos de inactividad.
   - [x] 6.4 Conexión Móvil en Flutter (`api_constants.dart`): Configuración de host HTTPS Render con aumento de timeout a 60 segundos tolerante a arranques en frío.
   - [ ] 6.5 Añadir Almacenamiento Multimedia Real Persistente (Cloudinary / AWS S3 / Firebase Storage): Migración del almacenamiento local de `./uploads/` hacia un bucket/servicio cloud persistente, ya que el sistema de archivos del contenedor Docker en Render es efímero y ante reinicios o despliegues se pierden las imágenes subidas de repuestos, herramientas y selfies.
-  - [ ] 6.6 Generación de APK Release Final para Android: Compilación del binario universal `flutter build apk --release` optimizado para producción, verificando firma, iconografía corporativa y cero errores de compilación.
+  - [x] 6.6 Correcciones y mejoras post-pruebas (26/11): envío de `correoAlmacenista` al crear herramientas, botón de WhatsApp con mensaje prellenado en recuperación de clave, filtros `Todos / Habilitados / Deshabilitados` en Catálogo Admin y bloqueo de edición de teléfono en Gestión de Usuarios y Perfil Admin.
+  - [ ] 6.7 Notificaciones Push externas (Firebase Cloud Messaging - FCM): envío de alertas push cuando la app está cerrada o en segundo plano.
+  - [ ] 6.8 Generación de APK Release Final para Android: Compilación del binario universal `flutter build apk --release` optimizado para producción, verificando firma, iconografía corporativa y cero errores de compilación.
 ```
 
 ---

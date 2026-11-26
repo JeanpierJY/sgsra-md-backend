@@ -56,10 +56,12 @@
   - `flutter_secure_storage: ^9.2.2`: Almacenamiento seguro en Android KeyStore para credenciales biométricas, DNI y host personalizado.
   - `sqflite: ^2.3.0` & `sqflite_sqlcipher: ^3.2.0+1`: Base de datos SQLite local para modo offline en socavón.
 - **Sensores Nativos y Hardware:**
-  - `mobile_scanner: ^5.1.1`: Escaneo óptico ultrarrápido de códigos QR y barras en taller.
+  - `mobile_scanner: ^7.1.0`: Escaneo óptico ultrarrápido de códigos QR y barras en taller.
+  - `qr_flutter: ^4.1.0`: Generación de etiquetas QR para herramientas.
   - `local_auth: ^2.1.8`: Autenticación biométrica con huella dactilar.
   - `image_picker: ^1.1.2`: Captura con cámara frontal (selfie de recuperación) y trasera (fotos de piezas).
   - `path_provider: ^2.1.4` + `open_filex: ^4.5.0`: Guardado y apertura automática de archivos Excel/CSV nativos en Android.
+  - `url_launcher: ^6.3.1`: Apertura directa de WhatsApp (`wa.me`) para enviar claves temporales de recuperación.
   - `connectivity_plus: ^6.0.3`: Monitoreo de conectividad a la red.
 - **Integración Nativa Android (Kotlin):**
   - `MainActivity.kt` con canal `MethodChannel("com.example.sgsra_mobile/telefono")` para invocar `Intent.ACTION_DIAL`, abriendo el marcador telefónico nativo con el número prellenado automáticamente.
@@ -88,9 +90,9 @@ El enrutador principal (`home_router.dart`) dirige al usuario según su rol de c
 ### 2. `ADMINISTRADOR` (`AdminMainScreen` - 5 Pestañas Inferiores + Mi Perfil en AppBar)
 - **Bandeja (`bandeja_solicitudes_screen.dart`):** Bandeja unificada ordenada por FIFO, filtros temporales, contadores en tiempo real y modal de **aprobación parcial ítem por ítem (`RF26`)** con motivo obligatorio si hay rechazos.
 - **Auditoría (`auditoria_screen.dart`):** Bitácora inalterable conectada a PostgreSQL con sellado `SHA-256`, agrupada cronológicamente con filtros avanzados por usuario, acción y fechas.
-- **Catálogo (`mantenimiento_catalogo_screen.dart`):** Gestión CRUD de repuestos, stock mínimo/actual, carga fotográfica y botón superior para consultar **Proveedores Homologados [RF27]** con redirección directa a llamadas telefónicas.
+- **Catálogo (`mantenimiento_catalogo_screen.dart`):** Gestión CRUD de repuestos, filtros por estado (`Todos`, `Habilitados`, `Deshabilitados`), carga fotográfica y botón superior para consultar **Proveedores Homologados** con redirección directa a llamadas telefónicas.
 - **Reportes (`reportes_analiticos_screen.dart`):** Métricas consolidadas de demanda, gráficos reactivos y exportación directa a Excel (`.xlsx`) y CSV compatible con Android.
-- **Personal (`gestion_personal_screen.dart`):** Búsqueda de usuarios, activación/bloqueo de cuentas, reseteo de contraseñas y pantalla de atención de solicitudes de recuperación de clave con cotejo de selfie vs perfil.
+- **Personal (`gestion_personal_screen.dart`):** Búsqueda de usuarios, activación/bloqueo de cuentas, edición de nombre (sin edición de teléfono por seguridad) y pantalla de atención de solicitudes de recuperación de clave con cotejo de selfie vs perfil y botón **WhatsApp** con mensaje prellenado al chat del trabajador.
 
 ### 3. `ALMACENISTA` (`AlmacenMainScreen` - 4 Pestañas Inferiores + Mi Perfil en AppBar)
 - **Dashboard (`dashboard_almacen_screen.dart`):** Indicadores en tiempo real de pañol (Disponibles, Prestadas, En Mora, Mantenimiento, Extraviadas) seguido de la sección **Repuestos Aprobados para Retiro Físico** y el **Control de Préstamos Activos**.
@@ -102,9 +104,103 @@ El enrutador principal (`home_router.dart`) dirige al usuario según su rol de c
 
 ---
 
-## 4. Modelo de Datos Físico Consolidado (PostgreSQL 16+ - 18)
+## 4. Catálogo de Requerimientos Funcionales (RF01 - RF50) y Reglas de Negocio
 
-Esquema relacional en Tercera Forma Normal (3FN) con integridad referencial completa y soporte para auditoría, notificaciones y recuperación de contraseñas:
+### Módulo 1: Seguridad, Usuarios y Perfiles (`RF01 - RF08`)
+- ~~**RF01:** Inicio de sesión con correo corporativo (`@masterdrilling.com`) y contraseña hasheada en BCrypt.~~ ✅
+- ~~**RF02:** Asignación automática de vistas según rol mediante `HomeRouter`.~~ ✅
+- ~~**RF03:** Cierre de sesión seguro purgando llaves en `FlutterSecureStorage`.~~ ✅
+- ~~**RF04:** Solicitud de desbloqueo / recuperación de contraseña hacia Administración con evidencia fotográfica selfie en vivo (`CameraDevice.front`) y envío de clave temporal por **WhatsApp**.~~ ✅
+- ~~**RF05:** Acceso rápido mediante biometría dactilar (`local_auth`) con prellenado de último correo y token seguro en Keystore.~~ ✅
+- ~~**RF06:** **Bloqueo escalonado por intentos fallidos:**~~ ✅
+  - ~~3 fallos consecutivos $\rightarrow$ Bloqueo temporal por 5 minutos.~~
+  - ~~6 fallos consecutivos $\rightarrow$ Bloqueo temporal por 15 minutos.~~
+  - ~~9 fallos consecutivos $\rightarrow$ **Bloqueo total (`BLOQUEADO`)**, requiriendo atención formal del Administrador.~~
+- ~~**RF07:** Edición de perfil básico: DNI, Nombres y Correo en modo solo lectura; permite actualizar el teléfono (9 dígitos, solo Mecánico y Almacenista) y contraseña personal.~~ ✅
+- ~~**RF08:** Gestión de personal: Búsqueda dinámica, activación/bloqueo de cuentas, edición de nombres (sin edición de teléfono por seguridad), reseteo de claves y revisión de selfies.~~ ✅
+  - **REGLA CRÍTICA DE JERARQUÍA:** Un Administrador no puede suspender, alterar ni resetear a otro Administrador (retorna `HTTP 403 Forbidden`).
+
+### Módulo 2: Catálogo y Solicitudes del Mecánico (`RF09 - RF20`)
+- ~~**RF09 - RF12:** Catálogo maestro paginado con fotos reales (`imagen_url`), buscador predictivo en tiempo real y modal de ficha técnica con fallback offline.~~ ✅
+- ~~**RF13 - RF16:** Carrito digital con selector predictivo de maquinaria pesada (`MD-RB-01`), selector de cantidad, nivel de prioridad (`BAJA`, `MEDIA`, `ALTA`) y justificación técnica ($\ge 10$ caracteres).~~ ✅
+- ~~**RF17:** Transmisión formal con generación de correlativo `SOL-2026-XXXX` en estado `PENDIENTE`.~~ ✅
+- ~~**RF18:** Modo Offline: Almacenamiento local en SQLite cifrado ante pérdida de señal en socavón.~~ ✅
+- ~~**RF19 - RF20:** Historial personal de solicitudes con badges cromáticos (`Amarillo`: Pendiente, `Verde`: Aprobada, `Naranja`: Aprobada Parcial, `Rojo`: Rechazada, `Azul`: Entregada).~~ ✅
+
+### Módulo 3: Administración, Aprobaciones y Auditoría (`RF21 - RF32`)
+- ~~**RF21 - RF22:** Bandeja unificada ordenada por FIFO con filtros temporales (30 a 180 días) y contadores dinámicos.~~ ✅
+- ~~**RF23 - RF25:** Aprobación total inmediata o rechazo total con justificación técnica obligatoria ($\ge 15$ caracteres).~~ ✅
+- ~~**RF26:** **Aprobación parcial de componentes:** Evaluación ítem por ítem con validación de stock en vivo, pasando la orden a `APROBADA_PARCIAL`.~~ ✅
+- ~~**RF27:** Directorio de proveedores homologados (Bosch Rexroth, Enerpac, Parker, Donaldson, Festo) con botón de llamada nativa por `MethodChannel` (`Intent.ACTION_DIAL`).~~ ✅
+- **RF28:** *(Descartado del alcance por ser gestión administrativa externa de compras)*.
+- ~~**RF29 - RF30:** Reportes analíticos con gráficos interactivos y exportación nativa a **Excel (`.xlsx`) y CSV** compatible con Android.~~ ✅
+- ~~**RF31:** Bitácora de auditoría histórica con filtros por rango de fechas, usuario/DNI y acción.~~ ✅
+- ~~**RF32:** CRUD de repuestos con filtros (`Todos`, `Habilitados`, `Deshabilitados`) y carga fotográfica multipart (`< 5MB`).~~ ✅
+
+### Módulo 4: Almacén / Pañol de Herramientas (`RF33 - RF45`)
+- ~~**RF33:** Dashboard de pañol con stock en tiempo real (Disponibles, Prestadas, En Mora, Mantenimiento, Extraviadas) con Repuestos Aprobados antes de Préstamos.~~ ✅
+- ~~**RF34 - RF35:** Escáner óptico QR con cámara trasera y despliegue instantáneo de ficha técnica del activo.~~ ✅
+- ~~**RF36 - RF37:** Salida formal de herramientas validando cupo máximo ($\le 5$ herramientas), capturando firma digital.~~ ✅
+- ~~**RF38 - RF40:** Recepción e inspección física de devolución (`BUEN_ESTADO` $\rightarrow$ Disponible, `CON_AVERIA` / `INCOMPLETA` $\rightarrow$ En Mantenimiento) con visualización antes/después (`PRE-01`).~~ ✅
+- ~~**RF41 - RF42:** Reporte de extravío de herramientas con buscador predictivo exclusivo de activos perdidos e imputación de responsabilidad al último custodio.~~ ✅
+- ~~**RF43:** Alerta visual destacada en rojo/ámbar para préstamos y herramientas en estado `MORA`.~~ ✅
+- ~~**RF44 - RF45:** Alta de herramientas por categoría (`Manuales`, `Hidráulicas`, `Neumáticas`, `Eléctricas`) con envío de `correoAlmacenista`, etiqueta QR y fotografía opcional/en alta.~~ ✅
+- ~~**Flujo de Despacho de Repuestos:** Entrega física de repuestos de solicitudes aprobadas, pasando a estado `ENTREGADA` y descontando el inventario físico en tiempo real.~~ ✅
+
+### Módulo 5: Notificaciones Internas y Auditoría (`RF46 - RF50`)
+- ~~**RF46 - RF48:** Sistema de notificaciones persistidas en PostgreSQL (tabla `notificacion`) para solicitudes, dictámenes, moras, extravíos y stock mínimo.~~ ✅
+- ~~**RF49:** Registro inmutable de auditoría con hash SHA-256 e IP de origen.~~ ✅
+- ~~**RF50:** Centro de notificaciones universal con campana y badge numérico en AppBar en los 3 roles.~~ ✅
+
+---
+
+## 5. Arquitectura de Despliegue Cloud: Render Cloud (Web Service Docker + PostgreSQL)
+
+Para garantizar la disponibilidad continua del sistema sin depender de redes locales ni laptops encendidas:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        RENDER CLOUD (PaaS / Docker)                    │
+│                                                                        │
+│   Web Service: https://sgsra-md-backend.onrender.com (HTTPS Nativo)    │
+│   Database: PostgreSQL 16/18 Gestionado (sgsra_db)                     │
+│                                                                        │
+│   ┌──────────────────────────────────────────────────────────────┐    │
+│   │               Docker Container (Java 21 JRE Alpine)          │    │
+│   │                                                              │    │
+│   │   ┌────────────────────────┐      ┌──────────────────────┐   │    │
+│   │   │ Spring Boot 3.x/4.x    │◄────►│ Render PostgreSQL 16 │   │    │
+│   │   │ Puerto: 8080 (REST)    │      │ (sgsra_db interno)   │   │    │
+│   │   └───────────┬────────────┘      └──────────────────────┘   │    │
+│   │               │                                              │    │
+│   │               ▼                                              │    │
+│   │   ┌────────────────────────┐                                 │    │
+│   │   │ Storage ./uploads/     │ ⚠️ Almacenamiento Efímero        │    │
+│   │   │ (Fotos / Selfies)      │ (Se borra ante reinicios)       │    │
+│   │   └────────────────────────┘                                 │    │
+│   └──────────────────────────────────────────────────────────────┘    │
+│                                   ▲                                    │
+│   Keep-Alive 24/7 (UptimeRobot)   │ Ping HTTP GET cada 5 min           │
+│   https://uptimerobot.com ────────┘ (Evita suspensión por inactividad) │
+└───────────────────────────────────▲────────────────────────────────────┘
+                                    │ HTTPS REST API
+                                    │ (Puerto 443 / SSL)
+            ┌───────────────────────┴───────────────────────┐
+            │                                               │
+     📱 Celular Mecánico                     📱 Celular Almacén / Admin
+   (App SGSRA-MD Release APK)               (App SGSRA-MD Release APK)
+    Red WiFi / Datos 4G/5G                   Red WiFi / Datos 4G/5G
+```
+
+> ⚠️ **Consideraciones Operativas de Render Cloud:**
+> 1. **Reposo y Arranque en Frío:** En el plan gratuito, si no recibe peticiones por 15 minutos, el contenedor entra en modo reposo. El arranque en frío demora **1 a 2 minutos**. Para mitigarlo, se utiliza un monitor en **UptimeRobot** que envía pings continuos cada 5 minutos al endpoint `/api/v1/catalogo`.
+> 2. **Almacenamiento Efímero:** El directorio `/app/uploads` reside dentro del contenedor Docker. Ante cualquier reinicio o redeploy, los archivos subidos se eliminan. Se requiere implementar un proveedor de almacenamiento persistente en la nube (Cloudinary, AWS S3 o Firebase Storage).
+
+---
+
+## 6. Modelo de Datos Físico Consolidado (PostgreSQL 16+ - 18)
+
+Esquema relacional actualizado conforme a `Query_sgsra_db.sql` y las entidades JPA/Hibernate en producción (3FN, integridad referencial completa, auditoría, notificaciones, recuperación de contraseñas e índices B-Tree):
 
 ```sql
 -- ============================================================================
@@ -117,18 +213,18 @@ CREATE TABLE usuario (
     correo_corporativo VARCHAR(100) UNIQUE NOT NULL,
     contrasena_hash VARCHAR(255) NOT NULL,
     rol VARCHAR(20) NOT NULL CHECK (rol IN ('MECANICO', 'ALMACENISTA', 'ADMINISTRADOR')),
-    estado_cuenta VARCHAR(20) NOT NULL DEFAULT 'ACTIVO', -- ACTIVO, BLOQUEADO, INACTIVO
+    estado_cuenta VARCHAR(20) NOT NULL DEFAULT 'ACTIVO' CHECK (estado_cuenta IN ('ACTIVO', 'BLOQUEADO', 'INACTIVO')),
     intentos_fallidos INT NOT NULL DEFAULT 0,
-    bloqueado_hasta TIMESTAMP,
+    bloqueado_hasta TIMESTAMP WITHOUT TIME ZONE, -- Generado/actualizado por JPA Hibernate
     foto_perfil_url VARCHAR(255),
-    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    creado_en TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
 -- 2. TABLAS DE ESPECIALIZACIÓN POR ROL
 -- ============================================================================
 CREATE TABLE mecanico (
-    dni_mecanico VARCHAR(8) PRIMARY KEY REFERENCES usuario(dni) ON DELETE CASCADE,
+    dni_mecanico VARCHAR(8) PRIMARY KEY REFERENCES usuario(dni) ON UPDATE CASCADE ON DELETE RESTRICT,
     nombre_mecanico VARCHAR(100) NOT NULL,
     especialidad_mecanico VARCHAR(50) NOT NULL,
     cargo_mecanico VARCHAR(50) NOT NULL,
@@ -136,14 +232,14 @@ CREATE TABLE mecanico (
 );
 
 CREATE TABLE almacenista (
-    dni_almacenista VARCHAR(8) PRIMARY KEY REFERENCES usuario(dni) ON DELETE CASCADE,
+    dni_almacenista VARCHAR(8) PRIMARY KEY REFERENCES usuario(dni) ON UPDATE CASCADE ON DELETE RESTRICT,
     nombre_almacenista VARCHAR(100) NOT NULL,
     sede_asignada VARCHAR(50) NOT NULL,
-    telefono VARCHAR(9)
+    telefono VARCHAR(15)
 );
 
 CREATE TABLE administrador (
-    dni_administrador VARCHAR(8) PRIMARY KEY REFERENCES usuario(dni) ON DELETE CASCADE,
+    dni_administrador VARCHAR(8) PRIMARY KEY REFERENCES usuario(dni) ON UPDATE CASCADE ON DELETE RESTRICT,
     nombre_administrador VARCHAR(100) NOT NULL,
     correo_corporativo VARCHAR(100) NOT NULL
 );
@@ -177,46 +273,48 @@ CREATE TABLE solicitud (
     hora_emision TIME WITHOUT TIME ZONE NOT NULL,
     prioridad_solicitud VARCHAR(20) NOT NULL CHECK (prioridad_solicitud IN ('BAJA', 'MEDIA', 'ALTA')),
     justificacion_tecnica TEXT NOT NULL,
-    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE', -- PENDIENTE, APROBADA, APROBADA_PARCIAL, RECHAZADA, ENTREGADA
-    dni_mecanico VARCHAR(8) NOT NULL REFERENCES mecanico(dni_mecanico),
-    cod_maquina VARCHAR(20) NOT NULL REFERENCES maquinaria(cod_maquinaria)
+    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE'
+        CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADA', 'APROBADA_PARCIAL', 'RECHAZADA', 'ORDEN_CONTACTADA', 'ENTREGADA')),
+    dni_mecanico VARCHAR(8) NOT NULL REFERENCES mecanico(dni_mecanico) ON UPDATE CASCADE ON DELETE RESTRICT,
+    cod_maquina VARCHAR(20) NOT NULL REFERENCES maquinaria(cod_maquinaria) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TABLE solicitud_detalle (
     solicitud_num VARCHAR(20) NOT NULL REFERENCES solicitud(solicitud_num) ON DELETE CASCADE,
     item INT NOT NULL,
     cantidad_repuesto INT NOT NULL CHECK (cantidad_repuesto > 0),
-    estado_item VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE', -- PENDIENTE, APROBADO, RECHAZADO
+    cod_parte VARCHAR(30) NOT NULL REFERENCES repuesto(cod_parte) ON UPDATE CASCADE ON DELETE RESTRICT,
+    estado_item VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado_item IN ('PENDIENTE', 'APROBADO', 'RECHAZADO')),
     motivo_rechazo_item TEXT,
-    cod_parte VARCHAR(30) NOT NULL REFERENCES repuesto(cod_parte),
     PRIMARY KEY (solicitud_num, item)
 );
 
 CREATE TABLE dictamen_rechazo (
     dictamen_num VARCHAR(20) PRIMARY KEY,
-    ref_solicitud_num VARCHAR(20) NOT NULL REFERENCES solicitud(solicitud_num),
+    ref_solicitud_num VARCHAR(20) NOT NULL REFERENCES solicitud(solicitud_num) ON DELETE RESTRICT,
     fecha_evaluacion DATE NOT NULL,
     justificacion_rechazo TEXT NOT NULL,
-    dni_administrador VARCHAR(8) NOT NULL REFERENCES administrador(dni_administrador)
+    dni_administrador VARCHAR(8) NOT NULL REFERENCES administrador(dni_administrador) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TABLE detalle_rechazo (
     dictamen_num VARCHAR(20) NOT NULL REFERENCES dictamen_rechazo(dictamen_num) ON DELETE CASCADE,
     item INT NOT NULL,
-    motivo_rechazo TEXT NOT NULL,
-    cod_parte VARCHAR(30) NOT NULL REFERENCES repuesto(cod_parte),
+    cod_parte VARCHAR(30) NOT NULL REFERENCES repuesto(cod_parte) ON UPDATE CASCADE ON DELETE RESTRICT,
+    cantidad_rechazada INT NOT NULL CHECK (cantidad_rechazada > 0),
+    motivo_especifico_item VARCHAR(255) NOT NULL,
     PRIMARY KEY (dictamen_num, item)
 );
 
 -- ============================================================================
--- 5. PAÑOL DE HERRAMIENTAS, PRÉSTAMOS Y DEVOLUCIONES
+-- 5. PAÑOL DE HERRAMIENTAS, PRÉSTAMOS, DEVOLUCIONES Y REGISTRO DE LOTES
 -- ============================================================================
 CREATE TABLE herramienta (
     cod_herramienta VARCHAR(30) PRIMARY KEY, -- Ej: HER-TOR-004
     nombre_herramienta VARCHAR(150) NOT NULL,
     marca_herramienta VARCHAR(50) NOT NULL,
-    categoria VARCHAR(30) NOT NULL, -- Manuales, Hidraulicas, Neumaticas, Electricas
-    estado_actual VARCHAR(30) NOT NULL, -- Disponible, Prestada, En Mora, En Mantenimiento, Extraviada
+    categoria VARCHAR(30) NOT NULL CHECK (categoria IN ('Electricas', 'Hidraulicas', 'Neumaticas', 'Manuales')),
+    estado_actual VARCHAR(30) NOT NULL CHECK (estado_actual IN ('Disponible', 'Prestada', 'En Mora', 'En Mantenimiento', 'Extraviada', 'Baja Tecnica')),
     imagen_url VARCHAR(255)
 );
 
@@ -224,20 +322,20 @@ CREATE TABLE prestamo (
     prestamo_num VARCHAR(20) PRIMARY KEY,
     fecha_prestamo DATE NOT NULL,
     hora_salida TIME WITHOUT TIME ZONE NOT NULL,
-    estado_prestamo VARCHAR(20) NOT NULL DEFAULT 'ACTIVO', -- ACTIVO, MORA, CERRADO
-    dni_almacenista VARCHAR(8) NOT NULL REFERENCES almacenista(dni_almacenista),
-    dni_mecanico VARCHAR(8) NOT NULL REFERENCES mecanico(dni_mecanico),
+    dni_almacenista VARCHAR(8) NOT NULL REFERENCES almacenista(dni_almacenista) ON UPDATE CASCADE ON DELETE RESTRICT,
+    dni_mecanico VARCHAR(8) NOT NULL REFERENCES mecanico(dni_mecanico) ON UPDATE CASCADE ON DELETE RESTRICT,
+    estado_prestamo VARCHAR(20) NOT NULL DEFAULT 'ACTIVO' CHECK (estado_prestamo IN ('ACTIVO', 'CERRADO', 'MORA')),
     aviso_preventivo_enviado BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE prestamo_detalle (
     prestamo_num VARCHAR(20) NOT NULL REFERENCES prestamo(prestamo_num) ON DELETE CASCADE,
     item INT NOT NULL,
+    cod_herramienta VARCHAR(30) NOT NULL REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT,
     nombre_herramienta VARCHAR(150) NOT NULL,
     estado_herramienta VARCHAR(50) NOT NULL,
     hora_retorno TIME WITHOUT TIME ZONE,
     firma_mecanico TEXT NOT NULL,
-    cod_herramienta VARCHAR(30) NOT NULL REFERENCES herramienta(cod_herramienta),
     PRIMARY KEY (prestamo_num, item)
 );
 
@@ -246,20 +344,30 @@ CREATE TABLE devolucion (
     fecha_devolucion DATE NOT NULL,
     hora_retorno TIME WITHOUT TIME ZONE NOT NULL,
     detalle_incidencia TEXT,
-    prestamo_num VARCHAR(20) NOT NULL REFERENCES prestamo(prestamo_num),
-    dni_almacenista VARCHAR(8) NOT NULL REFERENCES almacenista(dni_almacenista),
-    dni_mecanico VARCHAR(8) NOT NULL REFERENCES mecanico(dni_mecanico)
+    prestamo_num VARCHAR(20) NOT NULL REFERENCES prestamo(prestamo_num) ON DELETE RESTRICT,
+    dni_almacenista VARCHAR(8) NOT NULL REFERENCES almacenista(dni_almacenista) ON UPDATE CASCADE ON DELETE RESTRICT,
+    dni_mecanico VARCHAR(8) NOT NULL REFERENCES mecanico(dni_mecanico) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TABLE devolucion_detalle (
     devolucion_num VARCHAR(20) NOT NULL REFERENCES devolucion(devolucion_num) ON DELETE CASCADE,
     item INT NOT NULL,
-    nombre_herramienta VARCHAR(150) NOT NULL,
-    estado_herramienta VARCHAR(50) NOT NULL, -- BUEN_ESTADO, CON_AVERIA, INCOMPLETA
-    hora_retorno TIME WITHOUT TIME ZONE NOT NULL,
-    firma_almacenista TEXT NOT NULL,
-    cod_herramienta VARCHAR(30) NOT NULL REFERENCES herramienta(cod_herramienta),
+    cod_herramienta VARCHAR(30) NOT NULL REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT,
+    estado_herramienta VARCHAR(50) NOT NULL CHECK (estado_herramienta IN ('Buen Estado', 'Con Averia', 'Incompleta')),
     PRIMARY KEY (devolucion_num, item)
+);
+
+CREATE TABLE registro (
+    registro_num VARCHAR(20) PRIMARY KEY,
+    fecha_ingreso DATE NOT NULL,
+    dni_almacenista VARCHAR(8) NOT NULL REFERENCES almacenista(dni_almacenista) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE registro_detalle (
+    registro_num VARCHAR(20) NOT NULL REFERENCES registro(registro_num) ON DELETE CASCADE,
+    item INT NOT NULL,
+    cod_herramienta VARCHAR(30) NOT NULL REFERENCES herramienta(cod_herramienta) ON UPDATE CASCADE ON DELETE RESTRICT,
+    PRIMARY KEY (registro_num, item)
 );
 
 -- ============================================================================
@@ -273,8 +381,8 @@ CREATE TABLE solicitud_recuperacion_clave (
     rol_solicitante VARCHAR(20) NOT NULL,
     motivo TEXT,
     estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE', -- PENDIENTE, APROBADA, RECHAZADA
-    fecha_solicitud TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_resolucion TIMESTAMP,
+    fecha_solicitud TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    fecha_resolucion TIMESTAMP WITHOUT TIME ZONE,
     dni_administrador VARCHAR(8),
     observacion_admin TEXT,
     foto_selfie_url VARCHAR(255)
@@ -287,142 +395,36 @@ CREATE TABLE auditoria_operacion (
     accion VARCHAR(50) NOT NULL,
     detalle TEXT,
     ip_origen VARCHAR(45) NOT NULL,
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     hash_sha256 VARCHAR(64) NOT NULL
 );
 
 CREATE TABLE notificacion (
     id_notificacion BIGSERIAL PRIMARY KEY,
     dni_destinatario VARCHAR(8),
-    rol_destinatario VARCHAR(20), -- MECANICO, ALMACENISTA, ADMINISTRADOR
-    titulo VARCHAR(120) NOT NULL,
+    rol_destinatario VARCHAR(20) CHECK (rol_destinatario IN ('MECANICO', 'ALMACENISTA', 'ADMINISTRADOR', 'TODOS')),
+    titulo VARCHAR(150) NOT NULL,
     mensaje TEXT NOT NULL,
-    tipo_alerta VARCHAR(30) NOT NULL, -- NUEVA_SOLICITUD, DICTAMEN, MORA, EXTRAVIO, DESBLOQUEO, STOCK_MINIMO
+    tipo_alerta VARCHAR(30) NOT NULL DEFAULT 'INFO'
+        CHECK (tipo_alerta IN ('INFO', 'SOLICITUD', 'APROBACION', 'RECHAZO', 'MORA', 'EXTRAVIO', 'STOCK_MINIMO')),
     referencia_id VARCHAR(30),
     leida BOOLEAN NOT NULL DEFAULT FALSE,
-    fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    fecha_creacion TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
--- 7. VISTA ANALÍTICA CONSOLIDADA
+-- 7. ÍNDICES B-TREE (Optimización de Consultas Frecuentes)
 -- ============================================================================
-CREATE OR REPLACE VIEW v_solicitud_metricas AS
-SELECT s.solicitud_num, s.fecha_emision, s.estado_solicitud,
-       COUNT(sd.item) AS total_items,
-       COALESCE(SUM(sd.cantidad_repuesto), 0) AS total_unidades
-FROM solicitud s
-LEFT JOIN solicitud_detalle sd ON s.solicitud_num = sd.solicitud_num
-GROUP BY s.solicitud_num, s.fecha_emision, s.estado_solicitud;
+CREATE INDEX idx_solicitud_mecanico ON solicitud(dni_mecanico);
+CREATE INDEX idx_solicitud_estado ON solicitud(estado_solicitud);
+CREATE INDEX idx_prestamo_mecanico ON prestamo(dni_mecanico);
+CREATE INDEX idx_prestamo_estado ON prestamo(estado_prestamo);
+CREATE INDEX idx_herramienta_categoria ON herramienta(categoria);
+CREATE INDEX idx_herramienta_estado ON herramienta(estado_actual);
+CREATE INDEX idx_repuesto_activo ON repuesto(activo);
+CREATE INDEX idx_auditoria_timestamp ON auditoria_operacion(timestamp);
+CREATE INDEX idx_notificacion_destinatario ON notificacion(dni_destinatario, leida);
+CREATE INDEX idx_notificacion_rol ON notificacion(rol_destinatario, leida);
+CREATE INDEX idx_solicitud_recup_dni ON solicitud_recuperacion_clave(dni_solicitante);
+CREATE INDEX idx_solicitud_recup_estado ON solicitud_recuperacion_clave(estado);
 ```
-
----
-
-## 5. Catálogo de Requerimientos Funcionales (RF01 - RF50) y Reglas de Negocio
-
-### Módulo 1: Seguridad, Usuarios y Perfiles (`RF01 - RF08`)
-- **RF01:** Inicio de sesión con correo corporativo (`@masterdrilling.com`) y contraseña hasheada en BCrypt.
-- **RF02:** Asignación automática de vistas según rol mediante `HomeRouter`.
-- **RF03:** Cierre de sesión seguro purgando llaves en `FlutterSecureStorage`.
-- **RF04:** Solicitud de desbloqueo / recuperación de contraseña hacia Administración con evidencia fotográfica selfie en vivo (`CameraDevice.front`).
-- **RF05:** Acceso rápido mediante biometría dactilar (`local_auth`) con prellenado de último correo y token seguro en Keystore.
-- **RF06:** **Bloqueo escalonado por intentos fallidos:**
-  - 3 fallos consecutivos $\rightarrow$ Bloqueo temporal por 5 minutos.
-  - 6 fallos consecutivos $\rightarrow$ Bloqueo temporal por 15 minutos.
-  - 9 fallos consecutivos $\rightarrow$ **Bloqueo total (`BLOQUEADO`)**, requiriendo atención formal del Administrador.
-- **RF07:** Edición de perfil básico: DNI, Nombres y Correo en modo solo lectura; permite actualizar únicamente el teléfono (9 dígitos) y contraseña personal.
-- **RF08:** Gestión de personal: Búsqueda dinámica, activación/bloqueo de cuentas, reseteo de claves y revisión de selfies.
-  - **REGLA CRÍTICA DE JERARQUÍA:** Un Administrador no puede suspender, alterar ni resetear a otro Administrador (retorna `HTTP 403 Forbidden`).
-
-### Módulo 2: Catálogo y Solicitudes del Mecánico (`RF09 - RF20`)
-- **RF09 - RF12:** Catálogo maestro paginado con fotos reales (`imagen_url`), buscador predictivo en tiempo real y modal de ficha técnica con fallback offline.
-- **RF13 - RF16:** Carrito digital con selector predictivo de maquinaria pesada (`MD-RB-01`), selector de cantidad, nivel de prioridad (`BAJA`, `MEDIA`, `ALTA`) y justificación técnica ($\ge 10$ caracteres).
-- **RF17:** Transmisión formal con generación de correlativo `SOL-2026-XXXX` en estado `PENDIENTE`.
-- **RF18:** Modo Offline: Almacenamiento local en SQLite cifrado ante pérdida de señal en socavón.
-- **RF19 - RF20:** Historial personal de solicitudes con badges cromáticos (`Amarillo`: Pendiente, `Verde`: Aprobada, `Naranja`: Aprobada Parcial, `Rojo`: Rechazada, `Azul`: Entregada).
-
-### Módulo 3: Administración, Aprobaciones y Auditoría (`RF21 - RF32`)
-- **RF21 - RF22:** Bandeja unificada ordenada por FIFO con filtros temporales (30 a 180 días) y contadores dinámicos.
-- **RF23 - RF25:** Aprobación total inmediata o rechazo total con justificación técnica obligatoria ($\ge 15$ caracteres).
-- **RF26:** **Aprobación parcial de componentes:** Evaluación ítem por ítem con validación de stock en vivo, pasando la orden a `APROBADA_PARCIAL`.
-- **RF27:** Directorio de proveedores homologados (Bosch Rexroth, Enerpac, Parker, Donaldson, Festo) con botón de llamada nativa por `MethodChannel` (`Intent.ACTION_DIAL`).
-- **RF28:** *(Descartado del alcance por ser gestión administrativa externa de compras)*.
-- **RF29 - RF30:** Reportes analíticos con gráficos interactivos y exportación nativa a **Excel (`.xlsx`) y CSV** compatible con Android.
-- **RF31:** Bitácora de auditoría histórica con filtros por rango de fechas, usuario/DNI y acción.
-- **RF32:** CRUD de repuestos con carga fotográfica multipart (`< 5MB`).
-
-### Módulo 4: Almacén / Pañol de Herramientas (`RF33 - RF45`)
-- **RF33:** Dashboard de pañol con stock en tiempo real (Disponibles, Prestadas, En Mora, Mantenimiento, Extraviadas) con Repuestos Aprobados antes de Préstamos.
-- **RF34 - RF35:** Escáner óptico QR con cámara trasera y despliegue instantáneo de ficha técnica del activo.
-- **RF36 - RF37:** Salida formal de herramientas validando cupo máximo ($\le 5$ herramientas y 0 moras), capturando firma digital.
-- **RF38 - RF40:** Recepción e inspección física de devolución (`BUEN_ESTADO` $\rightarrow$ Disponible, `CON_AVERIA` / `INCOMPLETA` $\rightarrow$ En Mantenimiento) con visualización antes/después (`PRE-01`).
-- **RF41 - RF42:** Reporte de extravío de herramientas con buscador predictivo exclusivo de activos perdidos e imputación de responsabilidad al último custodio.
-- **RF43:** Alerta visual destacada en rojo/ámbar para préstamos y herramientas en estado `MORA`.
-- **RF44 - RF45:** Alta de herramientas por categoría (`Manuales`, `Hidráulicas`, `Neumáticas`, `Eléctricas`) con fotografía obligatoria.
-- **Flujo de Despacho de Repuestos:** Entrega física de repuestos de solicitudes aprobadas, pasando a estado `ENTREGADA` y descontando el inventario físico en tiempo real.
-
-### Módulo 5: Notificaciones Internas y Auditoría (`RF46 - RF50`)
-- **RF46 - RF48:** Sistema de notificaciones persistidas en PostgreSQL (tabla `notificacion`) para solicitudes, dictámenes, moras, extravíos y stock mínimo.
-- **RF49:** Registro inmutable de auditoría con hash SHA-256 e IP de origen.
-- **RF50:** Centro de notificaciones universal con campana y badge numérico en AppBar en los 3 roles.
-
----
-
-## 6. Arquitectura de Despliegue Cloud: Render Cloud (Web Service Docker + PostgreSQL)
-
-Para garantizar la disponibilidad continua del sistema sin depender de redes locales ni laptops encendidas:
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        RENDER CLOUD (PaaS / Docker)                    │
-│                                                                        │
-│   Web Service: https://sgsra-md-backend.onrender.com (HTTPS Nativo)    │
-│   Database: PostgreSQL 16/18 Gestionado (sgsra-db)                      │
-│                                                                        │
-│   ┌──────────────────────────────────────────────────────────────┐    │
-│   │               Docker Container (Java 21 JRE Alpine)          │    │
-│   │                                                              │    │
-│   │   ┌────────────────────────┐      ┌──────────────────────┐   │    │
-│   │   │ Spring Boot 3.x/4.x    │◄────►│ Render PostgreSQL 16 │   │    │
-│   │   │ Puerto: 8080 (REST)    │      │ (sgsra-db interno)   │   │    │
-│   │   └───────────┬────────────┘      └──────────────────────┘   │    │
-│   │               │                                              │    │
-│   │               ▼                                              │    │
-│   │   ┌────────────────────────┐                                 │    │
-│   │   │ Storage ./uploads/     │ ⚠️ Almacenamiento Efímero        │    │
-│   │   │ (Fotos / Selfies)      │ (Se borra ante reinicios)       │    │
-│   │   └────────────────────────┘                                 │    │
-│   └──────────────────────────────────────────────────────────────┘    │
-│                                   ▲                                    │
-│   Keep-Alive 24/7 (UptimeRobot)   │ Ping HTTP GET cada 5 min           │
-│   https://uptimerobot.com ────────┘ (Evita suspensión por inactividad) │
-└───────────────────────────────────▲────────────────────────────────────┘
-                                    │ HTTPS REST API
-                                    │ (Puerto 443 / SSL)
-            ┌───────────────────────┴───────────────────────┐
-            │                                               │
-     📱 Celular Mecánico                     📱 Celular Almacén / Admin
-   (App SGSRA-MD Release APK)               (App SGSRA-MD Release APK)
-    Red WiFi / Datos 4G/5G                   Red WiFi / Datos 4G/5G
-```
-
-> ⚠️ **Consideraciones Operativas de Render Cloud:**
-> 1. **Reposo y Arranque en Frío:** En el plan gratuito, si no recibe peticiones por 15 minutos, el contenedor entra en modo reposo. El arranque en frío demora **1 a 2 minutos**. Para mitigarlo, se utiliza un monitor en **UptimeRobot** que envía pings continuos cada 5 minutos al endpoint `/api/v1/catalogo`.
-> 2. **Almacenamiento Efímero:** El directorio `/app/uploads` reside dentro del contenedor Docker. Ante cualquier reinicio o redeploy, los archivos subidos se eliminan. Se requiere implementar un proveedor de almacenamiento persistente en la nube (Cloudinary, AWS S3 o Firebase Storage).
-
----
-
-## 7. Checklist Maestro de Ejecución del Proyecto
-
-- [x] **Fase 1: PostgreSQL & Backend Core** (DDL, Hashes Spring Security, `LocalStorageServiceImpl`, subida multipart `/uploads/**`).
-- [x] **Fase 2: Adaptaciones Flutter Multiplataforma** (`file_saver.dart` nativo, permisos en `AndroidManifest.xml`, `api_constants.dart`).
-- [x] **Fase 2.9: Calibración Backend** (Devoluciones con avería a mantenimiento, alerta preventiva día 6, evidencia selfie en recuperación).
-- [x] **Fase 3: Core Móvil & Componentes Transversales** (Centro de notificaciones `RF50`, bloqueo escalonado con selfie, `PerfilBoton` superior derecho).
-- [x] **Fase 4: Flujos Operativos por Rol** (Catálogo y solicitudes de mecánico, bandeja FIFO y dictámenes de administrador, pañol ergonómico y retorno QR en almacén).
-- [x] **Fase 5: Multimedia, Ajustes de Usabilidad & Integración** (Distribución de multimedia en assets y uploads, 3 pestañas en herramientas de mecánico, llamada nativa a proveedores, buscador predictivo de extraviadas en pañol).
-- [ ] **Fase 6: Despliegue Cloud en Render Cloud (24/7 con UptimeRobot) & Empaquetado APK Final**
-  - [x] 6.1 Creación de `Dockerfile` multi-etapa Java 21 y despliegue del Web Service en Render (`https://sgsra-md-backend.onrender.com`).
-  - [x] 6.2 Aprovisionamiento de base de datos PostgreSQL en Render y carga de esquema con `Query_sgsra_db.sql` y `Query_Insercion.sql`.
-  - [x] 6.3 Configuración de monitor Keep-Alive en UptimeRobot.com para evitar el apagado del servidor tras 15 minutos de inactividad.
-  - [x] 6.4 Apuntamiento de URL HTTPS en `api_constants.dart` con timeout tolerante a arranques en frío (60 segundos).
-  - [ ] 6.5 **Añadir almacenamiento multimedia real persistente (Cloudinary / AWS S3 / Firebase Storage):** Reemplazar el almacenamiento local efímero `/app/uploads/` para que las fotos de repuestos, herramientas y selfies de verificación no se borren ante reinicios del contenedor Docker en Render.
-  - [ ] 6.6 Compilación del APK Release optimizado (`flutter build apk --release`) para entrega final del proyecto SGSRA-MD.
